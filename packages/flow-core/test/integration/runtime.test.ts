@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { openDb, createRuntime } from '@praxis-flow/flow-core/server';
-import { parseRedirectBody } from '@praxis-flow/flow-core';
+import { openDb, createRuntime } from '@wartezimmer/flow-core/server';
+import { parseRedirectBody } from '@wartezimmer/flow-core';
 
 function testRuntime() {
   const db = openDb({ path: ':memory:' });

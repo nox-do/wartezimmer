@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assertLocationRemovable, locationReferences } from '@praxis-flow/flow-core';
+import { assertLocationRemovable, locationReferences } from '@wartezimmer/flow-core';
 
 const catalog = {
   journeySteps: [

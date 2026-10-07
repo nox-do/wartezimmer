@@ -2,7 +2,7 @@ import {
   CURRENT_SETTINGS_FORMAT_VERSION,
   MAINTENANCE_API_PROTOCOL_VERSION,
   type MaintenanceApiInfo,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import {
   fetchMaintenanceApiInfo,
   MaintenanceClientError,

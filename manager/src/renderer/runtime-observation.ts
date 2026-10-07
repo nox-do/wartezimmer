@@ -3,10 +3,10 @@ import {
   ManagerApiError,
   type ManagerError,
   type RuntimeObservation,
-} from '@praxis-flow/server-shared/setup-api';
+} from '@wartezimmer/server-shared/setup-api';
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
 
-export type { RuntimeObservation } from '@praxis-flow/server-shared/setup-api';
+export type { RuntimeObservation } from '@wartezimmer/server-shared/setup-api';
 
 export function managerRefreshError(error: unknown): ManagerError {
   if (error instanceof ManagerApiError) return error.toJSON();

@@ -6,7 +6,7 @@ import type {
   NetworkSnapshot,
 } from '../shared/host-status.js';
 import type { WartezimmerManagerApi } from '../shared/wartezimmer-manager-api.js';
-import { evaluateHostLifecycleAction } from '@praxis-flow/server-shared/host-lifecycle-policy';
+import { evaluateHostLifecycleAction } from '@wartezimmer/server-shared/host-lifecycle-policy';
 import type { LanIpFieldState, ProxyFieldState } from './host-network-panels.js';
 import {
   hostNetworkChanged,

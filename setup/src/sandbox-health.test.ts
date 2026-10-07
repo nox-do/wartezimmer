@@ -35,7 +35,7 @@ test('formatFreshclamAttemptLog formats last-attempt record with stderr message'
 
 test('mergeSandboxWithClamAvLogs appends ClamAV section after compose output', () => {
   const merged = mergeSandboxWithClamAvLogs(
-    'praxis-flow-sandbox  | [sandbox] server started',
+    'wartezimmer-sandbox  | [sandbox] server started',
     'Letzter Versuch: 2026-06-25T15:58:56.000Z\nERROR: mirror unreachable',
   );
   assert.match(merged, /server started/);

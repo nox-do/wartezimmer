@@ -1,5 +1,5 @@
-import { projectManagerStatus } from '@praxis-flow/server-shared/manager-status-projection';
-import type { HostStatus, RuntimeObservation } from '@praxis-flow/server-shared/setup-api';
+import { projectManagerStatus } from '@wartezimmer/server-shared/manager-status-projection';
+import type { HostStatus, RuntimeObservation } from '@wartezimmer/server-shared/setup-api';
 
 /** Presentation adapter only; all assessment and priority live in server-shared. */
 export function managerStatusViewModel(status: HostStatus | null, observation: RuntimeObservation) {

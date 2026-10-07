@@ -3,7 +3,7 @@
   import { onMount } from 'svelte';
   import TerminalWlanPromoBanner from '$lib/components/terminal/TerminalWlanPromoBanner.svelte';
   import BrowserTranslatedText from '$lib/components/shared/BrowserTranslatedText.svelte';
-  import { formatTicketCode } from '@praxis-flow/domain';
+  import { formatTicketCode } from '@wartezimmer/domain';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
   import { terminalOps } from '$lib/terminal/terminal-ops-runtime.svelte';
   import {

@@ -1,4 +1,4 @@
-import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
+import { hasBlockingMaintenanceOperation } from '@wartezimmer/server-shared/manager-status-projection';
 import type { ManagerView } from './host-refresh-controller.js';
 import type { HostStatus } from '../shared/host-status.js';
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';

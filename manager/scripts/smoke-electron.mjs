@@ -20,7 +20,7 @@ const child = spawn(packagedExecutable || electronPath, packagedExecutable ? [] 
   env: {
     ...process.env,
     ELECTRON_RUN_AS_NODE: '',
-    PRAXIS_FLOW_HOME: installHome,
+    WARTEZIMMER_HOME: installHome,
     WARTEZIMMER_MANAGER_SMOKE: '1',
   },
   stdio: ['ignore', 'pipe', 'pipe'],

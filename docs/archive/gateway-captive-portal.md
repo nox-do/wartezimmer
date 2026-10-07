@@ -86,7 +86,7 @@ Mindestens setzen (Beispielwerte anpassen):
 ```bash
 # Pflicht (bereits für app/sandbox)
 AUTH_KEY_CAPTIVE=…
-EXPORTS_HOST_PATH=~/praxis-flow-exports
+EXPORTS_HOST_PATH=~/wartezimmer-exports
 
 # Gateway (Gast-LAN)
 GATEWAY_INTERFACE=eth1

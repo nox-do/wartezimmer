@@ -15,7 +15,7 @@ import {
   type RoomPanelPlacementConfig,
   type RoomPanelTextPreset,
   WAITING_ROOM_LOCATION_ID,
-} from '@praxis-flow/domain';
+} from '@wartezimmer/domain';
 import { isValidConfigurableTopicId } from '../checkin-topics.js';
 import {
   normalizeTopicSettingsList,

@@ -5,7 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { runComposeAction } from './host-state.js';
 import { startExistingInstallation } from './installation-start.js';
-import type { ComposeStatus } from '@praxis-flow/server-shared';
+import type { ComposeStatus } from '@wartezimmer/server-shared';
 
 for (const entry of ['start', 'restart', 'existing'] as const) {
   for (const outcome of [
@@ -34,7 +34,7 @@ for (const entry of ['start', 'restart', 'existing'] as const) {
           'APP_BIND_ADDRESS=127.0.0.1',
           'SETUP_RESTRICTED_ENABLED=true',
           'SETUP_RESTRICTED_APP_IP=192.0.2.2',
-          'PRAXIS_FLOW_APP_IMAGE=app:test',
+          'WARTEZIMMER_APP_IMAGE=app:test',
         ].join('\n'),
       );
       const running: ComposeStatus = {

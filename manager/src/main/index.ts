@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
-import { createModuleLogger } from '@praxis-flow/server-shared/logger';
+import { createModuleLogger } from '@wartezimmer/server-shared/logger';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {

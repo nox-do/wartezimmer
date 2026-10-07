@@ -7,7 +7,7 @@ import test from 'node:test';
 import { createSetupRequestHandler, type SetupRequestHandlerOptions } from './server.js';
 import type { SetupContext } from './setup-context.js';
 import { testSetupContext } from './test-setup-context.js';
-import { SETUP_API_PROTOCOL_VERSION, SETUP_MANAGER_TOKEN_HEADER } from '@praxis-flow/server-shared';
+import { SETUP_API_PROTOCOL_VERSION, SETUP_MANAGER_TOKEN_HEADER } from '@wartezimmer/server-shared';
 
 const testContext: SetupContext = {
   home: '/unused',
@@ -296,13 +296,13 @@ test('HTTP rebuild waits for startup recovery and rejects an unhealthy installat
 test('host config survives Compose failure while runtime endpoints retain safe errors', async (t) => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-http-observation-'));
   const cli = path.join(home, 'docker');
-  const previous = process.env.PRAXIS_FLOW_DOCKER_CLI;
+  const previous = process.env.WARTEZIMMER_DOCKER_CLI;
   t.after(() => {
-    if (previous === undefined) delete process.env.PRAXIS_FLOW_DOCKER_CLI;
-    else process.env.PRAXIS_FLOW_DOCKER_CLI = previous;
+    if (previous === undefined) delete process.env.WARTEZIMMER_DOCKER_CLI;
+    else process.env.WARTEZIMMER_DOCKER_CLI = previous;
     fs.rmSync(home, { recursive: true, force: true });
   });
-  process.env.PRAXIS_FLOW_DOCKER_CLI = cli;
+  process.env.WARTEZIMMER_DOCKER_CLI = cli;
   fs.writeFileSync(path.join(home, '.env'), 'SETUP_LAN_APP_IP=192.168.1.10\n');
   fs.writeFileSync(
     cli,
@@ -448,16 +448,16 @@ test('restore startup recovery leaves status readable, runs once and releases mu
   const { createPreparedInstallOperation, readInstallOperation } =
     await import('./install-operation.js');
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'restore-http-'));
-  const cliBefore = process.env.PRAXIS_FLOW_DOCKER_CLI;
+  const cliBefore = process.env.WARTEZIMMER_DOCKER_CLI;
   const cli = path.join(home, 'docker');
   fs.writeFileSync(cli, '#!/bin/sh\ncase "$*" in *"ps --all"*) exit 1;; *) echo ok;; esac\n', {
     mode: 0o755,
   });
-  process.env.PRAXIS_FLOW_DOCKER_CLI = cli;
+  process.env.WARTEZIMMER_DOCKER_CLI = cli;
   fs.writeFileSync(path.join(home, '.env'), 'SETUP_LAN_APP_IP=192.168.1.10\n');
   t.after(() => {
-    if (cliBefore === undefined) delete process.env.PRAXIS_FLOW_DOCKER_CLI;
-    else process.env.PRAXIS_FLOW_DOCKER_CLI = cliBefore;
+    if (cliBefore === undefined) delete process.env.WARTEZIMMER_DOCKER_CLI;
+    else process.env.WARTEZIMMER_DOCKER_CLI = cliBefore;
     fs.rmSync(home, { recursive: true, force: true });
   });
   writeRestoreOperation(home, {
@@ -561,19 +561,19 @@ test('tls startup recovery leaves status readable, runs once and releases mutati
   const { createPreparedInstallOperation, readInstallOperation } =
     await import('./install-operation.js');
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'tls-http-'));
-  const cliBefore = process.env.PRAXIS_FLOW_DOCKER_CLI;
+  const cliBefore = process.env.WARTEZIMMER_DOCKER_CLI;
   const cli = path.join(home, 'docker');
   fs.writeFileSync(cli, '#!/bin/sh\ncase "$*" in *"ps --all"*) exit 1;; *) echo ok;; esac\n', {
     mode: 0o755,
   });
-  process.env.PRAXIS_FLOW_DOCKER_CLI = cli;
+  process.env.WARTEZIMMER_DOCKER_CLI = cli;
   fs.writeFileSync(
     path.join(home, '.env'),
     'SETUP_LAN_APP_IP=192.168.1.10\nPROXY_ENABLED=true\nPROXY_MODE=http\nCANONICAL_BASE_URL=http://192.168.1.10\n',
   );
   t.after(() => {
-    if (cliBefore === undefined) delete process.env.PRAXIS_FLOW_DOCKER_CLI;
-    else process.env.PRAXIS_FLOW_DOCKER_CLI = cliBefore;
+    if (cliBefore === undefined) delete process.env.WARTEZIMMER_DOCKER_CLI;
+    else process.env.WARTEZIMMER_DOCKER_CLI = cliBefore;
     fs.rmSync(home, { recursive: true, force: true });
   });
   writeTlsOperation(home, {

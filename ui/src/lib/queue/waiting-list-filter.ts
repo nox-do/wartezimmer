@@ -1,4 +1,4 @@
-import { formatTicketCode } from '@praxis-flow/domain';
+import { formatTicketCode } from '@wartezimmer/domain';
 import { computeWaitMs, isLongWait, LONG_WAIT_THRESHOLD_MINUTES } from './format-wait-duration';
 import type { QueueItem } from './types';
 

@@ -1,5 +1,5 @@
 /**
- * @praxis-flow/flow-core — public shared API.
+ * @wartezimmer/flow-core — public shared API.
  */
 export type * from './shared/types.js';
 

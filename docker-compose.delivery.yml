@@ -7,7 +7,7 @@ x-docker-logging: &docker-logging
 services:
   app:
     logging: *docker-logging
-    image: ${PRAXIS_FLOW_APP_IMAGE:?PRAXIS_FLOW_APP_IMAGE is required}
+    image: ${WARTEZIMMER_APP_IMAGE:?WARTEZIMMER_APP_IMAGE is required}
     # Images come from a verified release package (docker load); never pull from a registry.
     pull_policy: never
     restart: unless-stopped
@@ -24,7 +24,7 @@ services:
       STAFF_SESSION_IDLE_TTL_MS: ${STAFF_SESSION_IDLE_TTL_MS:-7200000}
       SANDBOX_INTERNAL_TOKEN: ${SANDBOX_INTERNAL_TOKEN:?SANDBOX_INTERNAL_TOKEN is required}
       SANDBOX_BASE_URL: ${SANDBOX_BASE_URL:-http://sandbox:8081}
-      SANDBOX_DOCS_BASE_PATH: ${SANDBOX_DOCS_BASE_PATH:-/var/lib/praxis-flow/docs}
+      SANDBOX_DOCS_BASE_PATH: ${SANDBOX_DOCS_BASE_PATH:-/var/lib/wartezimmer/docs}
       CONTACT_LOOKUP_BASE_PATH: ${CONTACT_LOOKUP_BASE_PATH:-/imports}
       TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-false}
     ports:
@@ -32,9 +32,9 @@ services:
       # LAN boundary: publish maintenance only on host loopback (container listens 0.0.0.0:8082).
       - '127.0.0.1:8082:8082'
     volumes:
-      - app_data:/var/lib/praxis-flow/app
-      - ${EXPORTS_HOST_PATH:-~/praxis-flow-exports}:/exports
-      - ${IMPORTS_HOST_PATH:-~/praxis-flow-imports}:/imports
+      - app_data:/var/lib/wartezimmer/app
+      - ${EXPORTS_HOST_PATH:-~/wartezimmer-exports}:/exports
+      - ${IMPORTS_HOST_PATH:-~/wartezimmer-imports}:/imports
     depends_on:
       sandbox:
         condition: service_healthy
@@ -46,7 +46,7 @@ services:
 
   sandbox:
     logging: *docker-logging
-    image: ${PRAXIS_FLOW_SANDBOX_IMAGE:?PRAXIS_FLOW_SANDBOX_IMAGE is required}
+    image: ${WARTEZIMMER_SANDBOX_IMAGE:?WARTEZIMMER_SANDBOX_IMAGE is required}
     pull_policy: never
     restart: unless-stopped
     environment:
@@ -66,7 +66,7 @@ services:
     read_only: true
     security_opt: ['no-new-privileges:true']
     tmpfs:
-      - /var/lib/praxis-flow/sandbox-intake:size=${SANDBOX_INTAKE_TMPFS_SIZE:-256m},mode=0700
+      - /var/lib/wartezimmer/sandbox-intake:size=${SANDBOX_INTAKE_TMPFS_SIZE:-256m},mode=0700
       - /tmp:size=64m,mode=1777
       - /var/log/clamav:size=8m,mode=1777
     healthcheck:

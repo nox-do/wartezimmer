@@ -37,7 +37,7 @@ import {
   validateManagerStateForBackup,
   type ManagerState,
   type PfbackupRestoreResult,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import {
   createDockerAppDataAccess,
   createLocalAppDataAccess,
@@ -194,7 +194,7 @@ function createRestoreId(now = new Date()): string {
 /**
  * Restore-ENV-Merge (kein vollständiges Ersetzen der `.env`):
  * - Backup-Werte gewinnen für alle im Snapshot enthaltenen Keys
- * - Aktuelle Stack-Image-Tags (`PRAXIS_FLOW_*_IMAGE`) bleiben erhalten
+ * - Aktuelle Stack-Image-Tags (`WARTEZIMMER_*_IMAGE`) bleiben erhalten
  * - Keys, die nur in der aktuellen `.env` existieren, bleiben erhalten
  * - Bewusstes Entfernen veralteter Keys braucht eine eigene Remove-Liste
  */
@@ -546,7 +546,7 @@ async function prepareRestore(input: {
       input.runtime.appDataAccess ??
       createDockerAppDataAccess(
         input.ctx.composeProjectName,
-        envMap.get('PRAXIS_FLOW_APP_IMAGE')?.trim() ?? '',
+        envMap.get('WARTEZIMMER_APP_IMAGE')?.trim() ?? '',
       ),
     tlsSidecarBytes: tlsPlan.tlsSidecarBytes,
     discardTlsPreparation: tlsPlan.discardTlsPreparation,
@@ -790,7 +790,7 @@ async function applyPreparedRestore(input: {
     schemaVersion: 1,
     id: input.restoreId,
     createdAt: new Date().toISOString(),
-    utilityImage: readEnvMap(input.prepared.envPath).get('PRAXIS_FLOW_APP_IMAGE')?.trim() || null,
+    utilityImage: readEnvMap(input.prepared.envPath).get('WARTEZIMMER_APP_IMAGE')?.trim() || null,
     installationId: input.installationId,
     phase: 'prepared',
   };

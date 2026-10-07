@@ -1,4 +1,4 @@
-import { projectManagerStatus } from '@praxis-flow/server-shared/manager-status-projection';
+import { projectManagerStatus } from '@wartezimmer/server-shared/manager-status-projection';
 import {
   failedRuntimeObservation,
   runtimeSnapshot,
@@ -7,7 +7,7 @@ import {
 import assert from 'node:assert/strict';
 import { createWizardController } from './wizard-controller.js';
 import test from 'node:test';
-import type { HostRuntimeHealth } from '@praxis-flow/server-shared/setup-api';
+import type { HostRuntimeHealth } from '@wartezimmer/server-shared/setup-api';
 import type { HostStatus } from '../shared/host-status.js';
 import {
   freshInstallHostStatus,

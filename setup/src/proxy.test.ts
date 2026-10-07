@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { PRAXIS_FLOW_PROXY_IMAGE_COMPOSE_DEFAULT_REF } from '@praxis-flow/server-shared';
+import { WARTEZIMMER_PROXY_IMAGE_COMPOSE_DEFAULT_REF } from '@wartezimmer/server-shared';
 import {
   assertComposeRemoveSucceeded,
   buildProxyEnvUpdates,
@@ -168,10 +168,10 @@ test('resolveCanonicalBaseUrlForProxyPlan keeps custom hostname host with proxy 
         httpPort: 80,
         appBindAddress: '127.0.0.1',
       },
-      existingCanonical: 'http://praxis-flow.local:8080',
+      existingCanonical: 'http://wartezimmer.local:8080',
       nextLanIp: '192.168.1.50',
     }),
-    'http://praxis-flow.local',
+    'http://wartezimmer.local',
   );
 });
 
@@ -320,10 +320,10 @@ test('resolveCanonicalBaseUrlForProxyPlan restores :8080 for custom hostname whe
         httpPort: 80,
         appBindAddress: '0.0.0.0',
       },
-      existingCanonical: 'http://praxis-flow.local',
+      existingCanonical: 'http://wartezimmer.local',
       nextLanIp: '192.168.1.50',
     }),
-    'http://praxis-flow.local:8080',
+    'http://wartezimmer.local:8080',
   );
 });
 
@@ -410,7 +410,7 @@ test('buildProxyStatus distinguishes missing container from stopped service', ()
       running: false,
       services: [
         {
-          name: 'praxis-flow-proxy',
+          name: 'wartezimmer-proxy',
           service: 'proxy',
           state: 'exited',
           health: null,
@@ -425,19 +425,19 @@ test('buildProxyStatus distinguishes missing container from stopped service', ()
 });
 
 test('resolveProxyImageRef falls back to the Compose stock default', () => {
-  assert.equal(resolveProxyImageRef(undefined), PRAXIS_FLOW_PROXY_IMAGE_COMPOSE_DEFAULT_REF);
-  assert.equal(resolveProxyImageRef(new Map()), PRAXIS_FLOW_PROXY_IMAGE_COMPOSE_DEFAULT_REF);
+  assert.equal(resolveProxyImageRef(undefined), WARTEZIMMER_PROXY_IMAGE_COMPOSE_DEFAULT_REF);
+  assert.equal(resolveProxyImageRef(new Map()), WARTEZIMMER_PROXY_IMAGE_COMPOSE_DEFAULT_REF);
   assert.equal(
     resolveProxyImageRef(
-      new Map([['PRAXIS_FLOW_PROXY_IMAGE', 'praxis-flow-proxy:2.11.4-acmedns']]),
+      new Map([['WARTEZIMMER_PROXY_IMAGE', 'wartezimmer-proxy:2.11.4-acmedns']]),
     ),
-    'praxis-flow-proxy:2.11.4-acmedns',
+    'wartezimmer-proxy:2.11.4-acmedns',
   );
 });
 
 test('ensureProxyImageAvailable accepts the release-supplied local image', async () => {
   const result = await ensureProxyImageAvailable(
-    new Map([['PRAXIS_FLOW_PROXY_IMAGE', 'caddy:test']]),
+    new Map([['WARTEZIMMER_PROXY_IMAGE', 'caddy:test']]),
     {
       imageExists: async () => true,
     },

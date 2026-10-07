@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { DEFAULT_ROOM_PANELS_SETTINGS, normalizeRoomPanelsSettings } from '@praxis-flow/domain';
+import { DEFAULT_ROOM_PANELS_SETTINGS, normalizeRoomPanelsSettings } from '@wartezimmer/domain';
 import type { PatchOpsSettingsBody } from '../../api/ops-openapi-types.js';
 import type { CoreDatabase } from '../../shared/db/database.js';
 import { buildOpsSettingsUpdate } from './ops-settings-mapper.js';

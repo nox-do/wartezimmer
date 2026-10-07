@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import path from 'node:path';
-import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
+import { ManagerApiError } from '@wartezimmer/server-shared/setup-api';
 
 export type HostMutationLock = {
   assertAvailable(): void;

@@ -1,4 +1,4 @@
-import type { ManagerError } from '@praxis-flow/server-shared/setup-api';
+import type { ManagerError } from '@wartezimmer/server-shared/setup-api';
 import { failedRuntimeObservation, type RuntimeObservation } from './runtime-observation.js';
 import type { HostRuntimeHealth } from '../shared/host-runtime-health.js';
 import type { HostStatus } from '../shared/host-status.js';

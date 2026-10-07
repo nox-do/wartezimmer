@@ -16,7 +16,7 @@ test('release archives preserve payload and omit macOS AppleDouble metadata', ()
       for (const target of [source, path.join(source, 'manifest.json')]) {
         const xattr = spawnSync(
           '/usr/bin/xattr',
-          ['-w', 'com.praxisflow.test', 'metadata', target],
+          ['-w', 'com.wartezimmer.test', 'metadata', target],
           { encoding: 'utf8' },
         );
         assert.equal(xattr.status, 0, xattr.stderr);

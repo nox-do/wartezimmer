@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { Worker } from 'node:worker_threads';
 import { fileURLToPath } from 'node:url';
 import type { DatabaseSync } from 'node:sqlite';
-import { openDb, createRuntime } from '@praxis-flow/flow-core/server';
+import { openDb, createRuntime } from '@wartezimmer/flow-core/server';
 
 const workerPath = fileURLToPath(new URL('./parallel-checkin-worker.ts', import.meta.url));
 const workerExecArgv = ['--import', 'tsx'];

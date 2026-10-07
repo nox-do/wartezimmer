@@ -3,14 +3,14 @@ import {
   isValidLongWaitThreshold,
 } from '../db/database-wait-settings.js';
 import type { DatabaseSync } from 'node:sqlite';
-import { settingsDbSnapshotsEquivalentForRestore } from '@praxis-flow/server-shared';
-import { validateCatalogIntegrity } from '@praxis-flow/flow-core';
-import { loadCatalog } from '@praxis-flow/flow-core/server';
+import { settingsDbSnapshotsEquivalentForRestore } from '@wartezimmer/server-shared';
+import { validateCatalogIntegrity } from '@wartezimmer/flow-core';
+import { loadCatalog } from '@wartezimmer/flow-core/server';
 import {
   normalizeRoomPanelsSettings,
   normalizeTerminalPatientLocales,
   type RoomPanelPlacementConfig,
-} from '@praxis-flow/domain';
+} from '@wartezimmer/domain';
 import {
   validateTopicSettings,
   normalizeTopicSettingsList,

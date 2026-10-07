@@ -8,11 +8,11 @@
  * Usage:
  *   npm run release:images
  *   npm run release:images -- --version 1.4.2
- *   PRAXIS_FLOW_RELEASE_VERSION=1.4.2 npm run release:images
+ *   WARTEZIMMER_RELEASE_VERSION=1.4.2 npm run release:images
  *   npm run release:images:current -- --version 1.4.2   # pack only, skip build
  *
- * Output (under dist/releases/praxis-flow-<version>/linux-<arch>/):
- *   praxis-flow-<version>-linux-<arch>.pfinstall (complete offline bundle)
+ * Output (under dist/releases/wartezimmer-<version>/linux-<arch>/):
+ *   wartezimmer-<version>-linux-<arch>.pfinstall (complete offline bundle)
  *   manifest.json
  *   SHA256SUMS.txt
  *   THIRD_PARTY_NOTICES.txt
@@ -44,21 +44,21 @@ function printHelp(proxyImage) {
   console.log(`build-release-images — Wartezimmer delivery release package
 
 Options:
-  --version <semver>   Release tag (default: package.json version or PRAXIS_FLOW_RELEASE_VERSION)
+  --version <semver>   Release tag (default: package.json version or WARTEZIMMER_RELEASE_VERSION)
   --output <dir>       Output directory (default: dist/releases)
   --platform <arch>   amd64, arm64, linux/amd64, linux/arm64, all (default: all)
   --no-build           Package existing architecture-tagged images only
   --help               Show this help
 
 Images tagged as:
-  praxis-flow/app:<version>
-  praxis-flow/sandbox:<version>
+  wartezimmer/app:<version>
+  wartezimmer/sandbox:<version>
   ${proxyImage}   ← optional offline reverse proxy with ACME-DNS (not auto-started)
 `);
 }
 
 function parseArgs(argv) {
-  let version = process.env.PRAXIS_FLOW_RELEASE_VERSION?.trim() || null;
+  let version = process.env.WARTEZIMMER_RELEASE_VERSION?.trim() || null;
   let noBuild = false;
   let platformSelection;
   let outputRoot = path.join(root, 'dist', 'releases');
@@ -146,8 +146,8 @@ function assertImageExists(imageRef) {
 }
 
 function buildReleaseImages(version, platform) {
-  const appImage = `praxis-flow/app:${version}`;
-  const sandboxImage = `praxis-flow/sandbox:${version}`;
+  const appImage = `wartezimmer/app:${version}`;
+  const sandboxImage = `wartezimmer/sandbox:${version}`;
 
   console.log(`Building ${appImage} …`);
   run('docker', appDockerBuildArgs(version, platform));
@@ -225,9 +225,9 @@ async function packImages(archivePath, imageRefs, platform) {
 }
 
 async function packReleaseBundle(archivePath, imageRefs, metadata) {
-  const stagingRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'praxis-flow-release-'));
+  const stagingRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'wartezimmer-release-'));
   try {
-    const imagesPath = path.join(stagingRoot, 'images', 'praxis-flow-images.tar');
+    const imagesPath = path.join(stagingRoot, 'images', 'wartezimmer-images.tar');
     await packImages(imagesPath, imageRefs, metadata.platform);
 
     for (const relativePath of [
@@ -257,9 +257,9 @@ async function loadProxyReleaseConfig() {
   const modulePath = path.join(root, 'packages/server-shared/dist/pfupdate.js');
   const pfupdate = await import(pathToFileURL(modulePath).href);
   return {
-    imageRef: pfupdate.PRAXIS_FLOW_PROXY_IMAGE_REF,
-    baseImageRef: pfupdate.PRAXIS_FLOW_PROXY_BASE_IMAGE_REF,
-    registryDigest: pfupdate.PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
+    imageRef: pfupdate.WARTEZIMMER_PROXY_IMAGE_REF,
+    baseImageRef: pfupdate.WARTEZIMMER_PROXY_BASE_IMAGE_REF,
+    registryDigest: pfupdate.WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST,
   };
 }
 
@@ -272,8 +272,8 @@ if (showHelp) {
   process.exit(0);
 }
 
-const appImage = `praxis-flow/app:${version}`;
-const sandboxImage = `praxis-flow/sandbox:${version}`;
+const appImage = `wartezimmer/app:${version}`;
+const sandboxImage = `wartezimmer/sandbox:${version}`;
 assertDockerReady();
 const api = runCapture('docker', ['version', '--format', '{{.Server.APIVersion}}']);
 const [apiMajor, apiMinor] = api.split('.').map(Number);
@@ -283,7 +283,7 @@ if (!(apiMajor > 1 || (apiMajor === 1 && apiMinor >= 49))) {
   );
 }
 for (const platform of platforms) {
-  const releaseDir = path.join(outputRoot, `praxis-flow-${version}`, platform.replace('/', '-'));
+  const releaseDir = path.join(outputRoot, `wartezimmer-${version}`, platform.replace('/', '-'));
   const archiveName = releaseArchiveName(version, platform);
   const archivePath = path.join(releaseDir, archiveName);
 
@@ -354,9 +354,9 @@ for (const platform of platforms) {
     archive: archiveName,
     sha256: archiveSha256,
     envExample: {
-      PRAXIS_FLOW_APP_IMAGE: appImage,
-      PRAXIS_FLOW_SANDBOX_IMAGE: sandboxImage,
-      PRAXIS_FLOW_PROXY_IMAGE: proxyImage,
+      WARTEZIMMER_APP_IMAGE: appImage,
+      WARTEZIMMER_SANDBOX_IMAGE: sandboxImage,
+      WARTEZIMMER_PROXY_IMAGE: proxyImage,
     },
     notes: {
       proxyImageSizeHintMb: 85,

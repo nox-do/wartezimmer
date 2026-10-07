@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { isTerminalPatientLocale, type TerminalPatientLocale } from '@praxis-flow/domain';
+import { isTerminalPatientLocale, type TerminalPatientLocale } from '@wartezimmer/domain';
 import type { CoreDatabase } from '../shared/db/database.js';
 import type { CreateCheckinBody } from '../api/checkin-openapi-types.js';
 import { checkinSchemas } from '../api/generated/checkin.fastify-schemas.js';

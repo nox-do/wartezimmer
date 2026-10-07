@@ -60,7 +60,7 @@ for (const fault of [
   'stop-fails',
 ] as const)
   test(`rollback audits restored contract and closes unverified runtime: ${fault ?? 'success'}`, async () => {
-    const { DEFAULT_PORTAL_PROXY_CONTRACT } = await import('@praxis-flow/server-shared');
+    const { DEFAULT_PORTAL_PROXY_CONTRACT } = await import('@wartezimmer/server-shared');
     const { runtimeAuditEnv, runtimeAuditCompose } =
       await import('./runtime-postcondition-test-fixtures.js');
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-rollback-audit-'));

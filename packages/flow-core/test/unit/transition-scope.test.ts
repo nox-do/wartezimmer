@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assertActingLocationScope, assertCallTargetLocation } from '@praxis-flow/flow-core';
-import { assertTransitionAllowed } from '@praxis-flow/flow-core';
+import { assertActingLocationScope, assertCallTargetLocation } from '@wartezimmer/flow-core';
+import { assertTransitionAllowed } from '@wartezimmer/flow-core';
 
 const catalog = {
   locations: [{ id: 'room_1', name: 'Raum 1', active: true }],

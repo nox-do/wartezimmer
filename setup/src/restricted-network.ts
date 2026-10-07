@@ -7,8 +7,8 @@ import type {
   RestrictedNetworkInspectResult,
   RestrictedNetworkStatus,
   TlsStatus,
-} from '@praxis-flow/server-shared';
-import { TLS_OPERATOR_ZONE_DEFAULT } from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
+import { TLS_OPERATOR_ZONE_DEFAULT } from '@wartezimmer/server-shared';
 import { auditStaffPublishedBindings } from './network-bindings.js';
 import { networkInterfaceId } from './network.js';
 

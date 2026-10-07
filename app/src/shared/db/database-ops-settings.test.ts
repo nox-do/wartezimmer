@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import type { StatementSync } from 'node:sqlite';
 import test from 'node:test';
-import { DEFAULT_ROOM_PANELS_SETTINGS } from '@praxis-flow/domain';
+import { DEFAULT_ROOM_PANELS_SETTINGS } from '@wartezimmer/domain';
 import {
   getOpsSettingsFromDb,
   nextOpsSettingsUpdatedAt,

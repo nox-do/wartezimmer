@@ -1,5 +1,5 @@
-import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
-import { projectManagerStatus } from '@praxis-flow/server-shared/manager-status-projection';
+import { hasBlockingMaintenanceOperation } from '@wartezimmer/server-shared/manager-status-projection';
+import { projectManagerStatus } from '@wartezimmer/server-shared/manager-status-projection';
 import type { HostStatus } from '../shared/host-status.js';
 import { deliveryImagesSummary, needsDeliveryImages } from './delivery-images-flow.js';
 

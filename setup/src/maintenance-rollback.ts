@@ -1,7 +1,7 @@
 import { durableWrite } from './restricted-operation.js';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { ComposeStatus } from '@praxis-flow/server-shared';
+import type { ComposeStatus } from '@wartezimmer/server-shared';
 import type { AppDataVolumeAccess } from './app-data-volume.js';
 import type { ComposeRunOptions } from './docker.js';
 import { readEnvMap } from './env-file.js';

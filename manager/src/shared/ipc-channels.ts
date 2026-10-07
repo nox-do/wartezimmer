@@ -1,4 +1,4 @@
-import { ManagerApiError, type ManagerError } from '@praxis-flow/server-shared/setup-api';
+import { ManagerApiError, type ManagerError } from '@wartezimmer/server-shared/setup-api';
 
 export const IPC_SETUP_API_CALL = 'wartezimmer:setup-api-call';
 export const IPC_OPEN_EXTERNAL_URL = 'wartezimmer:open-external-url';

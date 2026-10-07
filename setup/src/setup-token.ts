@@ -1,5 +1,5 @@
 import { timingSafeEqual } from 'node:crypto';
-import { SETUP_MANAGER_TOKEN_ENV } from '@praxis-flow/server-shared';
+import { SETUP_MANAGER_TOKEN_ENV } from '@wartezimmer/server-shared';
 
 export function readSetupManagerTokenFromEnv(): string | null {
   const raw = process.env[SETUP_MANAGER_TOKEN_ENV]?.trim();

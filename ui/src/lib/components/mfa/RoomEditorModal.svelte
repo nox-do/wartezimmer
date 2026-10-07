@@ -5,7 +5,7 @@
   import type { PracticeRoomWithPanels } from '$lib/queue/ops-settings-api';
   import { emptyRoomPanels, generateRoomId, isValidRoomId } from '$lib/queue/ops-settings-api';
   import { t } from '$lib/i18n/i18nStore.svelte';
-  import { isReservedRoomLabel } from '@praxis-flow/domain';
+  import { isReservedRoomLabel } from '@wartezimmer/domain';
   import { toastStore } from '$lib/stores/toastStore';
 
   interface Props {

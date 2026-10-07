@@ -3,7 +3,7 @@ import {
   ensureSingleDefaultCallTarget as domainEnsureSingleDefaultCallTarget,
   listEnabledRooms as domainListEnabledRooms,
   resolveDefaultCallRoomId as domainResolveDefaultCallRoomId,
-} from '@praxis-flow/domain';
+} from '@wartezimmer/domain';
 
 export function listEnabledRooms(rooms: PracticeRoom[]): PracticeRoom[] {
   return domainListEnabledRooms(rooms);

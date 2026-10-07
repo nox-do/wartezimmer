@@ -1,7 +1,7 @@
 import { restrictedPlatformSupported } from './restricted-platform.js';
 import { assertWindowsHostPath } from './windows-host-path.js';
 import { runHostMutation } from './maintenance-operation-guard.js';
-import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
+import { ManagerApiError } from '@wartezimmer/server-shared/setup-api';
 import fs from 'node:fs';
 import {
   durableWrite,
@@ -22,9 +22,9 @@ import type {
   ComposeServiceStatus,
   ComposeStatus,
   DockerStatus,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 
-export type { DockerStatus, ComposeServiceStatus, ComposeStatus } from '@praxis-flow/server-shared';
+export type { DockerStatus, ComposeServiceStatus, ComposeStatus } from '@wartezimmer/server-shared';
 
 export function supportedComposeVersion(value: string): boolean {
   const match = value.trim().match(/^v?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/);
@@ -632,9 +632,9 @@ function buildComposeArgv(
         delete env[match[1]!];
     }
     for (const key of [
-      'PRAXIS_FLOW_APP_IMAGE',
-      'PRAXIS_FLOW_SANDBOX_IMAGE',
-      'PRAXIS_FLOW_PROXY_IMAGE',
+      'WARTEZIMMER_APP_IMAGE',
+      'WARTEZIMMER_SANDBOX_IMAGE',
+      'WARTEZIMMER_PROXY_IMAGE',
       'COMPOSE_PROFILES',
     ])
       delete env[key];

@@ -13,7 +13,7 @@ console.log(
   'dev-ui: /api + /internal preview embed -> http://127.0.0.1:8080 (app proxies sandbox)',
 );
 
-execSync('npm run -w @praxis-flow/ui dev', {
+execSync('npm run -w @wartezimmer/ui dev', {
   stdio: 'inherit',
   env: devEnv,
 });

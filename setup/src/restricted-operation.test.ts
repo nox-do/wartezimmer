@@ -17,7 +17,7 @@ import { readEnvMap } from './env-file.js';
 for (const enable of [true, false])
   test(`SIGKILL during ${enable ? 'apply' : 'remove'} is recovered closed before ordinary start`, async () => {
     const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-crash-'));
-    const previousCli = process.env.PRAXIS_FLOW_DOCKER_CLI;
+    const previousCli = process.env.WARTEZIMMER_DOCKER_CLI;
     try {
       fs.writeFileSync(
         path.join(home, '.env'),
@@ -50,7 +50,7 @@ for (const enable of [true, false])
           '"\ncase "$1" in ps) printf "aaaaaaaaaaaa\\n";; esac\n',
         { mode: 0o755 },
       );
-      process.env.PRAXIS_FLOW_DOCKER_CLI = cli;
+      process.env.WARTEZIMMER_DOCKER_CLI = cli;
       const options = { projectRoot: home, composeProjectName: 'crash-test', build: false };
       const result = enable ? await composeUp(options) : await composeRestart(options);
       assert.equal(result.ok, true, result.log);
@@ -68,15 +68,15 @@ for (const enable of [true, false])
         /proxy-restricted/,
       );
     } finally {
-      if (previousCli === undefined) delete process.env.PRAXIS_FLOW_DOCKER_CLI;
-      else process.env.PRAXIS_FLOW_DOCKER_CLI = previousCli;
+      if (previousCli === undefined) delete process.env.WARTEZIMMER_DOCKER_CLI;
+      else process.env.WARTEZIMMER_DOCKER_CLI = previousCli;
       fs.rmSync(home, { recursive: true, force: true });
     }
   });
 
 test('live operations exclude another start and stage restart:no without changing committed env', async () => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-pending-'));
-  const previousCli = process.env.PRAXIS_FLOW_DOCKER_CLI;
+  const previousCli = process.env.WARTEZIMMER_DOCKER_CLI;
   try {
     fs.writeFileSync(
       path.join(home, '.env'),
@@ -94,7 +94,7 @@ test('live operations exclude another start and stage restart:no without changin
     );
     const cli = path.join(home, 'docker-mock');
     fs.writeFileSync(cli, '#!/bin/sh\nprintf "%s" "$*"\n', { mode: 0o755 });
-    process.env.PRAXIS_FLOW_DOCKER_CLI = cli;
+    process.env.WARTEZIMMER_DOCKER_CLI = cli;
     const validated = await composeValidateConfig({
       projectRoot: home,
       composeProjectName: 'pending',
@@ -108,8 +108,8 @@ test('live operations exclude another start and stage restart:no without changin
     );
     assert.equal(readEnvMap(path.join(home, '.env')).get('SETUP_RESTRICTED_ENABLED'), 'false');
   } finally {
-    if (previousCli === undefined) delete process.env.PRAXIS_FLOW_DOCKER_CLI;
-    else process.env.PRAXIS_FLOW_DOCKER_CLI = previousCli;
+    if (previousCli === undefined) delete process.env.WARTEZIMMER_DOCKER_CLI;
+    else process.env.WARTEZIMMER_DOCKER_CLI = previousCli;
     fs.rmSync(home, { recursive: true, force: true });
   }
 });

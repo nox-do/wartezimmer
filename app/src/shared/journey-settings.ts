@@ -2,8 +2,8 @@ import {
   COMPLETED_WHEN_VALUES,
   MOVEMENT_MODES,
   PUBLIC_DISPLAY_MODES,
-} from '@praxis-flow/flow-core';
-import { WAITING_ROOM_LOCATION_ID } from '@praxis-flow/domain';
+} from '@wartezimmer/flow-core';
+import { WAITING_ROOM_LOCATION_ID } from '@wartezimmer/domain';
 import { isRecord } from './type-guards.js';
 
 export type JourneyStepSetting = {

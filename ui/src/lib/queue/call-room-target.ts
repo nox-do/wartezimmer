@@ -2,7 +2,7 @@ import type { QueueItem } from './types';
 import type { PracticeRoom } from './ops-settings-api';
 import type { RoomTarget } from './room-target';
 import { roomTargetFromTicketDestination } from './room-target';
-import { isWaitingRoomLocationId } from '@praxis-flow/domain';
+import { isWaitingRoomLocationId } from '@wartezimmer/domain';
 
 export type CallRoomTargetOptions = {
   rooms: readonly (Pick<PracticeRoom, 'roomId' | 'enabled'> &

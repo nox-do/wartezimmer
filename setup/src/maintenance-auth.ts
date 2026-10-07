@@ -4,7 +4,7 @@ import type { SetupMode } from './setup-context.js';
 
 let installHome: string | null = null;
 let setupMode: SetupMode = 'install';
-export const LOCAL_DEV_MAINTENANCE_TOKEN = 'praxis-flow-local-dev-maintenance-token';
+export const LOCAL_DEV_MAINTENANCE_TOKEN = 'wartezimmer-local-dev-maintenance-token';
 
 export function configureMaintenanceAuthHome(home: string, mode: SetupMode = 'install'): void {
   installHome = home;

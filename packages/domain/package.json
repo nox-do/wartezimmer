@@ -1,5 +1,5 @@
 {
-  "name": "@praxis-flow/domain",
+  "name": "@wartezimmer/domain",
   "private": true,
   "version": "6.1.1",
   "type": "module",

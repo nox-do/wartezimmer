@@ -33,7 +33,7 @@ docs_data
 state
 backups
 dumps
-praxis-flow-source-*.tar.gz
+wartezimmer-source-*.tar.gz
 **/*.pfinstall
 **/*.pfupdate
 seed

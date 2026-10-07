@@ -1,7 +1,7 @@
 <script lang="ts">
   import { wizardError, wizardIsBusy } from './wizard-controller.js';
 
-  import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
+  import { hasBlockingMaintenanceOperation } from '@wartezimmer/server-shared/manager-status-projection';
   import { managerStatusViewModel } from './manager-status-view-model.js';
   import { onMount } from 'svelte';
   import type { WartezimmerManagerApi } from '../shared/wartezimmer-manager-api.js';

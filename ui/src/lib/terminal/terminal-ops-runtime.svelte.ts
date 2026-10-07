@@ -1,4 +1,4 @@
-import { DEFAULT_TERMINAL_PATIENT_LOCALES } from '@praxis-flow/domain';
+import { DEFAULT_TERMINAL_PATIENT_LOCALES } from '@wartezimmer/domain';
 import {
   createDevicePairingRuntime,
   type DevicePairingMessages,

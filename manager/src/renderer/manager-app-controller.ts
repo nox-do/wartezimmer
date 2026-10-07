@@ -1,5 +1,5 @@
 import { tabDisabled } from './manager-main-nav.js';
-import type { ManagerError } from '@praxis-flow/server-shared/setup-api';
+import type { ManagerError } from '@wartezimmer/server-shared/setup-api';
 import {
   createHostRefreshController,
   type HostRefreshController,

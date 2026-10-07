@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { HostLifecycle } from '@praxis-flow/server-shared/setup-api';
+import type { HostLifecycle } from '@wartezimmer/server-shared/setup-api';
 import { hostLifecycleSummary } from './host-lifecycle-view-model.js';
 
 const lifecycle: HostLifecycle = {

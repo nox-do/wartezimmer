@@ -2,7 +2,7 @@ import {
   canonicalizeBirthDate,
   isValidTerminalLastName,
   isValidTerminalPhoneNumber,
-} from '@praxis-flow/domain';
+} from '@wartezimmer/domain';
 import { domainError } from '../errors/domain-error.js';
 
 export function assertValidTerminalPhoneNumber(phoneNumber: string): void {

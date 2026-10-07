@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { formatTicketCode } from '@praxis-flow/domain';
+  import { formatTicketCode } from '@wartezimmer/domain';
   import { LogOut, Trash2 } from '@lucide/svelte';
   import Modal from '$lib/components/Modal.svelte';
   import Button from '$lib/components/forms/Button.svelte';

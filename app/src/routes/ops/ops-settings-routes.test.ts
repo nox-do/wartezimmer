@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import Fastify from 'fastify';
 import type { CoreDatabase } from '../../shared/db/database.js';
-import { DEFAULT_ROOM_PANELS_SETTINGS } from '@praxis-flow/domain';
+import { DEFAULT_ROOM_PANELS_SETTINGS } from '@wartezimmer/domain';
 import { createSerializedExecutor, registerOpsSettingsRoutes } from './ops-settings-routes.js';
 
 test('settings updates execute sequentially even while an earlier update awaits', async () => {

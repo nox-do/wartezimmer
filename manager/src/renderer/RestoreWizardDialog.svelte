@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
+  import { hasBlockingMaintenanceOperation } from '@wartezimmer/server-shared/manager-status-projection';
   import { managerShell } from './manager-shell-state.svelte.js';
   import { managerStatusViewModel } from './manager-status-view-model.js';
   import {

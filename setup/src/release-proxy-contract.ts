@@ -5,7 +5,7 @@ import {
   parsePortalProxyContract,
   type PfupdateManifestV1,
   type PortalProxyContract,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import { durableWrite } from './restricted-operation.js';
 import { readTlsStatus } from './host-tls.js';
 import { resolveProxyTlsPaths, writeGeneratedTlsCaddyfile } from './proxy-tls.js';
@@ -46,7 +46,7 @@ export async function installReleaseProxyContract(
   const file = resolveProxyTlsPaths(home).caddyfile;
   if (
     fs.existsSync(file) &&
-    !/^# PRAXIS-FLOW-GENERATED LAN-TLS v\d+/m.test(fs.readFileSync(file, 'utf8'))
+    !/^# WARTEZIMMER-GENERATED LAN-TLS v\d+/m.test(fs.readFileSync(file, 'utf8'))
   )
     throw new Error('Operator-eigene Caddy-Konfiguration wird beim Update nicht überschrieben.');
   writeGeneratedTlsCaddyfile(home, tls, env);

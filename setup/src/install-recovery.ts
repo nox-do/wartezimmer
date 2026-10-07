@@ -3,8 +3,8 @@ import type {
   InstallFinishInput,
   InstallFinishResult,
   InstallRecoveryPreview,
-} from '@praxis-flow/server-shared';
-import { currentTlsClaimsHttps } from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
+import { currentTlsClaimsHttps } from '@wartezimmer/server-shared';
 import path from 'node:path';
 import {
   readInstallOperation,

@@ -13,11 +13,11 @@ import {
   PFUPDATE_OPTIONAL_GATEWAY_TEMPLATE_PATHS,
   PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS,
   PFUPDATE_OPTIONAL_PROXY_NOTICE_PATHS,
-  PRAXIS_FLOW_PROXY_IMAGE_REF,
-  PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
+  WARTEZIMMER_PROXY_IMAGE_REF,
+  WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST,
   serializePfupdateManifest,
   type PfupdateAllowedFilePath,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import { sha256File } from './pfupdate-package.js';
 
 const defaultReleaseVersion = '2026.08.0';
@@ -58,20 +58,20 @@ export function buildTestPfupdateArchive(
   const withProxy = options.withProxy !== false;
   const staging = fs.mkdtempSync(path.join(os.tmpdir(), 'pfupdate-build-'));
   try {
-    const imagesTar = path.join(staging, 'images', 'praxis-flow-images.tar');
+    const imagesTar = path.join(staging, 'images', 'wartezimmer-images.tar');
     fs.mkdirSync(path.dirname(imagesTar), { recursive: true });
     fs.writeFileSync(imagesTar, 'fake-docker-save-tar');
 
     const fileEntries = [
-      writeFileDigest(staging, 'images/praxis-flow-images.tar', 'fake-docker-save-tar'),
+      writeFileDigest(staging, 'images/wartezimmer-images.tar', 'fake-docker-save-tar'),
       writeFileDigest(staging, 'templates/docker-compose.delivery.yml', 'services: {}\n'),
       writeFileDigest(
         staging,
         'templates/.env.example',
         [
-          `PRAXIS_FLOW_APP_IMAGE=praxis-flow/app:${version}`,
-          ...(withGateway ? [`PRAXIS_FLOW_GATEWAY_IMAGE=praxis-flow/gateway:${version}`] : []),
-          ...(withProxy ? [`PRAXIS_FLOW_PROXY_IMAGE=${PRAXIS_FLOW_PROXY_IMAGE_REF}`] : []),
+          `WARTEZIMMER_APP_IMAGE=wartezimmer/app:${version}`,
+          ...(withGateway ? [`WARTEZIMMER_GATEWAY_IMAGE=wartezimmer/gateway:${version}`] : []),
+          ...(withProxy ? [`WARTEZIMMER_PROXY_IMAGE=${WARTEZIMMER_PROXY_IMAGE_REF}`] : []),
           '',
         ].join('\n'),
       ),
@@ -107,16 +107,16 @@ export function buildTestPfupdateArchive(
       releaseVersion: version,
       minimumManagerVersion: '0.2.0',
       images: {
-        app: `praxis-flow/app:${version}`,
-        sandbox: `praxis-flow/sandbox:${version}`,
-        ...(withGateway ? { gateway: `praxis-flow/gateway:${version}` } : {}),
-        ...(withProxy ? { proxy: PRAXIS_FLOW_PROXY_IMAGE_REF } : {}),
+        app: `wartezimmer/app:${version}`,
+        sandbox: `wartezimmer/sandbox:${version}`,
+        ...(withGateway ? { gateway: `wartezimmer/gateway:${version}` } : {}),
+        ...(withProxy ? { proxy: WARTEZIMMER_PROXY_IMAGE_REF } : {}),
       },
       ...(withProxy
         ? {
             imageDigests: {
               proxy: {
-                registryDigest: PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
+                registryDigest: WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST,
                 archiveImageId: `sha256:${'d'.repeat(64)}`,
                 platform:
                   options.platform ?? `linux/${process.arch === 'x64' ? 'amd64' : process.arch}`,

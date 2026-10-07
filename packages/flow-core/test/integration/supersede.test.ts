@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { openDb, createRuntime } from '@praxis-flow/flow-core/server';
+import { openDb, createRuntime } from '@wartezimmer/flow-core/server';
 
 function testRuntime() {
   const db = openDb({ path: ':memory:' });

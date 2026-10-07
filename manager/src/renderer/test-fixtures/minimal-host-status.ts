@@ -1,4 +1,4 @@
-import type { HostLifecycle } from '@praxis-flow/server-shared';
+import type { HostLifecycle } from '@wartezimmer/server-shared';
 import type { HostStatus } from '../../shared/host-status.js';
 
 const CONFIGURED_GATEWAY = {

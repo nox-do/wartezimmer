@@ -12,7 +12,7 @@ import {
   writeGeneratedTlsCaddyfile,
 } from './proxy-tls.js';
 
-const GENERATED_MARKER_PATTERN = /^# PRAXIS-FLOW-GENERATED LAN-TLS v\d+\s*$/m;
+const GENERATED_MARKER_PATTERN = /^# WARTEZIMMER-GENERATED LAN-TLS v\d+\s*$/m;
 
 export type RegenerateProxyConfigResult = {
   caddyfilePath: string;

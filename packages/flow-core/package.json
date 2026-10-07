@@ -1,5 +1,5 @@
 {
-  "name": "@praxis-flow/flow-core",
+  "name": "@wartezimmer/flow-core",
   "version": "6.1.1",
   "private": true,
   "type": "module",
@@ -25,7 +25,7 @@
     "test": "npm run build && node --import tsx --test --test-reporter=dot 'test/**/*.test.ts'"
   },
   "dependencies": {
-    "@praxis-flow/domain": "*"
+    "@wartezimmer/domain": "*"
   },
   "devDependencies": {
     "@types/node": "^26.1.0",

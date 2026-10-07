@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
-import { validateCatalogIntegrity } from '@praxis-flow/flow-core';
-import { loadCatalog } from '@praxis-flow/flow-core/server';
+import { validateCatalogIntegrity } from '@wartezimmer/flow-core';
+import { loadCatalog } from '@wartezimmer/flow-core/server';
 import { createCurrentSchema } from '../db/create-current-schema.js';
 import { exportSettingsSnapshotFromDb } from './settings-snapshot-export.js';
 import {

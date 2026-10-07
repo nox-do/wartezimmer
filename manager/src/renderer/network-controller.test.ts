@@ -346,7 +346,7 @@ test('re-enabling proxy recreates a running stack whose healthcheck is still sta
       compose: {
         running: false,
         services: [
-          { name: 'praxis-flow-app', service: 'app', state: 'running', health: 'starting' },
+          { name: 'wartezimmer-app', service: 'app', state: 'running', health: 'starting' },
         ],
       },
     }),

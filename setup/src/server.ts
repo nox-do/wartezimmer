@@ -7,7 +7,7 @@ import { recoverRestoreOperation } from './settings-backup-restore.js';
 import { readUpdateOperationStatus } from './update-operation.js';
 import { recoverUpdateOperation } from './settings-backup-update.js';
 import type { HostMutationLock } from './host-mutation-lock.js';
-import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
+import { ManagerApiError } from '@wartezimmer/server-shared/setup-api';
 import { createModuleLogger } from './logger.js';
 import { discoverRecoveryBackups } from './recovery-backup.js';
 import { previewInstallRecovery, finishInstallRecovery } from './install-recovery.js';
@@ -84,7 +84,7 @@ import {
   SETUP_READY_LOG_PREFIX,
   SETUP_RESTRICTED_NETWORK_ROUTES,
   SETUP_TLS_ROUTES,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 
 const DEFAULT_PORT = 9190;
 const logger = createModuleLogger('setup.server');

@@ -1,11 +1,11 @@
 /**
  * Canonical `docker build` argv for the app delivery image.
- * Stack-release `--version` is both the image tag and PRAXIS_FLOW_STACK_VERSION
+ * Stack-release `--version` is both the image tag and WARTEZIMMER_STACK_VERSION
  * (display copy in /ops/health). Both release scripts must use this helper.
  */
 
-export const APP_IMAGE_REPOSITORY = 'praxis-flow/app';
-export const STACK_VERSION_BUILD_ARG = 'PRAXIS_FLOW_STACK_VERSION';
+export const APP_IMAGE_REPOSITORY = 'wartezimmer/app';
+export const STACK_VERSION_BUILD_ARG = 'WARTEZIMMER_STACK_VERSION';
 
 export function appImageRef(version) {
   const tag = String(version ?? '').trim();

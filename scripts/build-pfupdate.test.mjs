@@ -63,9 +63,9 @@ if(args[0]==='save') process.stdout.write('fake docker payload for '+platform);
         );
         const archive = path.join(
           output,
-          'praxis-flow-1.2.3',
+          'wartezimmer-1.2.3',
           `linux-${arch}`,
-          `praxis-flow-update-1.2.3-linux-${arch}.pfupdate`,
+          `wartezimmer-update-1.2.3-linux-${arch}.pfupdate`,
         );
         const manifest = spawnSync('tar', ['-xOf', archive, './manifest.json'], {
           encoding: 'utf8',
@@ -73,7 +73,7 @@ if(args[0]==='save') process.stdout.write('fake docker payload for '+platform);
         assert.equal(manifest.status, 0, manifest.stderr);
         const parsed = JSON.parse(manifest.stdout);
         assert.equal(parsed.imageDigests.proxy.platform, platform);
-        assert.ok(parsed.files.some((entry) => entry.path === 'images/praxis-flow-images.tar'));
+        assert.ok(parsed.files.some((entry) => entry.path === 'images/wartezimmer-images.tar'));
       }
       fs.writeFileSync(log, '');
       const dedicated = invoke(['--no-build', '--platform', 'amd64']);

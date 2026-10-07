@@ -1,7 +1,7 @@
 import { durableWrite } from './restricted-operation.js';
 import fs from 'node:fs';
 import path from 'node:path';
-import { buildEnvBackupPath, ENV_BACKUP_BASENAME_PREFIX } from '@praxis-flow/server-shared';
+import { buildEnvBackupPath, ENV_BACKUP_BASENAME_PREFIX } from '@wartezimmer/server-shared';
 import type { GeneratedSecrets } from './secrets.js';
 
 export type EnvMergeInput = {

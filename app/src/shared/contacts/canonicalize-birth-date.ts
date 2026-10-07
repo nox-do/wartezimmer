@@ -4,4 +4,4 @@ export {
   getBirthDateIssue,
   isValidBirthDate,
   type BirthDateIssue,
-} from '@praxis-flow/domain';
+} from '@wartezimmer/domain';

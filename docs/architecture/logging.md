@@ -8,7 +8,7 @@ Nicht: Container-Log-Rotation → [`../operations/runtime.md`](../operations/run
 ## 1. Entscheidung
 
 Ein **gemeinsamer Pino-Root** pro Prozess (über `buildFastifyLoggerOptions` /
-`createModuleLogger` in `@praxis-flow/server-shared/logger`). Fastify und Hintergrundcode
+`createModuleLogger` in `@wartezimmer/server-shared/logger`). Fastify und Hintergrundcode
 teilen denselben Logger — kein paralleler `console`-Wrapper in der App.
 
 | Kontext                                                         | Nutzen                                              | Nicht                                      |

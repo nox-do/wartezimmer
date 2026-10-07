@@ -1,4 +1,4 @@
-import { resolveMaxSignatureAgeHours } from '@praxis-flow/server-shared';
+import { resolveMaxSignatureAgeHours } from '@wartezimmer/server-shared';
 
 export type SandboxConfig = {
   docsBasePath: string;
@@ -26,9 +26,9 @@ export function getSandboxConfig(): SandboxConfig {
   }
 
   return {
-    docsBasePath: process.env.DOCS_BASE_PATH?.trim() || '/var/lib/praxis-flow/docs',
+    docsBasePath: process.env.DOCS_BASE_PATH?.trim() || '/var/lib/wartezimmer/docs',
     intakeBasePath:
-      process.env.SANDBOX_INTAKE_BASE_PATH?.trim() || '/var/lib/praxis-flow/sandbox-intake',
+      process.env.SANDBOX_INTAKE_BASE_PATH?.trim() || '/var/lib/wartezimmer/sandbox-intake',
     scannerDbPath: process.env.CLAMAV_DB_PATH?.trim() || '/var/lib/clamav',
     scanEnabled: (process.env.SANDBOX_SCAN_ENABLED?.trim() ?? 'true') === 'true',
     scanTimeoutMs: Number.parseInt(process.env.SANDBOX_SCAN_TIMEOUT_MS?.trim() ?? '', 10) || 15000,

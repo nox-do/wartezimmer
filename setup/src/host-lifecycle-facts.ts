@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { HostLifecycle } from '@praxis-flow/server-shared/setup-api';
+import type { HostLifecycle } from '@wartezimmer/server-shared/setup-api';
 import { parseEnvMap } from './env-file.js';
 import { deriveHostLifecycle, type HostLifecycleFacts } from './host-lifecycle.js';
 import { readRestrictedOperation } from './restricted-operation.js';

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import {
   ensureVisitEventAuditColumns,
   ensureVisitSupersedeColumns,
-} from '@praxis-flow/flow-core/server';
+} from '@wartezimmer/flow-core/server';
 import { ensureVisitHostStateSchema } from '../db/visit-host-state.js';
 import { ensureVisitPortalSchema } from '../db/visit-portal-schema.js';
 import { ensureVisitLegacyDropSchema } from '../db/visit-legacy-drop-schema.js';

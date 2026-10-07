@@ -1,9 +1,9 @@
 import type { DatabaseSync } from 'node:sqlite';
-import { laneCounterScope } from '@praxis-flow/flow-core';
+import { laneCounterScope } from '@wartezimmer/flow-core';
 import { getBusinessDay } from '../db/database-time.js';
 import { domainError } from '../errors/domain-error.js';
 
-/** PraxisFlow presentation policy. The reusable core deliberately has no such limit. */
+/** Wartezimmer presentation policy. The reusable core deliberately has no such limit. */
 export const MAX_REGISTRATION_NUMBER = 999;
 export const REGISTRATION_LIMIT_MESSAGE =
   'Technisch bedingt sind pro Kennbuchstabe der Themen nur 999 Anmeldungen pro Praxistag möglich.';

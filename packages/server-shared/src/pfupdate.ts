@@ -3,34 +3,34 @@ import { stableJsonStringify } from './pfbackup.js';
 
 export const PFUPDATE_FORMAT_VERSION = 1 as const;
 export const PFUPDATE_FILE_EXTENSION = 'pfupdate';
-export const PFUPDATE_BASENAME_PREFIX = 'praxis-flow-update-';
+export const PFUPDATE_BASENAME_PREFIX = 'wartezimmer-update-';
 
-export const PFUPDATE_IMAGES_TAR_PATH = 'images/praxis-flow-images.tar';
+export const PFUPDATE_IMAGES_TAR_PATH = 'images/wartezimmer-images.tar';
 
 /** Pinned offline reverse-proxy image shipped in new release/.pfupdate packages. */
-export const PRAXIS_FLOW_PROXY_IMAGE_REF = 'praxis-flow-proxy:2.11.4-acmedns' as const;
+export const WARTEZIMMER_PROXY_IMAGE_REF = 'wartezimmer-proxy:2.11.4-acmedns' as const;
 /** Stock Caddy tag still valid in already-issued v1 packages and HTTP-only Compose defaults. */
-export const PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF = 'caddy:2.11.4' as const;
+export const WARTEZIMMER_PROXY_IMAGE_LEGACY_REF = 'caddy:2.11.4' as const;
 /** Upstream stock Caddy used as the custom-image Dockerfile base. */
-export const PRAXIS_FLOW_PROXY_BASE_IMAGE_REF = PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF;
+export const WARTEZIMMER_PROXY_BASE_IMAGE_REF = WARTEZIMMER_PROXY_IMAGE_LEGACY_REF;
 /** Immutable upstream multi-platform digest approved for the pinned Caddy release (base image). */
-export const PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST =
+export const WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST =
   'sha256:df7f1c2fb114453b951de51a98efc010db1655a92c2e86be6706714e2417a78d' as const;
-export const PRAXIS_FLOW_PROXY_IMAGE_PINNED_REF =
-  `${PRAXIS_FLOW_PROXY_BASE_IMAGE_REF}@${PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST}` as const;
-export const PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY = 'PRAXIS_FLOW_PROXY_IMAGE' as const;
+export const WARTEZIMMER_PROXY_IMAGE_PINNED_REF =
+  `${WARTEZIMMER_PROXY_BASE_IMAGE_REF}@${WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST}` as const;
+export const WARTEZIMMER_PROXY_IMAGE_ENV_KEY = 'WARTEZIMMER_PROXY_IMAGE' as const;
 
-export const PRAXIS_FLOW_PROXY_IMAGE_ALLOWED_REFS = [
-  PRAXIS_FLOW_PROXY_IMAGE_REF,
-  PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF,
+export const WARTEZIMMER_PROXY_IMAGE_ALLOWED_REFS = [
+  WARTEZIMMER_PROXY_IMAGE_REF,
+  WARTEZIMMER_PROXY_IMAGE_LEGACY_REF,
 ] as const;
 
-/** Compose HTTP default when `PRAXIS_FLOW_PROXY_IMAGE` is unset (`:-caddy:2.11.4`). */
-export const PRAXIS_FLOW_PROXY_IMAGE_COMPOSE_DEFAULT_REF = PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF;
+/** Compose HTTP default when `WARTEZIMMER_PROXY_IMAGE` is unset (`:-caddy:2.11.4`). */
+export const WARTEZIMMER_PROXY_IMAGE_COMPOSE_DEFAULT_REF = WARTEZIMMER_PROXY_IMAGE_LEGACY_REF;
 
 /** First allowed proxy tag present in a docker-load result (custom preferred over stock). */
 export function pickLoadedProxyImageRef(loaded: readonly string[]): string | undefined {
-  return PRAXIS_FLOW_PROXY_IMAGE_ALLOWED_REFS.find((ref) => loaded.includes(ref));
+  return WARTEZIMMER_PROXY_IMAGE_ALLOWED_REFS.find((ref) => loaded.includes(ref));
 }
 
 export const PFUPDATE_TEMPLATE_PATHS = [
@@ -149,9 +149,9 @@ const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const DOCKER_SHA256_PATTERN = /^sha256:[a-f0-9]{64}$/;
 const RELEASE_VERSION_PATTERN = /^[0-9A-Za-z][0-9A-Za-z._-]*$/;
 const VERSIONED_IMAGE_REPO_BY_KEY = {
-  app: 'praxis-flow/app',
-  sandbox: 'praxis-flow/sandbox',
-  gateway: 'praxis-flow/gateway',
+  app: 'wartezimmer/app',
+  sandbox: 'wartezimmer/sandbox',
+  gateway: 'wartezimmer/gateway',
 } as const;
 
 type PfupdateVersionedImageKey = keyof typeof VERSIONED_IMAGE_REPO_BY_KEY;
@@ -593,12 +593,12 @@ export function validatePfupdateImageRefs(manifest: PfupdateManifestV1): string[
 
   if (manifest.images.proxy !== undefined) {
     if (
-      !PRAXIS_FLOW_PROXY_IMAGE_ALLOWED_REFS.includes(
-        manifest.images.proxy as (typeof PRAXIS_FLOW_PROXY_IMAGE_ALLOWED_REFS)[number],
+      !WARTEZIMMER_PROXY_IMAGE_ALLOWED_REFS.includes(
+        manifest.images.proxy as (typeof WARTEZIMMER_PROXY_IMAGE_ALLOWED_REFS)[number],
       )
     ) {
       errors.push(
-        `manifest.json: images.proxy muss "${PRAXIS_FLOW_PROXY_IMAGE_REF}" oder Legacy "${PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF}" sein (ist "${manifest.images.proxy}").`,
+        `manifest.json: images.proxy muss "${WARTEZIMMER_PROXY_IMAGE_REF}" oder Legacy "${WARTEZIMMER_PROXY_IMAGE_LEGACY_REF}" sein (ist "${manifest.images.proxy}").`,
       );
     }
     for (const templatePath of PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS) {
@@ -609,9 +609,9 @@ export function validatePfupdateImageRefs(manifest: PfupdateManifestV1): string[
       }
     }
     if (manifest.imageDigests?.proxy) {
-      if (manifest.imageDigests.proxy.registryDigest !== PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST) {
+      if (manifest.imageDigests.proxy.registryDigest !== WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST) {
         errors.push(
-          `manifest.json: imageDigests.proxy.registryDigest muss "${PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST}" sein.`,
+          `manifest.json: imageDigests.proxy.registryDigest muss "${WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST}" sein.`,
         );
       }
       for (const noticePath of PFUPDATE_OPTIONAL_PROXY_NOTICE_PATHS) {

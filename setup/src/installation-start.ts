@@ -1,8 +1,8 @@
 import { auditRestrictedStart, type RestrictedStartAuditHooks } from './restricted-start-audit.js';
-import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
+import { ManagerApiError } from '@wartezimmer/server-shared/setup-api';
 import { createModuleLogger } from './logger.js';
 import type { InstallationStartFailure } from './installation-state.js';
-import type { ComposeStatus } from '@praxis-flow/server-shared';
+import type { ComposeStatus } from '@wartezimmer/server-shared';
 import { composePs, composeUp, type ComposeRunOptions } from './docker.js';
 import { runDockerCommand } from './docker-cli.js';
 import { coreInstallationServicesHealthy } from './installation-state.js';
@@ -78,10 +78,10 @@ export async function inspectExistingAppDatabase(
     '--entrypoint',
     '/bin/sh',
     '-v',
-    `${volume}:/var/lib/praxis-flow/app:ro`,
+    `${volume}:/var/lib/wartezimmer/app:ro`,
     appImage,
     '-c',
-    `test -r /var/lib/praxis-flow/app && test -x /var/lib/praxis-flow/app || exit 43; if test -f ${APP_DB_PATH}; then exit 0; elif test ! -e ${APP_DB_PATH}; then exit 42; else exit 43; fi`,
+    `test -r /var/lib/wartezimmer/app && test -x /var/lib/wartezimmer/app || exit 43; if test -f ${APP_DB_PATH}; then exit 0; elif test ! -e ${APP_DB_PATH}; then exit 42; else exit 43; fi`,
   ]);
   if (database.code === 42) return { ok: false, code: 'database-missing' };
   return { ok: true };

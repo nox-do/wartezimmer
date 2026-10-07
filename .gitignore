@@ -34,6 +34,6 @@ docs_data/
 # Local backup, diagnostic, and source export artifacts
 backups/
 dumps/
-praxis-flow-source-*.tar.gz
+wartezimmer-source-*.tar.gz
 *.pfinstall
 *.pfupdate

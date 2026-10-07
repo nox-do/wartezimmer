@@ -1,1 +1,1 @@
-export { isComplexRoutingLicensed } from '@praxis-flow/server-shared';
+export { isComplexRoutingLicensed } from '@wartezimmer/server-shared';

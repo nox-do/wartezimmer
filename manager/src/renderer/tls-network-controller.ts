@@ -1,4 +1,4 @@
-import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
+import { hasBlockingMaintenanceOperation } from '@wartezimmer/server-shared/manager-status-projection';
 import type {
   HostStatus,
   TlsDnsCheck,
@@ -10,7 +10,7 @@ import type { WartezimmerManagerApi } from '../shared/wartezimmer-manager-api.js
 import {
   evaluateHostLifecycleAction,
   type HostLifecycleAction,
-} from '@praxis-flow/server-shared/host-lifecycle-policy';
+} from '@wartezimmer/server-shared/host-lifecycle-policy';
 import {
   tlsModeForNameMode,
   tlsNameValid,

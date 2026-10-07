@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_LOCALE, getBrowserLocale, normalizeLocale } from './I18nConfig';
 import { isAppLocale } from './I18nTypes';
-import { TERMINAL_PATIENT_LOCALES } from '@praxis-flow/domain';
+import { TERMINAL_PATIENT_LOCALES } from '@wartezimmer/domain';
 
 describe('i18n locale helpers', () => {
   it('isAppLocale accepts all patient locales', () => {

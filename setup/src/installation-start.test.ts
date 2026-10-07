@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
+import { ManagerApiError } from '@wartezimmer/server-shared/setup-api';
 import {
   inspectExistingAppDatabase,
   startExistingInstallation,
@@ -8,7 +8,7 @@ import {
 } from './installation-start.js';
 
 const runOptions = { projectRoot: '/tmp/test', composeProjectName: 'pf-test' };
-const appImage = 'praxis-flow/app:1';
+const appImage = 'wartezimmer/app:1';
 const runDocker: NonNullable<InstallationStartDependencies['runDocker']> = async (args) => ({
   code: 0,
   stdout: args[0] === 'image' ? 'sha256:test' : args[0] === 'volume' ? 'pf-test_app_data' : '',
@@ -48,7 +48,7 @@ test('database gate checks inventory before using a read-only networkless contai
   assert.ok(calls[2].includes('--network'));
   assert.ok(calls[2].includes('none'));
   assert.ok(calls[2].includes('--read-only'));
-  assert.ok(calls[2].includes('pf-test_app_data:/var/lib/praxis-flow/app:ro'));
+  assert.ok(calls[2].includes('pf-test_app_data:/var/lib/wartezimmer/app:ro'));
 });
 
 test('missing image, volume or database aborts with a code before compose starts', async () => {

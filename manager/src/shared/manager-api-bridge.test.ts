@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
+import { ManagerApiError } from '@wartezimmer/server-shared/setup-api';
 import { serializeManagerApiErrors, restoreManagerApiErrors } from './manager-api-bridge.js';
 import { unwrapSetupApiResponse } from './ipc-channels.js';
 import type { WartezimmerManagerApi } from './wartezimmer-manager-api.js';

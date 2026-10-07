@@ -3,13 +3,13 @@ import type { DatabaseSync } from 'node:sqlite';
  * Projects ops_settings (topics, rooms, journeys) into flow-core catalog tables.
  * Sole production writer for catalog DML — see docs/architecture/domain.md.
  */
-import { validateCatalogIntegrity } from '@praxis-flow/flow-core';
-import { loadCatalog } from '@praxis-flow/flow-core/server';
+import { validateCatalogIntegrity } from '@wartezimmer/flow-core';
+import { loadCatalog } from '@wartezimmer/flow-core/server';
 import {
   resolveDefaultCallRoomId,
   roomHasAnyEnabledPanel,
   roomPanelConfigForPlacement,
-} from '@praxis-flow/domain';
+} from '@wartezimmer/domain';
 import type { OpsSettings } from '../db/db-types.js';
 import { EMPTY_JOURNEY_SETTINGS } from '../journey-settings.js';
 import {

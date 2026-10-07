@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
+import { ManagerApiError } from '@wartezimmer/server-shared/setup-api';
 import {
   buildComposeEnv,
   buildComposeStatus,
@@ -209,7 +209,7 @@ test('resolveComposeFiles stacks proxy overlays', () => {
 test('resolveComposeFiles adds TLS overlay only when explicitly selected', () => {
   assert.deepEqual(
     resolveComposeFiles({
-      projectRoot: '/tmp/praxis-flow-dev',
+      projectRoot: '/tmp/wartezimmer-dev',
       delivery: false,
       proxyEnabled: true,
       proxyTlsEnabled: true,
@@ -218,7 +218,7 @@ test('resolveComposeFiles adds TLS overlay only when explicitly selected', () =>
   );
   assert.deepEqual(
     resolveComposeFiles({
-      projectRoot: '/tmp/praxis-flow-delivery',
+      projectRoot: '/tmp/wartezimmer-delivery',
       delivery: true,
       proxyEnabled: true,
       proxyTlsEnabled: true,
@@ -234,7 +234,7 @@ test('resolveComposeFiles adds TLS overlay only when explicitly selected', () =>
 test('resolveComposeFiles stacks pebble lab overlays only for non-delivery TLS', () => {
   assert.deepEqual(
     resolveComposeFiles({
-      projectRoot: '/tmp/praxis-flow-dev',
+      projectRoot: '/tmp/wartezimmer-dev',
       delivery: false,
       proxyEnabled: true,
       proxyTlsEnabled: true,
@@ -250,7 +250,7 @@ test('resolveComposeFiles stacks pebble lab overlays only for non-delivery TLS',
   );
   assert.deepEqual(
     resolveComposeFiles({
-      projectRoot: '/tmp/praxis-flow-delivery',
+      projectRoot: '/tmp/wartezimmer-delivery',
       delivery: true,
       proxyEnabled: true,
       proxyTlsEnabled: true,
@@ -451,7 +451,7 @@ test('buildComposeStatus marks running when any service is running', () => {
 });
 
 test('composeRestart recreates services and ignores shell binding overrides', async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'praxis-flow-compose-restart-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'wartezimmer-compose-restart-'));
   const fakeDocker = path.join(root, 'docker');
   fs.writeFileSync(
     path.join(root, '.env'),
@@ -468,16 +468,16 @@ test('composeRestart recreates services and ignores shell binding overrides', as
     '#!/bin/sh\nprintf "%s\\n%s|%s" "$*" "${APP_BIND_ADDRESS-unset}" "${SETUP_LAN_APP_IP-unset}"\n',
     { mode: 0o755 },
   );
-  const previousCli = process.env.PRAXIS_FLOW_DOCKER_CLI;
+  const previousCli = process.env.WARTEZIMMER_DOCKER_CLI;
   const previousAppBind = process.env.APP_BIND_ADDRESS;
   const previousStaffIp = process.env.SETUP_LAN_APP_IP;
-  process.env.PRAXIS_FLOW_DOCKER_CLI = fakeDocker;
+  process.env.WARTEZIMMER_DOCKER_CLI = fakeDocker;
   process.env.APP_BIND_ADDRESS = '0.0.0.0';
   process.env.SETUP_LAN_APP_IP = '0.0.0.0';
   try {
     const result = await composeRestart({
       projectRoot: root,
-      composeProjectName: 'praxis-flow-test',
+      composeProjectName: 'wartezimmer-test',
       delivery: false,
       withProxy: true,
       services: ['app', 'sandbox', 'proxy'],
@@ -486,8 +486,8 @@ test('composeRestart recreates services and ignores shell binding overrides', as
     assert.match(result.log, /up -d --force-recreate app sandbox proxy/);
     assert.match(result.log, /unset\|unset/);
   } finally {
-    if (previousCli === undefined) delete process.env.PRAXIS_FLOW_DOCKER_CLI;
-    else process.env.PRAXIS_FLOW_DOCKER_CLI = previousCli;
+    if (previousCli === undefined) delete process.env.WARTEZIMMER_DOCKER_CLI;
+    else process.env.WARTEZIMMER_DOCKER_CLI = previousCli;
     if (previousAppBind === undefined) delete process.env.APP_BIND_ADDRESS;
     else process.env.APP_BIND_ADDRESS = previousAppBind;
     if (previousStaffIp === undefined) delete process.env.SETUP_LAN_APP_IP;
@@ -507,13 +507,13 @@ test('rebuild compose preflight preserves env bytes and ignores parent image ove
   fs.writeFileSync(override, '{}');
   fs.writeFileSync(
     fakeDocker,
-    '#!/bin/sh\nprintf "%s\\n%s" "$*" "${PRAXIS_FLOW_APP_IMAGE-unset}"\n',
+    '#!/bin/sh\nprintf "%s\\n%s" "$*" "${WARTEZIMMER_APP_IMAGE-unset}"\n',
     { mode: 0o755 },
   );
-  const previousCli = process.env.PRAXIS_FLOW_DOCKER_CLI;
-  const previousImage = process.env.PRAXIS_FLOW_APP_IMAGE;
-  process.env.PRAXIS_FLOW_DOCKER_CLI = fakeDocker;
-  process.env.PRAXIS_FLOW_APP_IMAGE = 'unintended:latest';
+  const previousCli = process.env.WARTEZIMMER_DOCKER_CLI;
+  const previousImage = process.env.WARTEZIMMER_APP_IMAGE;
+  process.env.WARTEZIMMER_DOCKER_CLI = fakeDocker;
+  process.env.WARTEZIMMER_APP_IMAGE = 'unintended:latest';
   try {
     const result = await runComposeCommand(
       {
@@ -530,10 +530,10 @@ test('rebuild compose preflight preserves env bytes and ignores parent image ove
     assert.ok(result.stdout.includes(`-f ${override}`));
     assert.match(result.stdout, /unset$/);
   } finally {
-    if (previousCli === undefined) delete process.env.PRAXIS_FLOW_DOCKER_CLI;
-    else process.env.PRAXIS_FLOW_DOCKER_CLI = previousCli;
-    if (previousImage === undefined) delete process.env.PRAXIS_FLOW_APP_IMAGE;
-    else process.env.PRAXIS_FLOW_APP_IMAGE = previousImage;
+    if (previousCli === undefined) delete process.env.WARTEZIMMER_DOCKER_CLI;
+    else process.env.WARTEZIMMER_DOCKER_CLI = previousCli;
+    if (previousImage === undefined) delete process.env.WARTEZIMMER_APP_IMAGE;
+    else process.env.WARTEZIMMER_APP_IMAGE = previousImage;
     fs.rmSync(root, { recursive: true, force: true });
   }
 });

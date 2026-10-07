@@ -22,7 +22,7 @@ import {
   PORTAL_SURFACE_ROUTES,
   PORTAL_UI_SURFACE_ROUTES,
   type TlsCertificateStatus,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import { readEnvMap } from './env-file.js';
 import {
   applyHostTls,
@@ -231,7 +231,7 @@ test('managed fake vertical slice stays HTTP until apply and consumes token afte
     assert.doesNotMatch(caddyfile, /\nstaff\.7fk3m2\.lan\.notaus\.de \{/);
     assert.match(caddyfile, /\n\t\tabort\n/);
     assert.match(caddyfile, /https:\/\/127\.0\.0\.1 \{/);
-    assert.match(caddyfile, /respond \/__praxis-flow\/health "ok" 200/);
+    assert.match(caddyfile, /respond \/__wartezimmer\/health "ok" 200/);
   });
 });
 
@@ -634,7 +634,7 @@ test('generated managed Caddyfile derives a strict restricted listener from the 
   }
   assert.doesNotMatch(caddyfile, /path \/api\/\*/);
   assert.doesNotMatch(caddyfile, /path \/\*/);
-  assert.match(caddyfile, /header X-Praxis-Flow-Rejection portal-policy\n\t\t\trespond 404/);
+  assert.match(caddyfile, /header X-Wartezimmer-Rejection portal-policy\n\t\t\trespond 404/);
   assert.match(caddyfile, /servers \{\n\t\tprotocols h1 h2/);
   assert.match(caddyfile, /:443 \{\n\tabort\n\}/);
   assert.match(caddyfile, /https:\/\/:444 \{\n\tabort\n\}/);
@@ -661,7 +661,7 @@ test('generated managed and custom Caddyfiles expose the dedicated internal TLS 
     );
     assert.match(
       caddyfile,
-      /https:\/\/127\.0\.0\.1 \{\n\ttls internal\n\trespond \/__praxis-flow\/health "ok" 200\n\}/,
+      /https:\/\/127\.0\.0\.1 \{\n\ttls internal\n\trespond \/__wartezimmer\/health "ok" 200\n\}/,
     );
   }
 });
@@ -1091,14 +1091,14 @@ test('planProxyReloadAfterUp skips reload after recreate or first start', () => 
   assert.equal(
     planProxyReloadAfterUp({
       proxyWasRunning: true,
-      upLog: 'Container praxis-flow-proxy Recreated\nContainer praxis-flow-proxy Started',
+      upLog: 'Container wartezimmer-proxy Recreated\nContainer wartezimmer-proxy Started',
     }),
     'none',
   );
   assert.equal(
     planProxyReloadAfterUp({
       proxyWasRunning: true,
-      upLog: 'Container praxis-flow-proxy Running',
+      upLog: 'Container wartezimmer-proxy Running',
     }),
     'reload',
   );
@@ -1329,7 +1329,7 @@ test('own-domain ACME keeps wildcard identity through resume, obtain, apply and 
     assert.equal(renewed.tls.state, 'active');
     assert.equal(renewed.tls.hostname, 'staff.flow.praxis-meyer.de');
     assert.deepEqual(renewed.tls.certificate?.names, ['*.flow.praxis-meyer.de']);
-    assert.match(caddyfile, /respond \/__praxis-flow\/health "ok" 200/);
+    assert.match(caddyfile, /respond \/__wartezimmer\/health "ok" 200/);
   });
 });
 

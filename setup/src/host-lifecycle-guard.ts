@@ -6,7 +6,7 @@ import {
   evaluateHostLifecycleAction,
   type HostLifecycleAction,
   type HostLifecycleGuard,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import { readEnvMap } from './env-file.js';
 import { deriveHostLifecycle } from './host-lifecycle.js';
 import { readHostLifecycle } from './host-lifecycle-facts.js';

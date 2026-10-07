@@ -3,8 +3,8 @@ import {
   needsDockerFileSharingHint,
 } from '../shared/docker-file-sharing-hint.js';
 import type { HostStatus, StorageFoldersResult } from '../shared/host-status.js';
-import { formatEnvBackupLabel } from '@praxis-flow/server-shared/env-backup';
-import { formatPfbackupLabel } from '@praxis-flow/server-shared/backup-path-labels';
+import { formatEnvBackupLabel } from '@wartezimmer/server-shared/env-backup';
+import { formatPfbackupLabel } from '@wartezimmer/server-shared/backup-path-labels';
 import { deliveryImagesSummary } from './delivery-images-flow.js';
 
 export const MAINTENANCE_LOG_SERVICES = [

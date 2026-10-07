@@ -1,1 +1,1 @@
-export { formatTicketCode, parseTicketCode } from '@praxis-flow/domain';
+export { formatTicketCode, parseTicketCode } from '@wartezimmer/domain';

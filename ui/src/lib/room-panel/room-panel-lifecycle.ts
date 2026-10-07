@@ -1,4 +1,4 @@
-import type { RoomPanelPlacement } from '@praxis-flow/domain';
+import type { RoomPanelPlacement } from '@wartezimmer/domain';
 import { readRequestedPlacementParam } from './room-panel-requested-url';
 
 export type RoomPanelRequestedTarget = {

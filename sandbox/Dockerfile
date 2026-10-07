@@ -25,7 +25,7 @@ COPY packages/server-shared/src ./packages/server-shared/src
 COPY scripts/strip-production-artifacts.mjs ./scripts/strip-production-artifacts.mjs
 
 RUN npm run build:server-shared
-RUN npm run -w @praxis-flow/sandbox build
+RUN npm run -w @wartezimmer/sandbox build
 RUN node scripts/strip-production-artifacts.mjs packages/server-shared dist:sandbox/dist
 RUN npm prune --omit=dev --foreground-scripts
 

@@ -1,4 +1,4 @@
-import type { HostLifecycle } from '@praxis-flow/server-shared/setup-api';
+import type { HostLifecycle } from '@wartezimmer/server-shared/setup-api';
 import { readProxyConfig } from './proxy.js';
 
 export type HostLifecycleFacts = {

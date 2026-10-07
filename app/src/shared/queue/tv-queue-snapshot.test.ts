@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
-import { normalizeRoomPanelsSettings } from '@praxis-flow/domain';
+import { normalizeRoomPanelsSettings } from '@wartezimmer/domain';
 import { DEFAULT_TERMINAL_TOPIC_DEFINITIONS } from '../checkin-topic-settings.js';
 import { getBusinessDay } from '../db/database-time.js';
 import type { OpsSettings } from '../db/db-types.js';

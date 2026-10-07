@@ -8,12 +8,12 @@ import {
   type PfupdateFileDigest,
   type PfupdateManifestV1,
   validatePfupdatePackage,
-  PRAXIS_FLOW_PROXY_IMAGE_REF,
-  PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
+  WARTEZIMMER_PROXY_IMAGE_REF,
+  WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST,
   PFUPDATE_OPTIONAL_PROXY_NOTICE_PATHS,
   PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS,
   type PfupdateValidationResult,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import { sha256File } from './sha256-file.js';
 
 export { sha256File };
@@ -196,13 +196,13 @@ export function validateExtractedPfupdate(
   if (!validation.manifest) return validation;
   const validatedManifest = validation.manifest;
   const productErrors: string[] = [];
-  if (validatedManifest.images.proxy !== PRAXIS_FLOW_PROXY_IMAGE_REF) {
-    productErrors.push(`Produkt-Update muss Proxy-Image ${PRAXIS_FLOW_PROXY_IMAGE_REF} enthalten.`);
+  if (validatedManifest.images.proxy !== WARTEZIMMER_PROXY_IMAGE_REF) {
+    productErrors.push(`Produkt-Update muss Proxy-Image ${WARTEZIMMER_PROXY_IMAGE_REF} enthalten.`);
   }
   if (!validatedManifest.imageDigests?.proxy) {
     productErrors.push('Produkt-Update muss den vollständigen Proxy-Digestvertrag enthalten.');
   } else if (
-    validatedManifest.imageDigests.proxy.registryDigest !== PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST
+    validatedManifest.imageDigests.proxy.registryDigest !== WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST
   ) {
     productErrors.push('Proxy-Registry-Digest entspricht nicht dem freigegebenen Digest.');
   }

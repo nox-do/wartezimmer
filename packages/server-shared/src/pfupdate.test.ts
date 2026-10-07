@@ -5,9 +5,9 @@ import {
   PFUPDATE_OPTIONAL_PROXY_NOTICE_PATHS,
   PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS,
   PFUPDATE_REQUIRED_FILE_PATHS,
-  PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
-  PRAXIS_FLOW_PROXY_IMAGE_REF,
-  PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF,
+  WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST,
+  WARTEZIMMER_PROXY_IMAGE_REF,
+  WARTEZIMMER_PROXY_IMAGE_LEGACY_REF,
   pickLoadedProxyImageRef,
   buildPfupdateFilename,
   buildPfupdateManifest,
@@ -69,16 +69,16 @@ function sampleManifest(
     createdAt: '2026-08-01T10:00:00.000Z',
     minimumManagerVersion: '0.3.0',
     images: {
-      app: `praxis-flow/app:${releaseVersion}`,
-      sandbox: `praxis-flow/sandbox:${releaseVersion}`,
-      ...(withGateway ? { gateway: `praxis-flow/gateway:${releaseVersion}` } : {}),
-      ...(withProxy ? { proxy: PRAXIS_FLOW_PROXY_IMAGE_REF } : {}),
+      app: `wartezimmer/app:${releaseVersion}`,
+      sandbox: `wartezimmer/sandbox:${releaseVersion}`,
+      ...(withGateway ? { gateway: `wartezimmer/gateway:${releaseVersion}` } : {}),
+      ...(withProxy ? { proxy: WARTEZIMMER_PROXY_IMAGE_REF } : {}),
     },
     ...(withProxyDigest
       ? {
           imageDigests: {
             proxy: {
-              registryDigest: PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
+              registryDigest: WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST,
               archiveImageId: `sha256:${'a'.repeat(64)}`,
               platform: 'linux/arm64',
             },
@@ -140,7 +140,7 @@ test('validatePfupdatePackage rejects tampered checksum', () => {
 
 test('validatePfupdateImageRefs requires releaseVersion-aligned tags for required images', () => {
   const manifest = sampleManifest();
-  manifest.images.app = 'praxis-flow/app:2026.07.1';
+  manifest.images.app = 'wartezimmer/app:2026.07.1';
   const errors = validatePfupdateImageRefs(manifest);
   assert.match(errors.join(' '), /images\.app/);
 });
@@ -153,7 +153,7 @@ test('validatePfupdatePackage accepts optional gateway image and template', () =
     sha256Sums: formatSha256Sums(manifest.files),
   });
   assert.equal(result.ok, true);
-  assert.equal(result.manifest?.images.gateway, `praxis-flow/gateway:${releaseVersion}`);
+  assert.equal(result.manifest?.images.gateway, `wartezimmer/gateway:${releaseVersion}`);
 });
 
 test('validatePfupdatePackage still accepts legacy packages with gateway', () => {
@@ -164,16 +164,16 @@ test('validatePfupdatePackage still accepts legacy packages with gateway', () =>
     sha256Sums: formatSha256Sums(manifest.files),
   });
   assert.equal(result.ok, true);
-  assert.equal(result.manifest?.images.gateway, `praxis-flow/gateway:${releaseVersion}`);
+  assert.equal(result.manifest?.images.gateway, `wartezimmer/gateway:${releaseVersion}`);
 });
 
 test('validatePfupdateImageRefs rejects wrong gateway tag or missing gateway template', () => {
   const manifest = sampleManifest({ withGateway: true });
-  manifest.images.gateway = 'praxis-flow/gateway:2026.07.1';
+  manifest.images.gateway = 'wartezimmer/gateway:2026.07.1';
   assert.match(validatePfupdateImageRefs(manifest).join(' '), /gateway/);
 
   const withoutTemplate = sampleManifest();
-  withoutTemplate.images.gateway = `praxis-flow/gateway:${releaseVersion}`;
+  withoutTemplate.images.gateway = `wartezimmer/gateway:${releaseVersion}`;
   assert.match(
     validatePfupdateImageRefs(withoutTemplate).join(' '),
     /docker-compose\.gateway\.delivery\.yml/,
@@ -189,7 +189,7 @@ test('validatePfupdatePackage accepts optional proxy image and templates', () =>
     sha256Sums: formatSha256Sums(manifest.files),
   });
   assert.equal(result.ok, true);
-  assert.equal(result.manifest?.images.proxy, PRAXIS_FLOW_PROXY_IMAGE_REF);
+  assert.equal(result.manifest?.images.proxy, WARTEZIMMER_PROXY_IMAGE_REF);
 });
 
 test('validatePfupdatePackage accepts the approved Caddy digest and license files', () => {
@@ -203,7 +203,7 @@ test('validatePfupdatePackage accepts the approved Caddy digest and license file
   assert.equal(result.ok, true);
   assert.equal(
     result.manifest?.imageDigests?.proxy?.registryDigest,
-    PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
+    WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST,
   );
   assert.equal(result.manifest?.imageDigests?.proxy?.platform, 'linux/arm64');
 });
@@ -228,29 +228,29 @@ test('validatePfupdatePackage rejects an unapproved Caddy digest or missing noti
 test('pickLoadedProxyImageRef prefers custom over stock and ignores other tags', () => {
   assert.equal(
     pickLoadedProxyImageRef([
-      'praxis-flow/app:1',
-      PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF,
-      PRAXIS_FLOW_PROXY_IMAGE_REF,
+      'wartezimmer/app:1',
+      WARTEZIMMER_PROXY_IMAGE_LEGACY_REF,
+      WARTEZIMMER_PROXY_IMAGE_REF,
     ]),
-    PRAXIS_FLOW_PROXY_IMAGE_REF,
+    WARTEZIMMER_PROXY_IMAGE_REF,
   );
   assert.equal(
-    pickLoadedProxyImageRef(['praxis-flow/app:1', PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF]),
-    PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF,
+    pickLoadedProxyImageRef(['wartezimmer/app:1', WARTEZIMMER_PROXY_IMAGE_LEGACY_REF]),
+    WARTEZIMMER_PROXY_IMAGE_LEGACY_REF,
   );
-  assert.equal(pickLoadedProxyImageRef(['praxis-flow/app:1']), undefined);
+  assert.equal(pickLoadedProxyImageRef(['wartezimmer/app:1']), undefined);
 });
 
 test('validatePfupdatePackage still accepts legacy stock Caddy proxy pin', () => {
   const manifest = sampleManifest({ withProxy: true, withProxyDigest: true });
-  manifest.images.proxy = PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF;
+  manifest.images.proxy = WARTEZIMMER_PROXY_IMAGE_LEGACY_REF;
   const result = validatePfupdatePackage({
     manifest,
     files: digestMapFromManifest(manifest),
     sha256Sums: formatSha256Sums(manifest.files),
   });
   assert.equal(result.ok, true);
-  assert.equal(result.manifest?.images.proxy, PRAXIS_FLOW_PROXY_IMAGE_LEGACY_REF);
+  assert.equal(result.manifest?.images.proxy, WARTEZIMMER_PROXY_IMAGE_LEGACY_REF);
 });
 
 test('validatePfupdatePackage still accepts legacy packages without proxy', () => {
@@ -269,14 +269,14 @@ test('validatePfupdateImageRefs rejects wrong proxy pin or missing proxy templat
   manifest.images.proxy = 'caddy:latest';
   assert.match(validatePfupdateImageRefs(manifest).join(' '), /images\.proxy/);
 
-  manifest.images.proxy = PRAXIS_FLOW_PROXY_IMAGE_REF;
+  manifest.images.proxy = WARTEZIMMER_PROXY_IMAGE_REF;
   assert.match(validatePfupdateImageRefs(manifest).join(' '), /proxy\/Caddyfile/);
 });
 
 test('isPfupdateRelativePath rejects traversal and absolute paths', () => {
   assert.equal(isPfupdateRelativePath('../secret'), false);
   assert.equal(isPfupdateRelativePath('/etc/passwd'), false);
-  assert.equal(isPfupdateRelativePath('images/praxis-flow-images.tar'), true);
+  assert.equal(isPfupdateRelativePath('images/wartezimmer-images.tar'), true);
 });
 
 test('compareSemver and manager compatibility', () => {
@@ -291,10 +291,10 @@ test('parseSha256Sums and validatePfupdateSha256Sums stay aligned with manifest'
   const manifest = sampleManifest();
   const sums = formatSha256Sums(manifest.files);
   const parsed = parseSha256Sums(sums);
-  assert.equal(parsed.get('images/praxis-flow-images.tar'), manifest.files[0]?.sha256);
+  assert.equal(parsed.get('images/wartezimmer-images.tar'), manifest.files[0]?.sha256);
   assert.deepEqual(validatePfupdateSha256Sums(manifest, sums), []);
 });
 
 test('buildPfupdateFilename uses release version', () => {
-  assert.equal(buildPfupdateFilename('2026.08.0'), 'praxis-flow-update-2026.08.0.pfupdate');
+  assert.equal(buildPfupdateFilename('2026.08.0'), 'wartezimmer-update-2026.08.0.pfupdate');
 });

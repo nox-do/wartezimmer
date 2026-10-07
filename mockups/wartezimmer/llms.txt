@@ -1,6 +1,6 @@
 # Wartezimmer
 
-> Wartezimmer ist lokale Software für Anmeldung, Warteliste, Aufruf und die Koordination des gesamten Praxisbesuchs von Raum zu Raum. Sie richtet sich vor allem an Einzel- und Gemeinschaftspraxen, ergänzend an größere Ärztehäuser. Der technische Projektname ist Praxis Flow.
+> Wartezimmer ist lokale Software für Anmeldung, Warteliste, Aufruf und die Koordination des gesamten Praxisbesuchs von Raum zu Raum. Sie richtet sich vor allem an Einzel- und Gemeinschaftspraxen, ergänzend an größere Ärztehäuser. Der technische Projektname ist Wartezimmer.
 
 **Ziel und Einsatz:** Eine gemeinsame Übersicht verbindet Empfang und
 Behandlungsräume. Patienten erhalten eine Wartenummer und Orientierung zum

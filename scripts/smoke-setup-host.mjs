@@ -54,7 +54,7 @@ async function fetchJson(url, init) {
 }
 
 async function main() {
-  const child = spawn('npm', ['run', '-w', '@praxis-flow/setup', 'serve'], {
+  const child = spawn('npm', ['run', '-w', '@wartezimmer/setup', 'serve'], {
     cwd: root,
     env: { ...process.env, SETUP_HOST_PORT: String(port) },
     stdio: ['ignore', 'pipe', 'pipe'],

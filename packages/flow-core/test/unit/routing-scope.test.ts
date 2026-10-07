@@ -4,8 +4,8 @@ import {
   ruleForTopicAtSurface,
   terminalsForTopic,
   topicsForTerminal,
-} from '@praxis-flow/flow-core';
-import { openDb } from '@praxis-flow/flow-core/server';
+} from '@wartezimmer/flow-core';
+import { openDb } from '@wartezimmer/flow-core/server';
 
 test('ruleForTopicAtSurface: disjunkte Terminal-Scopes waehlen passende Rule', () => {
   const db = openDb({ reset: true, path: ':memory:' });

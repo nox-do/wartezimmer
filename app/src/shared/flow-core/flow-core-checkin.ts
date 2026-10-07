@@ -1,6 +1,6 @@
 import { assertRegistrationNumberAllowed } from '../queue/registration-number-limit.js';
 import type { DatabaseSync } from 'node:sqlite';
-import type { AuthPath } from '@praxis-flow/flow-core';
+import type { AuthPath } from '@wartezimmer/flow-core';
 import type { CreateTicketCallerInput, QueueDisplayStatus } from '../db/db-types.js';
 import type { CheckinSessionDeps } from '../db/database-checkin-sessions.js';
 import { assertCheckInAllowed } from '../db/database-checkin-sessions.js';

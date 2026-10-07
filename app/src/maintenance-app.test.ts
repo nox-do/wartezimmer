@@ -10,7 +10,7 @@ import { registerOpsSettingsRoutes } from './routes/ops/ops-settings-routes.js';
 import { registerOpsManagerMaintenanceRoutes as registerMaintenanceRoutes } from './routes/ops/ops-manager-maintenance-routes.js';
 import { CoreDatabase } from './shared/db/database.js';
 import { createCurrentSchema } from './shared/db/create-current-schema.js';
-import { settingsDbSnapshotsEquivalentForRestore } from '@praxis-flow/server-shared';
+import { settingsDbSnapshotsEquivalentForRestore } from '@wartezimmer/server-shared';
 import { exportSettingsSnapshotFromDb } from './shared/settings/settings-snapshot-export.js';
 import { withDefaultEnvForSnapshotParse } from './shared/settings/settings-snapshot-import.js';
 
@@ -112,11 +112,11 @@ test('maintenance listener rejects missing and incorrect tokens', async () => {
 });
 
 test('maintenance listener exposes a lightweight authenticated compatibility handshake', async (t) => {
-  const previousVersion = process.env.PRAXIS_FLOW_STACK_VERSION;
-  process.env.PRAXIS_FLOW_STACK_VERSION = '2.1.0';
+  const previousVersion = process.env.WARTEZIMMER_STACK_VERSION;
+  process.env.WARTEZIMMER_STACK_VERSION = '2.1.0';
   t.after(() => {
-    if (previousVersion === undefined) delete process.env.PRAXIS_FLOW_STACK_VERSION;
-    else process.env.PRAXIS_FLOW_STACK_VERSION = previousVersion;
+    if (previousVersion === undefined) delete process.env.WARTEZIMMER_STACK_VERSION;
+    else process.env.WARTEZIMMER_STACK_VERSION = previousVersion;
   });
 
   const app = Fastify({ logger: false });

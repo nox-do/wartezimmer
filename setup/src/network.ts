@@ -1,5 +1,5 @@
 import os from 'node:os';
-import type { NetworkAddress, NetworkInterfaceInfo } from '@praxis-flow/server-shared';
+import type { NetworkAddress, NetworkInterfaceInfo } from '@wartezimmer/server-shared';
 
 export type { NetworkAddress, NetworkInterfaceInfo };
 

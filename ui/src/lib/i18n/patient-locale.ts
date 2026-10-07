@@ -4,8 +4,7 @@ import { isAppLocale, type AppLocale } from '$lib/i18n/core/I18nTypes';
 /** Staff surfaces (MFA, Ops, TV) are German-only; see docs/architecture/i18n.md. */
 export const STAFF_LOCALE: AppLocale = DEFAULT_LOCALE;
 
-// Preserve the language preference stored by existing installations.
-const PATIENT_LOCALE_KEY = 'praxis-flow-patient-locale';
+const PATIENT_LOCALE_KEY = 'wartezimmer-patient-locale';
 
 export function getStoredPatientLocale(): AppLocale | null {
   if (typeof localStorage === 'undefined') {

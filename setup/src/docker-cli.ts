@@ -40,7 +40,7 @@ function executableExists(filePath: string): boolean {
 }
 
 export function resolveDockerCli(): string {
-  const override = process.env.PRAXIS_FLOW_DOCKER_CLI?.trim();
+  const override = process.env.WARTEZIMMER_DOCKER_CLI?.trim();
   if (override) {
     return override;
   }

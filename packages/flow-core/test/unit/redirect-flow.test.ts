@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveRedirectVisitPatch } from '@praxis-flow/flow-core';
+import { resolveRedirectVisitPatch } from '@wartezimmer/flow-core';
 
 test('resolveRedirectVisitPatch: instructed behaelt lastKnown, setzt Terminal-Default', () => {
   const current = {

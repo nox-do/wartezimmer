@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { validateCatalogIntegrity } from '@praxis-flow/flow-core';
+import { validateCatalogIntegrity } from '@wartezimmer/flow-core';
 import { loadCatalog } from './catalog-repository.js';
 import { seedIfEmpty } from './seed.js';
 import { projectRoot } from './paths.js';

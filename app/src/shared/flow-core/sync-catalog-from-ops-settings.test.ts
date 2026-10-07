@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
-import { validateCatalogIntegrity } from '@praxis-flow/flow-core';
-import { createRuntime, loadCatalog } from '@praxis-flow/flow-core/server';
-import { normalizeRoomPanelsSettings } from '@praxis-flow/domain';
+import { validateCatalogIntegrity } from '@wartezimmer/flow-core';
+import { createRuntime, loadCatalog } from '@wartezimmer/flow-core/server';
+import { normalizeRoomPanelsSettings } from '@wartezimmer/domain';
 import { ensureFlowCoreSchema } from './flow-core-schema.js';
 import {
   PF_FLOW_LOC_WAITING,

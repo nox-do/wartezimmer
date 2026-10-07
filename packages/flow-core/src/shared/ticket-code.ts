@@ -1,4 +1,4 @@
-import { formatTicketCode, parseTicketCode } from '@praxis-flow/domain';
+import { formatTicketCode, parseTicketCode } from '@wartezimmer/domain';
 
 export { formatTicketCode, parseTicketCode };
 

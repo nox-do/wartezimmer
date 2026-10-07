@@ -6,7 +6,7 @@ import {
   validateManagerStateForBackup,
   type ManagerReleaseState,
   type ManagerState,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 
 export type { ManagerReleaseState, ManagerState };
 
@@ -80,10 +80,10 @@ export function releaseEnvFromManagerState(state: ManagerState): Record<string, 
     return {};
   }
   return {
-    PRAXIS_FLOW_APP_IMAGE: state.release.appImage,
-    PRAXIS_FLOW_SANDBOX_IMAGE: state.release.sandboxImage,
+    WARTEZIMMER_APP_IMAGE: state.release.appImage,
+    WARTEZIMMER_SANDBOX_IMAGE: state.release.sandboxImage,
     ...(state.release.gatewayImage
-      ? { PRAXIS_FLOW_GATEWAY_IMAGE: state.release.gatewayImage }
+      ? { WARTEZIMMER_GATEWAY_IMAGE: state.release.gatewayImage }
       : {}),
   };
 }

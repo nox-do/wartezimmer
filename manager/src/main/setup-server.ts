@@ -8,7 +8,7 @@ import {
   SETUP_BUILD_ID_ENV,
   SETUP_MANAGER_TOKEN_ENV,
   SETUP_MANAGER_TOKEN_HEADER,
-} from '@praxis-flow/server-shared/setup-api';
+} from '@wartezimmer/server-shared/setup-api';
 import { findProjectRoot } from './project-root.js';
 import { devSetupArguments } from './process-command.js';
 import {
@@ -133,9 +133,9 @@ function startPackagedSetupServer(port: number, token: string, buildId: string):
   return spawn(process.execPath, [serverEntry], {
     env: {
       ...childEnv(port, token, buildId),
-      PRAXIS_FLOW_HOME: expectedSetupInstallHome(true, ''),
+      WARTEZIMMER_HOME: expectedSetupInstallHome(true, ''),
       ELECTRON_RUN_AS_NODE: '1',
-      PRAXIS_FLOW_TEMPLATE_ROOT: templateRoot,
+      WARTEZIMMER_TEMPLATE_ROOT: templateRoot,
     },
     windowsHide: true,
     stdio: ['ignore', 'pipe', 'pipe', 'ipc'],

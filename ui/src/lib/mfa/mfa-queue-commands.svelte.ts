@@ -15,7 +15,7 @@ import {
 import { resolveCallRoomTarget } from '$lib/queue/call-room-target';
 import { roomHasCapacity } from '$lib/queue/room-capacity';
 import { formatClockTime } from '$lib/queue/format-time';
-import { formatTicketCode } from '@praxis-flow/domain';
+import { formatTicketCode } from '@wartezimmer/domain';
 import {
   callVisit,
   checkInVisit,

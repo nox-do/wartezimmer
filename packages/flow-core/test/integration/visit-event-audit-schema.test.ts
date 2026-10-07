@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
-import { ensureVisitEventAuditColumns } from '@praxis-flow/flow-core/server';
+import { ensureVisitEventAuditColumns } from '@wartezimmer/flow-core/server';
 
 test('Audit-Migration nummeriert bestehende Events und sichert Ortsnamen', () => {
   const db = new DatabaseSync(':memory:');

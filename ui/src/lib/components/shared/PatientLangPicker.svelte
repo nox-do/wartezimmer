@@ -7,8 +7,8 @@
   import { locale, setLocale, t } from '$lib/i18n/i18nStore.svelte';
   import { warmBrowserTranslator } from '$lib/i18n/browser-translator';
   import { storePatientLocale } from '$lib/i18n/patient-locale';
-  import type { TerminalPatientLocale } from '@praxis-flow/domain';
-  import { DEFAULT_TERMINAL_PATIENT_LOCALES } from '@praxis-flow/domain';
+  import type { TerminalPatientLocale } from '@wartezimmer/domain';
+  import { DEFAULT_TERMINAL_PATIENT_LOCALES } from '@wartezimmer/domain';
 
   let {
     enabledLocales = DEFAULT_TERMINAL_PATIENT_LOCALES,

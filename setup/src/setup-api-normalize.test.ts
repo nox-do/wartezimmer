@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { HostNetworkInput } from '@praxis-flow/server-shared';
+import type { HostNetworkInput } from '@wartezimmer/server-shared';
 import {
   normalizeApplySetupInput,
   normalizeGatewayPlan,

@@ -9,7 +9,7 @@ import {
   ManagerApiError,
   type NetworkInterfaceInfo,
   type TlsStatus,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import {
   buildRestrictedNetworkCandidates,
   buildRestrictedNetworkInspect,
@@ -574,7 +574,7 @@ test('apply and remove switch the restricted overlay transactionally', async () 
       path.join(fixture.home, 'state', 'tls', 'Caddyfile'),
       'utf8',
     );
-    assert.match(generatedCaddyfile, /^# PRAXIS-FLOW-GENERATED LAN-TLS v6/m);
+    assert.match(generatedCaddyfile, /^# WARTEZIMMER-GENERATED LAN-TLS v6/m);
     assert.match(generatedCaddyfile, /:444 \{/);
 
     const removed = await removeRestrictedNetwork(ctx, fixture.hooks);
@@ -691,7 +691,7 @@ test('unexpected compose exception rolls restricted apply and generated Caddyfil
   };
   const caddyfile = path.join(fixture.home, 'state', 'tls', 'Caddyfile');
   fs.mkdirSync(path.dirname(caddyfile), { recursive: true });
-  fs.writeFileSync(caddyfile, '# PRAXIS-FLOW-GENERATED LAN-TLS v2\nold-contract\n');
+  fs.writeFileSync(caddyfile, '# WARTEZIMMER-GENERATED LAN-TLS v2\nold-contract\n');
   let removeCalls = 0;
   try {
     await assert.rejects(
@@ -709,7 +709,7 @@ test('unexpected compose exception rolls restricted apply and generated Caddyfil
     assert.equal(readEnvMap(fixture.envPath).has('SETUP_RESTRICTED_ENABLED'), false);
     assert.equal(
       fs.readFileSync(caddyfile, 'utf8'),
-      '# PRAXIS-FLOW-GENERATED LAN-TLS v2\nold-contract\n',
+      '# WARTEZIMMER-GENERATED LAN-TLS v2\nold-contract\n',
     );
   } finally {
     fs.rmSync(fixture.home, { recursive: true, force: true });

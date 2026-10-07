@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { ComposeStatus, DockerStatus, HostLifecycle } from '@praxis-flow/server-shared';
+import type { ComposeStatus, DockerStatus, HostLifecycle } from '@wartezimmer/server-shared';
 import { deriveInstallationState, type InstallationStateFacts } from './installation-state.js';
 
 const docker: DockerStatus = {

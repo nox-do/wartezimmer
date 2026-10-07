@@ -1,6 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
-import type { Runtime } from '@praxis-flow/flow-core/server';
-import type { VisitStatus } from '@praxis-flow/flow-core';
+import type { Runtime } from '@wartezimmer/flow-core/server';
+import type { VisitStatus } from '@wartezimmer/flow-core';
 import type { AbsenceMode, QueueSummary, QueueDisplayStatus } from './db-types.js';
 import { canonicalizePhone } from '../phone/canonicalize-phone.js';
 import { domainError } from '../errors/domain-error.js';

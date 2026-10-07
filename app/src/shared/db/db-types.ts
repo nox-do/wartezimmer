@@ -1,4 +1,4 @@
-import type { TerminalPatientLocale } from '@praxis-flow/domain';
+import type { TerminalPatientLocale } from '@wartezimmer/domain';
 import type { JourneySettings } from '../journey-settings.js';
 
 export const TICKET_STATUSES = [
@@ -197,15 +197,15 @@ export type OpsSettings = {
   updatedAt: string;
 };
 
-export type RoomPanelPlacement = import('@praxis-flow/domain').RoomPanelPlacement;
+export type RoomPanelPlacement = import('@wartezimmer/domain').RoomPanelPlacement;
 
-export type RoomPanelMode = import('@praxis-flow/domain').RoomPanelMode;
+export type RoomPanelMode = import('@wartezimmer/domain').RoomPanelMode;
 
-export type RoomPanelTextPreset = import('@praxis-flow/domain').RoomPanelTextPreset;
+export type RoomPanelTextPreset = import('@wartezimmer/domain').RoomPanelTextPreset;
 
-export type RoomPanelPlacementConfig = import('@praxis-flow/domain').RoomPanelPlacementConfig;
+export type RoomPanelPlacementConfig = import('@wartezimmer/domain').RoomPanelPlacementConfig;
 
-export type RoomPanelsSettings = import('@praxis-flow/domain').RoomPanelsSettings;
+export type RoomPanelsSettings = import('@wartezimmer/domain').RoomPanelsSettings;
 
 export type OutboxEventRow = {
   id: string;

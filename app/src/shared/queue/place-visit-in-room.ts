@@ -1,5 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
-import type { Runtime } from '@praxis-flow/flow-core/server';
+import type { Runtime } from '@wartezimmer/flow-core/server';
 import type { OpsSettings, QueueDisplayStatus, QueueVisitRow } from '../db/db-types.js';
 import { domainError } from '../errors/domain-error.js';
 import {

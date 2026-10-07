@@ -18,7 +18,7 @@
   } from '$lib/mfa/journey-admin-helpers';
   import type { JourneySettings, JourneyTemplateSetting, PracticeRoom } from '$lib/ops/openapi-types';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
-  import { WAITING_ROOM_LABEL, WAITING_ROOM_LOCATION_ID } from '@praxis-flow/domain';
+  import { WAITING_ROOM_LABEL, WAITING_ROOM_LOCATION_ID } from '@wartezimmer/domain';
 
   interface Props {
     journeySettings: JourneySettings;

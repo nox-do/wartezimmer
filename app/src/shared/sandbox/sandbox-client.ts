@@ -2,7 +2,7 @@ import { isRecord } from '../type-guards.js';
 import {
   encodeIntakeFileNameHeader,
   INTAKE_FILE_NAME_ENCODING_HEADER,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 
 type SandboxPreviewRequest = {
   previewSessionId: string;

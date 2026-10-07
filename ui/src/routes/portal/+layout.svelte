@@ -5,7 +5,7 @@
   import { fetchPortalConfig } from '$lib/portal/config-api';
   import { updatePracticeProfileCache } from '$lib/practice/practice-profile-client';
   import { clearPortalSession } from '$lib/portal/portal-session';
-  import { DEFAULT_TERMINAL_PATIENT_LOCALES, type TerminalPatientLocale } from '@praxis-flow/domain';
+  import { DEFAULT_TERMINAL_PATIENT_LOCALES, type TerminalPatientLocale } from '@wartezimmer/domain';
   import { t } from '$lib/i18n/i18nStore.svelte';
   import { page } from '$app/state';
 

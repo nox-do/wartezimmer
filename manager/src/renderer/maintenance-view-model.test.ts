@@ -35,7 +35,7 @@ function minimalStorageResult(overrides: Partial<StorageFoldersResult> = {}): St
 
 test('backupInfoText covers backup, missing backup, and missing env', () => {
   assert.match(
-    backupInfoText('/tmp/backups/praxis-flow-backup-2026-06-25T10-00-00-000Z.pfbackup', true),
+    backupInfoText('/tmp/backups/wartezimmer-backup-2026-06-25T10-00-00-000Z.pfbackup', true),
     /^Letztes Backup:/,
   );
   assert.equal(backupInfoText(null, true), 'Noch kein Backup vorhanden.');
@@ -90,8 +90,8 @@ test('softwareUpdateInfoRows shows compact current release', () => {
     deliveryImages: {
       required: true,
       configured: true,
-      appImage: 'praxis-flow/app:2.0',
-      sandboxImage: 'praxis-flow/sandbox:2.0',
+      appImage: 'wartezimmer/app:2.0',
+      sandboxImage: 'wartezimmer/sandbox:2.0',
       releaseVersion: '2.0.0',
       archiveSha256: 'deadbeef',
       appPresent: true,
@@ -110,8 +110,8 @@ test('softwareUpdateInfoRows falls back to shared image tag without releaseVersi
       deliveryImages: {
         required: true,
         configured: true,
-        appImage: 'praxis-flow/app:2026.07.0',
-        sandboxImage: 'praxis-flow/sandbox:2026.07.0',
+        appImage: 'wartezimmer/app:2026.07.0',
+        sandboxImage: 'wartezimmer/sandbox:2026.07.0',
         releaseVersion: null,
         archiveSha256: null,
         appPresent: true,

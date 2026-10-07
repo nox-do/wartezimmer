@@ -43,7 +43,7 @@ export const DEV_BOOTSTRAP_FILES = [
 ] as const;
 
 function resolveTemplateRoot(startDir?: string): string {
-  const fromEnv = process.env.PRAXIS_FLOW_TEMPLATE_ROOT?.trim();
+  const fromEnv = process.env.WARTEZIMMER_TEMPLATE_ROOT?.trim();
   if (fromEnv) {
     return path.resolve(fromEnv);
   }
@@ -60,12 +60,12 @@ function resolveTemplateRoot(startDir?: string): string {
   }
 
   throw new Error(
-    'SETUP_TEMPLATE_ROOT_NOT_FOUND: run from the praxis_flow repository or set PRAXIS_FLOW_TEMPLATE_ROOT',
+    'SETUP_TEMPLATE_ROOT_NOT_FOUND: run from the wartezimmer repository or set WARTEZIMMER_TEMPLATE_ROOT',
   );
 }
 
 function bootstrapFilesForProfile(): readonly string[] {
-  const profile = process.env.PRAXIS_FLOW_COMPOSE_PROFILE?.trim().toLowerCase();
+  const profile = process.env.WARTEZIMMER_COMPOSE_PROFILE?.trim().toLowerCase();
   return profile === 'dev' ? DEV_BOOTSTRAP_FILES : DELIVERY_BOOTSTRAP_FILES;
 }
 
@@ -144,7 +144,7 @@ export function resolveSetupContext(startDir = process.cwd()): SetupContext {
     return {
       home: repoRoot,
       mode: 'repo',
-      composeProjectName: process.env.COMPOSE_PROJECT_NAME?.trim() || 'praxis-flow',
+      composeProjectName: process.env.COMPOSE_PROJECT_NAME?.trim() || 'wartezimmer',
       templateRoot: repoRoot,
     };
   }

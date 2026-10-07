@@ -1,4 +1,4 @@
-import { createModuleLogger } from '@praxis-flow/server-shared/logger';
+import { createModuleLogger } from '@wartezimmer/server-shared/logger';
 import type { OpsSettings } from './db/db-types.js';
 import { domainError } from './errors/domain-error.js';
 

@@ -21,7 +21,7 @@ function createMockApi(overrides: Partial<WartezimmerManagerApi> = {}): Wartezim
     }),
     createPfbackup: async () => ({
       envPath: '/tmp/pf/.env',
-      backupPath: '/tmp/backups/praxis-flow-backup-2026-06-25T10-00-00-000Z.pfbackup',
+      backupPath: '/tmp/backups/wartezimmer-backup-2026-06-25T10-00-00-000Z.pfbackup',
     }),
     savePfbackup: async () => ({ saved: true, canceled: false, filePath: '/tmp/out.pfbackup' }),
     selectPfbackupForRestore: async () => ({

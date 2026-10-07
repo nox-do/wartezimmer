@@ -11,7 +11,7 @@ export type GeneratedSecrets = {
   OPENNDS_FAS_KEY: string;
 };
 
-import { SECRET_ENV_KEYS } from '@praxis-flow/server-shared';
+import { SECRET_ENV_KEYS } from '@wartezimmer/server-shared';
 export { SECRET_ENV_KEYS };
 
 const WEAK_SECRET_VALUES = new Set(['change-me', 'change-me-captive-key']);

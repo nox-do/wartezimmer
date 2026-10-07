@@ -15,7 +15,7 @@
     isTerminalPatientLocaleEnabled,
     toggleTerminalPatientLocale,
     type TerminalPatientLocale,
-  } from '@praxis-flow/domain';
+  } from '@wartezimmer/domain';
 
   const RETURN_WINDOW_MIN = 1;
   const RETURN_WINDOW_MAX = 240;

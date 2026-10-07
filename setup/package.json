@@ -1,5 +1,5 @@
 {
-  "name": "@praxis-flow/setup",
+  "name": "@wartezimmer/setup",
   "private": true,
   "version": "6.1.1",
   "type": "module",
@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@clack/prompts": "^0.10.1",
-    "@praxis-flow/server-shared": "*"
+    "@wartezimmer/server-shared": "*"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",

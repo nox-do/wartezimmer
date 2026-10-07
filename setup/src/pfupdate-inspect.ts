@@ -6,7 +6,7 @@ import type {
   PfupdateInspectInput,
   PfupdateInspectResult,
   PfupdateManifestV1,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import { readManagerState } from './manager-state.js';
 import { extractPfupdateArchive, validateExtractedPfupdate } from './pfupdate-package.js';
 import { resolveCurrentSettingsFormatVersion } from './settings-format-version.js';

@@ -41,7 +41,7 @@ services:
   coredns:
     logging: *docker-logging
     image: coredns/coredns:1.14.7@sha256:7efd3c635b03efd68c4e8398fc45f0d993d0e9ab016f72c1cefb0fd6d01aa286
-    container_name: praxis-flow-tls-lab-coredns
+    container_name: wartezimmer-tls-lab-coredns
     restart: unless-stopped
     command: ['-conf', '/etc/coredns/Corefile']
     ports:
@@ -57,7 +57,7 @@ services:
   acme-dns:
     logging: *docker-logging
     image: joohoi/acme-dns:v1.0@sha256:08435bf0c6cfe7c29816ff48beabcc333743b5bb060cae3867777d9b0d956517
-    container_name: praxis-flow-tls-lab-acme-dns
+    container_name: wartezimmer-tls-lab-acme-dns
     restart: unless-stopped
     ports:
       # Host + later Setup: HTTP API on loopback. Containers use http://acme-dns:80.
@@ -69,7 +69,7 @@ services:
   pebble:
     logging: *docker-logging
     image: ghcr.io/letsencrypt/pebble:2.10.1@sha256:ddf230642b1a584f519f32e347de1b05a6e4c1f6c35c1863b33effeab5f78199
-    container_name: praxis-flow-tls-lab-pebble
+    container_name: wartezimmer-tls-lab-pebble
     restart: unless-stopped
     command: ['-config', 'test/config/pebble-config.json', '-dnsserver', 'coredns:53']
     environment:

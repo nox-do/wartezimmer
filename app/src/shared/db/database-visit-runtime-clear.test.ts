@@ -7,7 +7,7 @@ import { DatabaseSync } from 'node:sqlite';
 import {
   ensureVisitEventAuditColumns,
   ensureVisitSupersedeColumns,
-} from '@praxis-flow/flow-core/server';
+} from '@wartezimmer/flow-core/server';
 import { CoreDatabase } from './database.js';
 import { createCurrentSchema } from './create-current-schema.js';
 import { runMigrations } from './migrations-runner.js';
@@ -72,7 +72,7 @@ function seedVisitPortalRows(db: DatabaseSync, visitId: string): void {
 
 function openCoreDatabase(): { core: CoreDatabase; inspect: DatabaseSync; cleanup: () => void } {
   const dir = mkdtempSync(join(tmpdir(), 'pf-db-reset-'));
-  const dbPath = join(dir, 'praxis-flow.db');
+  const dbPath = join(dir, 'wartezimmer.db');
   const previousNodeEnv = process.env.NODE_ENV;
   const previousContactLookupBase = process.env.CONTACT_LOOKUP_BASE_PATH;
   process.env.NODE_ENV = 'test';

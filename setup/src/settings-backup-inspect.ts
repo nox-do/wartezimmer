@@ -15,7 +15,7 @@ import {
   type PfbackupInspectEnvironment,
   type PfbackupInspectResult,
   type StackImageEnvKey,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import { buildPfbackupTlsInspectSummary } from './tls-backup-sidecar.js';
 import { readEnvMap } from './env-file.js';
 import { readManagerState } from './manager-state.js';
@@ -41,11 +41,11 @@ const NETWORK_ENV_KEYS = [
 const MOCK_MESSAGING_PROVIDER_ID = 'mock';
 
 const STACK_IMAGE_MANAGER_FIELDS = {
-  PRAXIS_FLOW_APP_IMAGE: 'appImage',
-  PRAXIS_FLOW_SANDBOX_IMAGE: 'sandboxImage',
-  PRAXIS_FLOW_GATEWAY_IMAGE: 'gatewayImage',
+  WARTEZIMMER_APP_IMAGE: 'appImage',
+  WARTEZIMMER_SANDBOX_IMAGE: 'sandboxImage',
+  WARTEZIMMER_GATEWAY_IMAGE: 'gatewayImage',
 } as const satisfies Record<
-  Exclude<StackImageEnvKey, 'PRAXIS_FLOW_PROXY_IMAGE'>,
+  Exclude<StackImageEnvKey, 'WARTEZIMMER_PROXY_IMAGE'>,
   keyof Pick<ManagerReleaseState, 'appImage' | 'sandboxImage' | 'gatewayImage'>
 >;
 
@@ -133,10 +133,10 @@ export function extractPfbackupInspectEnvironment(
 
   const imageReferences = pickNonEmptyStrings({
     releaseVersion: release?.releaseVersion ?? undefined,
-    appImage: env.PRAXIS_FLOW_APP_IMAGE ?? release?.appImage,
-    sandboxImage: env.PRAXIS_FLOW_SANDBOX_IMAGE ?? release?.sandboxImage,
-    gatewayImage: env.PRAXIS_FLOW_GATEWAY_IMAGE ?? release?.gatewayImage ?? undefined,
-    proxyImage: env.PRAXIS_FLOW_PROXY_IMAGE,
+    appImage: env.WARTEZIMMER_APP_IMAGE ?? release?.appImage,
+    sandboxImage: env.WARTEZIMMER_SANDBOX_IMAGE ?? release?.sandboxImage,
+    gatewayImage: env.WARTEZIMMER_GATEWAY_IMAGE ?? release?.gatewayImage ?? undefined,
+    proxyImage: env.WARTEZIMMER_PROXY_IMAGE,
     archiveSha256: release?.archiveSha256 ?? undefined,
   });
 

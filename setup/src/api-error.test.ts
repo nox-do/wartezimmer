@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
+import { ManagerApiError } from '@wartezimmer/server-shared/setup-api';
 import { resolveSetupApiError } from './api-error.js';
 import { SetupApiValidationError } from './setup-api-normalize.js';
 import { createHostMutationLock } from './host-mutation-lock.js';

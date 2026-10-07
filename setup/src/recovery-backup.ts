@@ -5,7 +5,7 @@ import {
   parsePfbackupArchive,
   validatePfbackupArchive,
   type RecoveryBackupCandidate,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import { buildPfbackupTlsInspectSummary } from './tls-backup-sidecar.js';
 import { installOperationDirectory, type InstallOperation } from './install-operation.js';
 
@@ -61,7 +61,7 @@ function names(home: string): string[] {
     .readdirSync(root)
     .filter(
       (name) =>
-        /^praxis-flow-backup-.+\.pfbackup$/.test(name) &&
+        /^wartezimmer-backup-.+\.pfbackup$/.test(name) &&
         fs.lstatSync(path.join(root, name)).isFile(),
     );
 }

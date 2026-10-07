@@ -1,4 +1,4 @@
-import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
+import { ManagerApiError } from '@wartezimmer/server-shared/setup-api';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { resolveSetupApiUrl, setupApiTimeoutMs, callSetupApi, setupApiError } from './setup-api.js';

@@ -1,4 +1,4 @@
-import { formatTicketCode, parseTicketCode } from '@praxis-flow/domain';
+import { formatTicketCode, parseTicketCode } from '@wartezimmer/domain';
 
 export type FormatTicketCodeInputOptions = {
   /** When true, inserts `-` right after the lane letter (e.g. `A` → `A-`). */

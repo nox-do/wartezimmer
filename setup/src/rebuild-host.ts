@@ -20,12 +20,12 @@ import {
 import { runDockerCommand } from './docker-cli.js';
 import { waitForExpectedStackHealth } from './stack-health.js';
 import { auditRuntimePostcondition, createRuntimePostcondition } from './runtime-postcondition.js';
-import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
+import { ManagerApiError } from '@wartezimmer/server-shared/setup-api';
 import { SetupApiValidationError } from './setup-api-normalize.js';
 import type { SetupContext } from './setup-context.js';
 import { listNetworkInterfaces } from './network.js';
 import { assertHostLifecycleAction } from './host-lifecycle-guard.js';
-import type { ComposeActionResult, PortalProxyContract } from '@praxis-flow/server-shared';
+import type { ComposeActionResult, PortalProxyContract } from '@wartezimmer/server-shared';
 
 export type RebuildHooks = {
   compose?: typeof runComposeCommand;
@@ -303,7 +303,7 @@ export async function rebuildHost(
         if (
           previous &&
           tls.state !== 'off' &&
-          !/^# PRAXIS-FLOW-GENERATED LAN-TLS v\d+/m.test(previous.toString())
+          !/^# WARTEZIMMER-GENERATED LAN-TLS v\d+/m.test(previous.toString())
         )
           fail('Eigene Caddy-Konfiguration wird nicht überschrieben.');
         fs.mkdirSync(path.dirname(caddyFile), { recursive: true });

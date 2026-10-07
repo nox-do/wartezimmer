@@ -1,4 +1,4 @@
-import { isWaitingRoomLocationId } from '@praxis-flow/domain';
+import { isWaitingRoomLocationId } from '@wartezimmer/domain';
 import type { PracticeRoom } from './ops-settings-api';
 import type { QueueItem } from './types';
 

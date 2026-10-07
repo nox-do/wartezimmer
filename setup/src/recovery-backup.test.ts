@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test, { type TestContext } from 'node:test';
-import { buildPfbackupArchive, serializePfbackupArchive } from '@praxis-flow/server-shared';
+import { buildPfbackupArchive, serializePfbackupArchive } from '@wartezimmer/server-shared';
 import {
   discoverRecoveryBackups,
   inspectRecoveryArchive,
@@ -44,7 +44,7 @@ function archive(createdAt = '2026-09-20T12:00:00.000Z') {
   );
 }
 function prepare(home: string) {
-  fs.writeFileSync(path.join(home, 'backups/praxis-flow-backup-valid.pfbackup'), archive());
+  fs.writeFileSync(path.join(home, 'backups/wartezimmer-backup-valid.pfbackup'), archive());
   const operation = createPreparedInstallOperation({
     home,
     mode: 'replace',
@@ -92,16 +92,16 @@ const healthyDeps: RecoveryDeps = {
 
 test('offline discovery skips newer corrupt/v1 files, directories and symlinks; exposes no paths or secrets', (t) => {
   const home = fixture(t);
-  fs.writeFileSync(path.join(home, 'backups/praxis-flow-backup-old.pfbackup'), archive());
-  fs.writeFileSync(path.join(home, 'backups/praxis-flow-backup-new.pfbackup'), '{broken');
+  fs.writeFileSync(path.join(home, 'backups/wartezimmer-backup-old.pfbackup'), archive());
+  fs.writeFileSync(path.join(home, 'backups/wartezimmer-backup-new.pfbackup'), '{broken');
   const old = JSON.parse(archive());
   old.manifest.pfbackupFormatVersion = 1;
-  fs.writeFileSync(path.join(home, 'backups/praxis-flow-backup-v1.pfbackup'), JSON.stringify(old));
+  fs.writeFileSync(path.join(home, 'backups/wartezimmer-backup-v1.pfbackup'), JSON.stringify(old));
   fs.symlinkSync(
-    path.join(home, 'backups/praxis-flow-backup-old.pfbackup'),
-    path.join(home, 'backups/praxis-flow-backup-link.pfbackup'),
+    path.join(home, 'backups/wartezimmer-backup-old.pfbackup'),
+    path.join(home, 'backups/wartezimmer-backup-link.pfbackup'),
   );
-  fs.mkdirSync(path.join(home, 'backups/praxis-flow-backup-directory.pfbackup'));
+  fs.mkdirSync(path.join(home, 'backups/wartezimmer-backup-directory.pfbackup'));
   const candidates = discoverRecoveryBackups(home);
   assert.equal(candidates.length, 1);
   assert.equal(candidates[0]?.archiveUsable, true);

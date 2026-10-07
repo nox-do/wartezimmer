@@ -1,7 +1,7 @@
 import type { CheckInPath } from './types.js';
 
 // Gemeinsame Source of Truth mit Host/UI; flow-core exportiert sie nur weiter.
-export { MFA_ASSIST_TOPIC_ID } from '@praxis-flow/domain';
+export { MFA_ASSIST_TOPIC_ID } from '@wartezimmer/domain';
 
 export const CHECK_IN_PATHS = new Set<CheckInPath>(['topic', 'mfa_assist']);
 

@@ -14,12 +14,12 @@ import type { SetupContext } from './setup-context.js';
 test('normalizeHostFolderPath expands ~ and normalizes absolute paths', () => {
   const home = process.env.HOME ?? process.env.USERPROFILE ?? '';
   assert.equal(
-    normalizeHostFolderPath('~/praxis-flow-imports'),
-    path.join(home, 'praxis-flow-imports'),
+    normalizeHostFolderPath('~/wartezimmer-imports'),
+    path.join(home, 'wartezimmer-imports'),
   );
   assert.equal(
-    normalizeHostFolderPath('/tmp/praxis-flow-exports'),
-    path.normalize('/tmp/praxis-flow-exports'),
+    normalizeHostFolderPath('/tmp/wartezimmer-exports'),
+    path.normalize('/tmp/wartezimmer-exports'),
   );
 });
 
@@ -59,12 +59,12 @@ test('resolveStorageFoldersFromSources prefers process env over .env map', () =>
 test('resolveStorageFoldersFromSources expands ~ from env map', () => {
   const home = process.env.HOME ?? process.env.USERPROFILE ?? '';
   const envMap = new Map([
-    ['IMPORTS_HOST_PATH', '~/praxis-flow-imports'],
-    ['EXPORTS_HOST_PATH', '~/praxis-flow-exports'],
+    ['IMPORTS_HOST_PATH', '~/wartezimmer-imports'],
+    ['EXPORTS_HOST_PATH', '~/wartezimmer-exports'],
   ]);
   assert.deepEqual(resolveStorageFoldersFromSources({ envMap }), {
-    imports: path.join(home, 'praxis-flow-imports'),
-    exports: path.join(home, 'praxis-flow-exports'),
+    imports: path.join(home, 'wartezimmer-imports'),
+    exports: path.join(home, 'wartezimmer-exports'),
   });
 });
 

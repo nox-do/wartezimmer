@@ -22,7 +22,7 @@ function testConfig(intakeBasePath: string): SandboxConfig {
 }
 
 test('image preview embed serves a fit-to-screen HTML viewer and raw image asset', async () => {
-  const basePath = await mkdtemp(path.join(tmpdir(), 'praxis-flow-preview-'));
+  const basePath = await mkdtemp(path.join(tmpdir(), 'wartezimmer-preview-'));
   const app = buildSandboxApp(testConfig(basePath));
 
   try {
@@ -74,7 +74,7 @@ test('image preview embed serves a fit-to-screen HTML viewer and raw image asset
 });
 
 test('deleting a document releases its preview session and missing source has a distinct status', async () => {
-  const basePath = await mkdtemp(path.join(tmpdir(), 'praxis-flow-preview-cleanup-'));
+  const basePath = await mkdtemp(path.join(tmpdir(), 'wartezimmer-preview-cleanup-'));
   const app = buildSandboxApp(testConfig(basePath));
   try {
     await app.inject({

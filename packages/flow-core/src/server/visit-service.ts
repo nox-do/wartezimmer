@@ -7,7 +7,7 @@ import type {
   Visit,
   VisitEvent,
   VisitView,
-} from '@praxis-flow/flow-core';
+} from '@wartezimmer/flow-core';
 import {
   MFA_ASSIST_TOPIC_ID,
   assertCheckInCombination,
@@ -36,12 +36,12 @@ import {
   assertCallTargetLocation,
   resolveReturnToWaitingVisitPatch,
   statusForMovementMode,
-} from '@praxis-flow/flow-core';
+} from '@wartezimmer/flow-core';
 import type {
   RedirectRequestBody,
   RedirectContext,
   TransitionRequestBody,
-} from '@praxis-flow/flow-core';
+} from '@wartezimmer/flow-core';
 import { resolveCheckInRouting } from './escort.js';
 import { resolveQueueOnArrival } from './location-routing.js';
 import { allocateQueueSequence } from './queue-counter.js';

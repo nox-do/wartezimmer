@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tlsNetworkPendingObtain } from './tls-network-controller.js';
-  import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
+  import { hasBlockingMaintenanceOperation } from '@wartezimmer/server-shared/manager-status-projection';
   import { managerStatusViewModel } from './manager-status-view-model.js';
   import {
     runtimeSnapshot as observedSnapshot,

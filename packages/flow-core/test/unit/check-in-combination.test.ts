@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assertCheckInCombination } from '@praxis-flow/flow-core';
+import { assertCheckInCombination } from '@wartezimmer/flow-core';
 
 test('assertCheckInCombination: topic oder mfaAssist erforderlich', () => {
   assert.doesNotThrow(() => assertCheckInCombination({ topicId: 'general' }));

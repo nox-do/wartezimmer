@@ -2,7 +2,7 @@
 
 Library für Praxisdurchläufe — Visit-Routing, Queues, Surfaces und Journey-Templates.
 
-**Package:** `@praxis-flow/flow-core` (TypeScript, Build nach `dist/`)
+**Package:** `@wartezimmer/flow-core` (TypeScript, Build nach `dist/`)
 
 Host-Architektur (Modi, Sync, Guards): [`docs/architecture/routing.md`](../../docs/architecture/routing.md).
 
@@ -59,7 +59,7 @@ src/server/                — Runtime (TypeScript → dist/server/)
   visit-repository.ts      — Visits + Events
   admin-service.ts         — Rules/Templates/Topics (Package-Tests / Legacy)
   open-db.ts / seed*.ts    — Test-Infrastruktur (nicht Host-Produktpfad)
-src/index.ts               — @praxis-flow/flow-core (shared barrel)
+src/index.ts               — @wartezimmer/flow-core (shared barrel)
 test/                      — Unit + Integration
 dist/                      — Build-Ausgabe (gitignored)
 ```
@@ -68,18 +68,18 @@ dist/                      — Build-Ausgabe (gitignored)
 
 | Import                          | Inhalt                                                      |
 | ------------------------------- | ----------------------------------------------------------- |
-| `@praxis-flow/flow-core`        | Shared Domain (Types, Validierung, Journey, Visit-Flow, …)  |
-| `@praxis-flow/flow-core/server` | Runtime (`createRuntime`, `openDb`, Repositories, Services) |
+| `@wartezimmer/flow-core`        | Shared Domain (Types, Validierung, Journey, Visit-Flow, …)  |
+| `@wartezimmer/flow-core/server` | Runtime (`createRuntime`, `openDb`, Repositories, Services) |
 
 `openDb` / `seed*` sind **Package-Testadapter**, nicht Teil des Host-Betriebs. Der Host nutzt Fastify + eigene DB/Migration und importiert Runtime/Shared.
 
 ## Entwicklung
 
 ```bash
-npm run -w @praxis-flow/flow-core build
-npm run -w @praxis-flow/flow-core typecheck
-npm run -w @praxis-flow/flow-core lint
-npm run -w @praxis-flow/flow-core test
+npm run -w @wartezimmer/flow-core build
+npm run -w @wartezimmer/flow-core typecheck
+npm run -w @wartezimmer/flow-core lint
+npm run -w @wartezimmer/flow-core test
 ```
 
 ## Integration
@@ -91,9 +91,9 @@ import {
   formatVisitId,
   type Visit,
   type RoutingRuleDraft,
-} from '@praxis-flow/flow-core';
+} from '@wartezimmer/flow-core';
 
-import { createRuntime, loadCatalog } from '@praxis-flow/flow-core/server';
+import { createRuntime, loadCatalog } from '@wartezimmer/flow-core/server';
 ```
 
 Shared-Module (Domain, ohne DB) — vollständige Liste siehe `src/index.ts`.

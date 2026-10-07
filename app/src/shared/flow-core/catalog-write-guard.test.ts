@@ -73,7 +73,7 @@ test('app/src does not import low-level flow-core visit writers', () => {
     .filter((absolutePath) => !absolutePath.endsWith('.test.ts'))
     .filter((absolutePath) => {
       const source = readFileSync(absolutePath, 'utf8');
-      return /import\s*\{[^}]*\b(?:updateVisit|addEvent)\b[^}]*\}\s*from\s*['"]@praxis-flow\/flow-core\/server['"]/s.test(
+      return /import\s*\{[^}]*\b(?:updateVisit|addEvent)\b[^}]*\}\s*from\s*['"]@wartezimmer\/flow-core\/server['"]/s.test(
         source,
       );
     })

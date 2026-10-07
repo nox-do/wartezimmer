@@ -24,7 +24,7 @@ import {
   isReservedRoomLabel,
   isValidLaneCode,
   WAITING_ROOM_LOCATION_ID,
-} from '@praxis-flow/domain';
+} from '@wartezimmer/domain';
 import { validateTopicTimeWindow } from '$lib/queue/time-of-day';
 import { fetchRoutingCapabilities, type RoutingCapabilities } from '$lib/mfa/practice-ops-api';
 import { t, tf } from '$lib/i18n/i18nStore.svelte';

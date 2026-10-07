@@ -41,7 +41,7 @@ oder Manager-Metadaten schalten ein Repository nicht auf Delivery um.
 
 openNDS-Gateway-Compose ist entfernt (nicht Produkt). Historie: [`../archive/gateway-captive-portal.md`](../archive/gateway-captive-portal.md).
 
-TLS-Overlay nur nach Proxy-Overlay. Default-Compose-Projektname typisch `praxis-flow` (Volumes z. B. `praxis-flow_app_data`).
+TLS-Overlay nur nach Proxy-Overlay. Default-Compose-Projektname typisch `wartezimmer` (Volumes z. B. `wartezimmer_app_data`).
 
 Leitplanken: `restart: unless-stopped`, Healthchecks, **feste Image-Tags** (kein `latest` im Praxisbetrieb).
 
@@ -49,7 +49,7 @@ Leitplanken: `restart: unless-stopped`, Healthchecks, **feste Image-Tags** (kein
 
 | Name                                  | Inhalt                                                                   |
 | ------------------------------------- | ------------------------------------------------------------------------ |
-| Volume `app_data`                     | SQLite + Runtime-Status (`/var/lib/praxis-flow/app`)                     |
+| Volume `app_data`                     | SQLite + Runtime-Status (`/var/lib/wartezimmer/app`)                     |
 | `tmpfs` Sandbox-Intake                | Temporäre Dokumente, maximal 256 MiB standardmäßig; Verlust bei Neustart |
 | Volume `clamav_db`                    | ClamAV-Signaturen                                                        |
 | Bind `EXPORTS_HOST_PATH` → `/exports` | Exporte bleiben liegen                                                   |
@@ -59,7 +59,7 @@ Docker Desktop: File Sharing für Host-Pfade. Kein Log-Volume — stdout + json-
 
 - Default `DOCKER_LOG_MAX_SIZE=10m`, `DOCKER_LOG_MAX_FILE=5`
 - Greift für **neu erstellte** Container (`--force-recreate` nach Limit-Änderung)
-- Altlast `praxis_flow_logs_data` ggf. manuell löschen wenn leer
+- Altlast `wartezimmer_logs_data` ggf. manuell löschen wenn leer
 
 ## 5. Netz & Ports
 
@@ -153,7 +153,7 @@ Vor der erstmaligen Umstellung alle offenen Dokumente exportieren oder verwerfen
 
 Das bisherige benannte Volume `sandbox_intake_data` wird nicht mehr eingebunden. Docker entfernt es beim Wechsel nicht automatisch. Nach abgeschlossener Umstellung anhand der Compose-Projekt- und Volume-Labels das zu dieser Installation gehörende alte Volume ermitteln und gezielt entfernen; niemals pauschal `docker volume prune` oder `compose down -v` verwenden. Die übrigen Datenvolumes und Exporte bleiben erhalten. Es werden durch tägliche Neustarts keine neuen Images oder Container angesammelt; die Aufbewahrung alter Release-Images gehört zum Softwareupdate, nicht zum Tagesreset.
 
-Verifikation ohne Änderung der Installation: `npm run build:server-shared`, `npm run -w @praxis-flow/sandbox build`, anschließend `SANDBOX_TEST_IMAGE=praxis-flow/sandbox:<lokaler-Tag> node scripts/smoke-sandbox-lifecycle.mjs`. Der Test erzeugt ausschließlich einen eigenen kurzlebigen Container samt Testvolume und entfernt beides anschließend. Er prüft Schreibschutz, Dokumentverlust beim Neustart, erhaltenen Cache und die Schreibrechte des realen FreshClam-Updaters offline.
+Verifikation ohne Änderung der Installation: `npm run build:server-shared`, `npm run -w @wartezimmer/sandbox build`, anschließend `SANDBOX_TEST_IMAGE=wartezimmer/sandbox:<lokaler-Tag> node scripts/smoke-sandbox-lifecycle.mjs`. Der Test erzeugt ausschließlich einen eigenen kurzlebigen Container samt Testvolume und entfernt beides anschließend. Er prüft Schreibschutz, Dokumentverlust beim Neustart, erhaltenen Cache und die Schreibrechte des realen FreshClam-Updaters offline.
 
 ## Windows-Betriebsgrenzen (Vorbereitung)
 
@@ -169,7 +169,7 @@ Windows-Namen, Steuerzeichen, `#` und nachgestellte Punkte/Leerzeichen nicht.
 Eine bereits existierende Netzwerkfreigabe wird nicht als lokale Freigabe angenommen.
 
 Docker-Suche berücksichtigt PATH sowie System- und Benutzerinstallation von
-Docker Desktop. Abweichende Installationsorte über `PRAXIS_FLOW_DOCKER_CLI`
+Docker Desktop. Abweichende Installationsorte über `WARTEZIMMER_DOCKER_CLI`
 angeben. Windows-Aufrufe prüfen den lokalen Named-Pipe-Endpunkt und Linux-Modus
 vor der eigentlichen Operation. Compose-Mindestversion 2.24.4 wird im Status
 geprüft. Kontext und Backend werden niemals automatisch umgeschaltet.

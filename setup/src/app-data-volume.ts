@@ -4,7 +4,7 @@ import path from 'node:path';
 import { runDockerCommand, type CommandResult } from './docker-cli.js';
 import { APP_DB_PATH, appDataVolumeName } from './staff-pin-reset.js';
 
-export const APP_DB_BASENAME = 'praxis-flow.db';
+export const APP_DB_BASENAME = 'wartezimmer.db';
 
 export const APP_DB_RELATED_FILES = [
   APP_DB_BASENAME,
@@ -124,7 +124,7 @@ export function createLocalAppDataAccess(dataDir: string): AppDataVolumeAccess {
   };
 }
 
-const DOCKER_APP_DATA_MOUNT = '/var/lib/praxis-flow/app';
+const DOCKER_APP_DATA_MOUNT = '/var/lib/wartezimmer/app';
 
 function dockerUtilityRunArgs(
   composeProjectName: string,
@@ -151,7 +151,7 @@ export function createDockerAppDataAccess(
   utilityImage: string,
 ): AppDataVolumeAccess {
   if (!utilityImage.trim()) {
-    throw new Error('PRAXIS_FLOW_APP_IMAGE fehlt — App-Daten-Volume-Operationen nicht möglich.');
+    throw new Error('WARTEZIMMER_APP_IMAGE fehlt — App-Daten-Volume-Operationen nicht möglich.');
   }
 
   return {

@@ -1,4 +1,4 @@
-import { TERMINAL_PATIENT_LOCALES, type TerminalPatientLocale } from '@praxis-flow/domain';
+import { TERMINAL_PATIENT_LOCALES, type TerminalPatientLocale } from '@wartezimmer/domain';
 import type { AppLocale } from '$lib/i18n/core/I18nTypes';
 import type { TranslationKey } from '$lib/i18n/core/translation-keys';
 import { DEFAULT_LOCALE } from '$lib/i18n/core/I18nConfig';

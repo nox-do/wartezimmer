@@ -9,7 +9,7 @@ function walkProjectRoot(startDir: string): string | null {
       const raw = fs.readFileSync(pkgPath, 'utf8');
       try {
         const pkg = JSON.parse(raw) as { name?: string };
-        if (pkg.name === 'praxis_flow') {
+        if (pkg.name === 'wartezimmer') {
           return current;
         }
       } catch {
@@ -32,7 +32,7 @@ export function findProjectRootOptional(startDir = process.cwd()): string | null
 export function findProjectRoot(startDir = process.cwd()): string {
   const root = walkProjectRoot(startDir);
   if (!root) {
-    throw new Error('PROJECT_ROOT_NOT_FOUND: run from the praxis_flow repository');
+    throw new Error('PROJECT_ROOT_NOT_FOUND: run from the wartezimmer repository');
   }
   return root;
 }

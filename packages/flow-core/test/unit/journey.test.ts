@@ -6,8 +6,8 @@ import {
   isStepCompletedByAction,
   startNextJourneyStepPatch,
   stepToVisitPatch,
-} from '@praxis-flow/flow-core';
-import { escortTerminalInstruction } from '@praxis-flow/flow-core';
+} from '@wartezimmer/flow-core';
+import { escortTerminalInstruction } from '@wartezimmer/flow-core';
 
 const room1 = { id: 'room_1', name: 'Raum 1', publicName: 'Raum 1' };
 

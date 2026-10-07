@@ -3,10 +3,10 @@ import {
   MFA_ASSIST_LANE_CODE,
   WAITING_ROOM_LABEL,
   WAITING_ROOM_LOCATION_ID,
-} from '@praxis-flow/domain';
+} from '@wartezimmer/domain';
 import type { PracticeRoom, PracticeTopicSetting } from './ops-settings-api';
 
-/** Re-export canonical reserved-lane helpers from `@praxis-flow/domain`. */
+/** Re-export canonical reserved-lane helpers from `@wartezimmer/domain`. */
 export { MFA_ASSIST_LANE_CODE, isReservedLaneCode };
 
 /** Topics whose `defaultRoomId` is not present in the room list (e.g. after remove/rename). */

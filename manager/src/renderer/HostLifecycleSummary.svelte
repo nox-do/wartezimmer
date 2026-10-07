@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { HostLifecycle } from '@praxis-flow/server-shared/setup-api';
+  import type { HostLifecycle } from '@wartezimmer/server-shared/setup-api';
   import { hostLifecycleSummary } from './host-lifecycle-view-model.js';
 
   let { lifecycle }: { lifecycle: HostLifecycle } = $props();

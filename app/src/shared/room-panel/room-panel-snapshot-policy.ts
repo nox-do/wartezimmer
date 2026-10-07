@@ -1,6 +1,6 @@
-import type { VisitView } from '@praxis-flow/flow-core';
-import type { RoomPanelCapabilities, RoomPanelPolicyInput } from '@praxis-flow/domain';
-import { resolveRoomPanelCapabilities, visitTargetsRoom } from '@praxis-flow/domain';
+import type { VisitView } from '@wartezimmer/flow-core';
+import type { RoomPanelCapabilities, RoomPanelPolicyInput } from '@wartezimmer/domain';
+import { resolveRoomPanelCapabilities, visitTargetsRoom } from '@wartezimmer/domain';
 import type { CoreDatabase } from '../db/database.js';
 import { domainError } from '../errors/domain-error.js';
 import { QUEUE_ROOM_MISMATCH } from '../queue/queue-room-scope.js';

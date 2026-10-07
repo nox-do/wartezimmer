@@ -56,8 +56,8 @@ export function normalizeHostFolderPath(value: string): string {
 export function defaultStorageFolders(): StorageFolders {
   const home = process.env.HOME ?? process.env.USERPROFILE ?? process.cwd();
   return {
-    imports: path.join(home, 'praxis-flow-imports'),
-    exports: path.join(home, 'praxis-flow-exports'),
+    imports: path.join(home, 'wartezimmer-imports'),
+    exports: path.join(home, 'wartezimmer-exports'),
   };
 }
 

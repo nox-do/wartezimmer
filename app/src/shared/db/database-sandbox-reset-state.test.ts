@@ -11,10 +11,10 @@ test('sandbox reset pending survives independently and blocks manual unlock unti
   const tempDir = mkdtempSync(path.join(os.tmpdir(), 'pf-reset-state-'));
   process.env.CONTACT_LOOKUP_BASE_PATH = path.join(tempDir, 'contacts');
   try {
-    const firstProcess = new CoreDatabase(path.join(tempDir, 'praxis-flow.db'));
+    const firstProcess = new CoreDatabase(path.join(tempDir, 'wartezimmer.db'));
     firstProcess.beginSandboxReset();
 
-    const restartedProcess = new CoreDatabase(path.join(tempDir, 'praxis-flow.db'));
+    const restartedProcess = new CoreDatabase(path.join(tempDir, 'wartezimmer.db'));
     assert.equal(restartedProcess.isSandboxResetPending(), true);
     assert.equal(restartedProcess.getDayLifecycleState().needsDayStartHint, true);
     assert.throws(

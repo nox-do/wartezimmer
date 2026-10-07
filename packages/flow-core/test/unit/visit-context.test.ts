@@ -6,7 +6,7 @@ import {
   lastKnownFromJourneyStep,
   ruleUsesJourneyRouting,
   visitOperationalLabel,
-} from '@praxis-flow/flow-core';
+} from '@wartezimmer/flow-core';
 
 test('ruleUsesJourneyRouting', () => {
   assert.equal(ruleUsesJourneyRouting({ journeyTemplateId: 'j1' }), true);

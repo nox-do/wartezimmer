@@ -121,7 +121,7 @@ verweigert Start oder Recreate, wenn diese Adresse fehlt oder nicht lokal ist.
 
 Compose-Stacking (`setup/src/docker.ts`): Base → `docker-compose.proxy(.delivery).yml` wenn `PROXY_ENABLED` + aktiver Mode → optional `proxy-tls(.delivery).yml` → Lab nur bei `TLS_ACME_DIRECTORY=pebble`.
 
-Image: `PRAXIS_FLOW_PROXY_IMAGE` (Delivery: `praxis-flow-proxy:…-acmedns`, sonst Default `caddy:2.11.4`); Delivery `pull_policy: never` (app/sandbox/proxy) — siehe [`delivery.md`](delivery.md) §3.
+Image: `WARTEZIMMER_PROXY_IMAGE` (Delivery: `wartezimmer-proxy:…-acmedns`, sonst Default `caddy:2.11.4`); Delivery `pull_policy: never` (app/sandbox/proxy) — siehe [`delivery.md`](delivery.md) §3.
 
 ### Env (Auszug)
 
@@ -302,7 +302,7 @@ verwendeten Host-IP ist kein zusätzlicher Blocker.
 
 |                |                                                                                                                                        |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Image          | `PRAXIS_FLOW_PROXY_IMAGE` — Delivery: `praxis-flow-proxy:…-acmedns` (xcaddy + `dns.providers.acmedns`); Fallback/Legacy `caddy:2.11.4` |
+| Image          | `WARTEZIMMER_PROXY_IMAGE` — Delivery: `wartezimmer-proxy:…-acmedns` (xcaddy + `dns.providers.acmedns`); Fallback/Legacy `caddy:2.11.4` |
 | Delivery       | `pull_policy: never` auf app/sandbox/proxy — kein Registry-Nachzug in der Praxis                                                       |
 | Port 80        | immer mit Proxy-Overlay (`PROXY_HTTP_PORT`, Default 80)                                                                                |
 | Port 443       | nur mit TLS-Overlay (`PROXY_HTTPS_PORT`, Default 443)                                                                                  |
@@ -318,7 +318,7 @@ bei `.pfbackup` v2 als internes TLS-Archiv in derselben Backup-Datei enthalten
 
 | Pfad                                           | Inhalt                                                                                                                                                   |
 | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Caddyfile`                                    | generiert (`writeGeneratedTlsCaddyfile`, Marker `# PRAXIS-FLOW-GENERATED LAN-TLS v6`) — ersetzt den Stock-`proxy/Caddyfile`-Mount, sobald Overlay an ist |
+| `Caddyfile`                                    | generiert (`writeGeneratedTlsCaddyfile`, Marker `# WARTEZIMMER-GENERATED LAN-TLS v6`) — ersetzt den Stock-`proxy/Caddyfile`-Mount, sobald Overlay an ist |
 | `caddy-data/`, `caddy-config/`                 | Caddy ACME/Storage (`/data`, `/config`)                                                                                                                  |
 | `acme-dns.json`                                | ACME-DNS-Credentials (managed); Custom: leeres `{}` damit Docker die Datei nicht als Dir anlegt                                                          |
 | `certs/fullchain.pem`, `certs/private-key.pem` | Custom-PEM                                                                                                                                               |
@@ -330,7 +330,7 @@ Compose bind-mountet über Host-Pfad-Env (`PROXY_CADDY_*_HOST_PATH`, `PROXY_ACME
 
 Vor Cutover: Staff-Host und direkter IP-Zugang auf `:80` → `app:8080`;
 HTTPS-Block mit TLS (ACME DNS-01 bzw. PEM) + lokaler Check-Pfad
-`/__praxis-flow/setup/tls-sse`. Nach Cutover werden Staff-Host und direkter
+`/__wartezimmer/setup/tls-sse`. Nach Cutover werden Staff-Host und direkter
 IP-Zugang auf `:80` zum Staff-FQDN umgeleitet; die App läuft regulär über 443.
 Managed ist der Caddy-Site-Name ausschließlich `*.<raum>`, damit keine zweite
 Exact-Name-Order entsteht. Ein expliziter Host-Matcher leitet nur
@@ -517,7 +517,7 @@ unbekannte Zertifikatsnamen annehmen, damit eine clientseitige Zertifikatsablehn
 nicht mit einer serverseitigen Sperre verwechselt wird. Positivproben prüfen
 weiterhin Zertifikatsidentität und Vertrauen. Timeout/Verbindungsverweigerung
 beweisen keine funktionierende Zugangsgrenze. Verbotene Pfade und Methoden müssen
-404 mit dem Proxy-Marker X-Praxis-Flow-Rejection: portal-policy liefern; auf allen
+404 mit dem Proxy-Marker X-Wartezimmer-Rejection: portal-policy liefern; auf allen
 Portal-Upstream-Antworten wird dieser Header entfernt. Zulässige schreibende
 API-Aufrufe werden im Runtime-Audit nicht ausgeführt.
 

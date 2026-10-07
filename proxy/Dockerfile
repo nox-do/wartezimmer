@@ -1,16 +1,16 @@
 # syntax=docker/dockerfile:1
 # Local custom Caddy with the acmedns DNS-01 plugin (LAN-TLS managed path).
-# Stock HTTP-only default remains caddy:2.11.4 via PRAXIS_FLOW_PROXY_IMAGE unset.
+# Stock HTTP-only default remains caddy:2.11.4 via WARTEZIMMER_PROXY_IMAGE unset.
 #
 # Build (repo root):
-#   docker build -t praxis-flow-proxy:2.11.4-acmedns -f proxy/Dockerfile .
+#   docker build -t wartezimmer-proxy:2.11.4-acmedns -f proxy/Dockerfile .
 #
 # Verify plugin:
-#   docker run --rm praxis-flow-proxy:2.11.4-acmedns caddy version
-#   docker run --rm praxis-flow-proxy:2.11.4-acmedns caddy list-modules | grep acmedns
+#   docker run --rm wartezimmer-proxy:2.11.4-acmedns caddy version
+#   docker run --rm wartezimmer-proxy:2.11.4-acmedns caddy list-modules | grep acmedns
 #
 # Use with existing compose:
-#   PRAXIS_FLOW_PROXY_IMAGE=praxis-flow-proxy:2.11.4-acmedns \
+#   WARTEZIMMER_PROXY_IMAGE=wartezimmer-proxy:2.11.4-acmedns \
 #     docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d
 #
 # Plugin pin: github.com/caddy-dns/acmedns@v0.7.0

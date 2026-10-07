@@ -1,4 +1,4 @@
-import type { ComposeStatus } from '@praxis-flow/server-shared';
+import type { ComposeStatus } from '@wartezimmer/server-shared';
 
 export const runtimeAuditEnv = {
   PROXY_ENABLED: 'true',

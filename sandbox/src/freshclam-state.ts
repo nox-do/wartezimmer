@@ -1,4 +1,4 @@
-import { FRESHCLAM_LOG_PATH } from '@praxis-flow/server-shared';
+import { FRESHCLAM_LOG_PATH } from '@wartezimmer/server-shared';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { truncateLogTail } from './sandbox-log.js';

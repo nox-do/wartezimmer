@@ -12,9 +12,9 @@ export {
   type RoomTargetInput,
   type RoomPanelCapabilities,
   type RoomPanelPolicyInput,
-} from '@praxis-flow/domain';
+} from '@wartezimmer/domain';
 
-import { roomPanelConfigForPlacement } from '@praxis-flow/domain';
+import { roomPanelConfigForPlacement } from '@wartezimmer/domain';
 
 export type ActiveRoomPanel = {
   room: OpsSettings['rooms'][number];

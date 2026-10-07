@@ -1,6 +1,6 @@
-import { explainVisibility } from '@praxis-flow/flow-core';
-import { visitTargetsRoom } from '@praxis-flow/domain';
-import type { Runtime } from '@praxis-flow/flow-core/server';
+import { explainVisibility } from '@wartezimmer/flow-core';
+import { visitTargetsRoom } from '@wartezimmer/domain';
+import type { Runtime } from '@wartezimmer/flow-core/server';
 import type {
   QueueVisitRow,
   RoomPanelMode,

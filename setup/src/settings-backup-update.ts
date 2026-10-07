@@ -22,7 +22,7 @@ import { createRuntimePostcondition, auditRuntimePostcondition } from './runtime
 import { releasePortalContract, installReleaseProxyContract } from './release-proxy-contract.js';
 import { composeExec, recoverRestrictedOperation } from './docker.js';
 import { auditRestrictedListeners } from './restricted-listener-probe.js';
-import type { PortalProxyContract } from '@praxis-flow/server-shared';
+import type { PortalProxyContract } from '@wartezimmer/server-shared';
 import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -33,7 +33,7 @@ import {
   type PfupdateApplyInput,
   type PfupdateApplyResult,
   type PfupdateManifestV1,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import { createDockerAppDataAccess, type AppDataVolumeAccess } from './app-data-volume.js';
 import { composePs, composeStop, composeUp, type ComposeRunOptions } from './docker.js';
 import {
@@ -295,10 +295,10 @@ function buildUpdateEnv(
 ): Record<string, string> {
   return {
     ...currentEnv,
-    PRAXIS_FLOW_APP_IMAGE: manifest.images.app,
-    PRAXIS_FLOW_SANDBOX_IMAGE: manifest.images.sandbox,
-    ...(manifest.images.gateway ? { PRAXIS_FLOW_GATEWAY_IMAGE: manifest.images.gateway } : {}),
-    ...(manifest.images.proxy ? { PRAXIS_FLOW_PROXY_IMAGE: manifest.images.proxy } : {}),
+    WARTEZIMMER_APP_IMAGE: manifest.images.app,
+    WARTEZIMMER_SANDBOX_IMAGE: manifest.images.sandbox,
+    ...(manifest.images.gateway ? { WARTEZIMMER_GATEWAY_IMAGE: manifest.images.gateway } : {}),
+    ...(manifest.images.proxy ? { WARTEZIMMER_PROXY_IMAGE: manifest.images.proxy } : {}),
   };
 }
 
@@ -479,7 +479,7 @@ async function backupUpdateRollbackArtifacts(
   backupComposeTemplates(ctx.home, composeTemplatesDir);
   if (
     !fs.existsSync(path.join(rollbackDir, '.env')) ||
-    !fs.existsSync(path.join(rollback.appDataDir, 'praxis-flow.db'))
+    !fs.existsSync(path.join(rollback.appDataDir, 'wartezimmer.db'))
   ) {
     throw new Error('UPDATE_BACKUP_INCOMPLETE');
   }
@@ -673,7 +673,7 @@ export async function recoverUpdateOperation(
       if (needsRollback) {
         writeUpdateOperation(ctx.home, atPhase(operation, 'rolling-back'));
         // Do not turn a missing recovery snapshot into an empty database/configuration.
-        for (const file of ['.env', 'app-data/praxis-flow.db', 'compose-templates']) {
+        for (const file of ['.env', 'app-data/wartezimmer.db', 'compose-templates']) {
           if (!fs.existsSync(path.join(rollbackDir, file)))
             throw new Error('UPDATE_BACKUP_INCOMPLETE');
         }

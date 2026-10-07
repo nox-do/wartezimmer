@@ -65,8 +65,8 @@ test('writeEnvFromExample preserves keys that are only commented in the template
       path.join(dir, '.env.example'),
       [
         'PRACTICE_DISPLAY_NAME=Praxis',
-        '# PRAXIS_FLOW_APP_IMAGE=ghcr.io/your-org/praxis-flow-app:v0.1.0',
-        '# PRAXIS_FLOW_SANDBOX_IMAGE=ghcr.io/your-org/praxis-flow-sandbox:v0.1.0',
+        '# WARTEZIMMER_APP_IMAGE=ghcr.io/your-org/wartezimmer-app:v0.1.0',
+        '# WARTEZIMMER_SANDBOX_IMAGE=ghcr.io/your-org/wartezimmer-sandbox:v0.1.0',
         '',
       ].join('\n'),
     );
@@ -74,8 +74,8 @@ test('writeEnvFromExample preserves keys that are only commented in the template
       path.join(dir, '.env'),
       [
         'PRACTICE_DISPLAY_NAME=Alt',
-        'PRAXIS_FLOW_APP_IMAGE=praxis-flow/app:local',
-        'PRAXIS_FLOW_SANDBOX_IMAGE=praxis-flow/sandbox:local',
+        'WARTEZIMMER_APP_IMAGE=wartezimmer/app:local',
+        'WARTEZIMMER_SANDBOX_IMAGE=wartezimmer/sandbox:local',
         '',
       ].join('\n'),
     );
@@ -93,14 +93,14 @@ test('writeEnvFromExample preserves keys that are only commented in the template
         extra: {},
       },
       {
-        preserveExistingKeys: ['PRAXIS_FLOW_APP_IMAGE', 'PRAXIS_FLOW_SANDBOX_IMAGE'],
+        preserveExistingKeys: ['WARTEZIMMER_APP_IMAGE', 'WARTEZIMMER_SANDBOX_IMAGE'],
       },
     );
 
     const envMap = readEnvMap(path.join(dir, '.env'));
     assert.equal(envMap.get('PRACTICE_DISPLAY_NAME'), 'Neu');
-    assert.equal(envMap.get('PRAXIS_FLOW_APP_IMAGE'), 'praxis-flow/app:local');
-    assert.equal(envMap.get('PRAXIS_FLOW_SANDBOX_IMAGE'), 'praxis-flow/sandbox:local');
+    assert.equal(envMap.get('WARTEZIMMER_APP_IMAGE'), 'wartezimmer/app:local');
+    assert.equal(envMap.get('WARTEZIMMER_SANDBOX_IMAGE'), 'wartezimmer/sandbox:local');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

@@ -112,7 +112,7 @@ import {
   evaluateHostLifecycleAction,
   SETUP_DEFAULT_GATEWAY_INTERFACE,
   SETUP_DEFAULT_GATEWAY_IP,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import type {
   ApplySetupOptions,
   ComposeAction,
@@ -142,7 +142,7 @@ import type {
   StorageFoldersInput,
   StorageFoldersResult,
   TlsStatus,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import { resolveSecretsForEnv } from './secrets.js';
 import { resetStaffPinsInAppDatabase } from './staff-pin-reset.js';
 import {
@@ -172,9 +172,9 @@ import {
 } from './proxy.js';
 import { dockerImageExists } from './delivery-images.js';
 import { SetupApiValidationError } from './setup-api-normalize.js';
-import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
+import { ManagerApiError } from '@wartezimmer/server-shared/setup-api';
 import type { SetupContext } from './setup-context.js';
-import type { ProxyConfigInput } from '@praxis-flow/server-shared';
+import type { ProxyConfigInput } from '@wartezimmer/server-shared';
 import { parseTlsDnsResolvers, readTlsStatus, TLS_ENV_KEYS } from './host-tls.js';
 import {
   GENERATED_CADDYFILE_MARKER,
@@ -216,7 +216,7 @@ export type {
   SetupPlan,
   StorageFoldersInput,
   StorageFoldersResult,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 
 export type { SandboxScannerStatus } from './sandbox-health.js';
 
@@ -588,7 +588,7 @@ export async function runComposeAction(
 
     const start = async () => {
       const appImage =
-        envMap.get('PRAXIS_FLOW_APP_IMAGE')?.trim() ||
+        envMap.get('WARTEZIMMER_APP_IMAGE')?.trim() ||
         readManagerState(ctx.home).release?.appImage?.trim() ||
         (ctx.mode === 'repo' ? `${ctx.composeProjectName}-app` : '');
       const gate = await (hooks?.inspectExistingAppDatabase ?? inspectExistingAppDatabase)(
@@ -1126,7 +1126,7 @@ export async function startStoppedInstallation(
     const env = readEnvMap(path.join(ctx.home, '.env'));
     const release = readManagerState(ctx.home).release;
     const appImage =
-      env.get('PRAXIS_FLOW_APP_IMAGE')?.trim() ||
+      env.get('WARTEZIMMER_APP_IMAGE')?.trim() ||
       release?.appImage?.trim() ||
       (ctx.mode === 'repo' ? `${ctx.composeProjectName}-app` : '');
     assertHostLifecycleAction(ctx, 'stack-start');
@@ -1409,7 +1409,7 @@ type RestrictedNetworkMutationHooks = HostWriteRuntimeHooks & {
   restoreProxyRestartPolicy?: typeof restoreProxyRestartPolicy;
 };
 
-const GENERATED_CADDYFILE_PATTERN = /^# PRAXIS-FLOW-GENERATED LAN-TLS v\d+\s*$/m;
+const GENERATED_CADDYFILE_PATTERN = /^# WARTEZIMMER-GENERATED LAN-TLS v\d+\s*$/m;
 
 function restrictedPrerequisiteError(inspect: RestrictedNetworkInspectResult): string | null {
   const required = new Set([
@@ -1826,9 +1826,9 @@ export async function applySetupPlan(
     const preserveExistingKeys = [
       ...(input.preserveEnv
         ? [
-            'PRAXIS_FLOW_APP_IMAGE',
-            'PRAXIS_FLOW_SANDBOX_IMAGE',
-            'PRAXIS_FLOW_GATEWAY_IMAGE',
+            'WARTEZIMMER_APP_IMAGE',
+            'WARTEZIMMER_SANDBOX_IMAGE',
+            'WARTEZIMMER_GATEWAY_IMAGE',
             ...(preparedStorage ? [] : ['IMPORTS_HOST_PATH', 'EXPORTS_HOST_PATH']),
           ]
         : []),
@@ -2030,8 +2030,8 @@ export async function loadDeliveryImages(
     }
 
     const status = await getHostStatus(ctx);
-    const appImage = `praxis-flow/app:${operation.package.releaseVersion}`;
-    const sandboxImage = `praxis-flow/sandbox:${operation.package.releaseVersion}`;
+    const appImage = `wartezimmer/app:${operation.package.releaseVersion}`;
+    const sandboxImage = `wartezimmer/sandbox:${operation.package.releaseVersion}`;
 
     return {
       envPath: path.join(ctx.home, '.env'),

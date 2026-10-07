@@ -1,4 +1,4 @@
-import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
+import { ManagerApiError } from '@wartezimmer/server-shared/setup-api';
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -60,10 +60,10 @@ export function assertWindowsHostPath(
         '-NoProfile',
         '-NonInteractive',
         '-Command',
-        '[System.IO.DriveInfo]::new($env:PRAXIS_FLOW_CHECK_DRIVE).DriveType.ToString()',
+        '[System.IO.DriveInfo]::new($env:WARTEZIMMER_CHECK_DRIVE).DriveType.ToString()',
       ],
       {
-        env: { ...process.env, PRAXIS_FLOW_CHECK_DRIVE: drive },
+        env: { ...process.env, WARTEZIMMER_CHECK_DRIVE: drive },
         encoding: 'utf8',
         windowsHide: true,
         timeout: 5000,

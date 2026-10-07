@@ -14,7 +14,7 @@ import { parseDeviceAuthorizationCopyRows } from '../../shared/db/database-devic
 import {
   MAINTENANCE_API_PROTOCOL_VERSION,
   CURRENT_SETTINGS_FORMAT_VERSION,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import { resolveStackVersion } from '../../shared/stack-version.js';
 
 /**

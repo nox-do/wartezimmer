@@ -16,7 +16,7 @@
     isRenameGenerationCurrent,
   } from '$lib/mfa/mfa-document-preview.svelte';
   import { type MfaPreviewContext } from '$lib/mfa/document-context';
-  import { formatTicketCode } from '@praxis-flow/domain';
+  import { formatTicketCode } from '@wartezimmer/domain';
   import { mfaPracticeContext } from '$lib/mfa/mfa-practice-context.svelte';
   import { getTopicLabel } from '$lib/queue/practice-catalog';
   import { toastStore } from '$lib/stores/toastStore';

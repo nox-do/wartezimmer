@@ -21,8 +21,8 @@ test('buildDeviceUrlsFromBaseUrl derives role URLs from a base', () => {
 
 test('buildDeviceUrlsFromBaseUrl strips trailing slashes', () => {
   assert.equal(
-    buildDeviceUrlsFromBaseUrl('http://praxis-flow.local/').appBaseUrl,
-    'http://praxis-flow.local',
+    buildDeviceUrlsFromBaseUrl('http://wartezimmer.local/').appBaseUrl,
+    'http://wartezimmer.local',
   );
 });
 
@@ -44,8 +44,8 @@ test('resolveCanonicalBaseUrl falls back to LAN IP when env is empty', () => {
 });
 
 test('resolveCanonicalBaseUrl prefers CANONICAL_BASE_URL', () => {
-  const env = new Map([['CANONICAL_BASE_URL', 'http://praxis-flow.local:8080/']]);
-  assert.equal(resolveCanonicalBaseUrl(env, '192.168.1.50'), 'http://praxis-flow.local:8080');
+  const env = new Map([['CANONICAL_BASE_URL', 'http://wartezimmer.local:8080/']]);
+  assert.equal(resolveCanonicalBaseUrl(env, '192.168.1.50'), 'http://wartezimmer.local:8080');
 });
 
 test('resolveCanonicalBaseUrl ignores invalid or non-http CANONICAL_BASE_URL', () => {

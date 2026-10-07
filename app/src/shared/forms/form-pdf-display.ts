@@ -3,7 +3,7 @@ import type {
   FormPdfDisplayField,
   FormPdfDisplayMeta,
   FormPdfDisplaySection,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import type { FormTemplateDefinition, FormTemplateField } from './template-types.js';
 import { buildFormPrivacyNoticeV2 } from './consent/privacy-notice-v1.js';
 import { getCoreDatabase } from '../db/database.js';

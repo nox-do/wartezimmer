@@ -1,4 +1,4 @@
-import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
+import { hasBlockingMaintenanceOperation } from '@wartezimmer/server-shared/manager-status-projection';
 import { tabDisabled } from './manager-main-nav.js';
 import type {
   RecoveryBackupCandidate,

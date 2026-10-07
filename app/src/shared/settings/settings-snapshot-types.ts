@@ -1,4 +1,4 @@
-import { CURRENT_SETTINGS_FORMAT_VERSION } from '@praxis-flow/server-shared';
+import { CURRENT_SETTINGS_FORMAT_VERSION } from '@wartezimmer/server-shared';
 
 export const SETTINGS_FORMAT_VERSION = CURRENT_SETTINGS_FORMAT_VERSION;
 

@@ -3,12 +3,12 @@ import type {
   ComposeStatus,
   ProxyMode,
   ProxyStatus,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import {
   deriveHttpDeviceAddress,
-  PRAXIS_FLOW_PROXY_IMAGE_COMPOSE_DEFAULT_REF,
-  PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY,
-} from '@praxis-flow/server-shared';
+  WARTEZIMMER_PROXY_IMAGE_COMPOSE_DEFAULT_REF,
+  WARTEZIMMER_PROXY_IMAGE_ENV_KEY,
+} from '@wartezimmer/server-shared';
 import { runDockerCommand } from './docker-cli.js';
 import { DEFAULT_PROXY_HTTP_PORT } from './network-bindings.js';
 import { DEFAULT_APP_PORT, parseHttpBaseUrl } from './urls.js';
@@ -23,7 +23,7 @@ export function resolveAppBindAddress(proxyEnabled: boolean): string {
 }
 
 /** Always survive applySetupPlan (not part of the proxy wire payload). */
-export const PROXY_IMAGE_ENV_KEY = PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY;
+export const PROXY_IMAGE_ENV_KEY = WARTEZIMMER_PROXY_IMAGE_ENV_KEY;
 
 /**
  * Survive applySetupPlan only when the wire omits `proxy` (older clients).
@@ -335,7 +335,7 @@ export function planProxyComposeActions(input: {
 
 export function resolveProxyImageRef(env?: EnvLike): string {
   return (
-    readEnvValue(env, PROXY_IMAGE_ENV_KEY)?.trim() || PRAXIS_FLOW_PROXY_IMAGE_COMPOSE_DEFAULT_REF
+    readEnvValue(env, PROXY_IMAGE_ENV_KEY)?.trim() || WARTEZIMMER_PROXY_IMAGE_COMPOSE_DEFAULT_REF
   );
 }
 

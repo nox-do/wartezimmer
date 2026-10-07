@@ -24,17 +24,17 @@ test('buildDockerEnv prepends fallback docker cli directories to PATH', () => {
 });
 
 test('runDockerCommand does not restore variables omitted from an explicit environment', async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'praxis-flow-docker-env-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'wartezimmer-docker-env-'));
   const fakeDocker = path.join(root, 'docker');
   fs.writeFileSync(
     fakeDocker,
     '#!/bin/sh\nprintf "%s|%s" "${APP_BIND_ADDRESS-unset}" "${SETUP_LAN_APP_IP-unset}"\n',
     { mode: 0o755 },
   );
-  const previousCli = process.env.PRAXIS_FLOW_DOCKER_CLI;
+  const previousCli = process.env.WARTEZIMMER_DOCKER_CLI;
   const previousAppBind = process.env.APP_BIND_ADDRESS;
   const previousStaffIp = process.env.SETUP_LAN_APP_IP;
-  process.env.PRAXIS_FLOW_DOCKER_CLI = fakeDocker;
+  process.env.WARTEZIMMER_DOCKER_CLI = fakeDocker;
   process.env.APP_BIND_ADDRESS = '0.0.0.0';
   process.env.SETUP_LAN_APP_IP = '0.0.0.0';
   try {
@@ -42,8 +42,8 @@ test('runDockerCommand does not restore variables omitted from an explicit envir
     assert.equal(result.code, 0);
     assert.equal(result.stdout, 'unset|unset');
   } finally {
-    if (previousCli === undefined) delete process.env.PRAXIS_FLOW_DOCKER_CLI;
-    else process.env.PRAXIS_FLOW_DOCKER_CLI = previousCli;
+    if (previousCli === undefined) delete process.env.WARTEZIMMER_DOCKER_CLI;
+    else process.env.WARTEZIMMER_DOCKER_CLI = previousCli;
     if (previousAppBind === undefined) delete process.env.APP_BIND_ADDRESS;
     else process.env.APP_BIND_ADDRESS = previousAppBind;
     if (previousStaffIp === undefined) delete process.env.SETUP_LAN_APP_IP;

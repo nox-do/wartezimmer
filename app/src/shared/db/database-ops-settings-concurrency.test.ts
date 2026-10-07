@@ -11,7 +11,7 @@ test('updateOpsSettings checks expected revision inside the write transaction', 
   const tempDir = mkdtempSync(path.join(os.tmpdir(), 'pf-settings-revision-'));
   process.env.CONTACT_LOOKUP_BASE_PATH = path.join(tempDir, 'contacts');
   try {
-    const db = new CoreDatabase(path.join(tempDir, 'praxis-flow.db'));
+    const db = new CoreDatabase(path.join(tempDir, 'wartezimmer.db'));
     const initial = db.getOpsSettings();
     const first = db.updateOpsSettings(
       { emergencyEnabled: !initial.emergencyEnabled },

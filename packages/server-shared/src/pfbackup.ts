@@ -9,10 +9,10 @@ export { PFBACKUP_BASENAME_PREFIX, PFBACKUP_FILE_EXTENSION } from './backup-path
 export { formatPfbackupLabel, parsePfbackupTimestampFromPath } from './backup-path-labels.js';
 
 export const STACK_IMAGE_ENV_KEYS = [
-  'PRAXIS_FLOW_APP_IMAGE',
-  'PRAXIS_FLOW_SANDBOX_IMAGE',
-  'PRAXIS_FLOW_GATEWAY_IMAGE',
-  'PRAXIS_FLOW_PROXY_IMAGE',
+  'WARTEZIMMER_APP_IMAGE',
+  'WARTEZIMMER_SANDBOX_IMAGE',
+  'WARTEZIMMER_GATEWAY_IMAGE',
+  'WARTEZIMMER_PROXY_IMAGE',
 ] as const;
 
 export const SECRET_ENV_KEYS = [

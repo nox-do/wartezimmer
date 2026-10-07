@@ -5,7 +5,7 @@ import {
   SETUP_MANAGER_TOKEN_HEADER,
   SETUP_RESTRICTED_NETWORK_ROUTES,
   SETUP_TLS_ROUTES,
-} from '@praxis-flow/server-shared/setup-api';
+} from '@wartezimmer/server-shared/setup-api';
 
 const DEFAULT_SETUP_API_TIMEOUT_MS = 30_000;
 /** Erstinstallation: docker compose up --build kann deutlich länger als Status-Polls dauern. */

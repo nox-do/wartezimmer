@@ -1,7 +1,7 @@
 <script lang="ts">
   import { restoreWizardIsBusy } from './restore-wizard-flow.js';
   import { pfupdateWizardIsBusy } from './pfupdate-wizard-flow.js';
-  import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
+  import { hasBlockingMaintenanceOperation } from '@wartezimmer/server-shared/manager-status-projection';
   import { onMount } from 'svelte';
   import type { WartezimmerManagerApi } from '../shared/wartezimmer-manager-api.js';
   import type { HostStatus } from '../shared/host-status.js';

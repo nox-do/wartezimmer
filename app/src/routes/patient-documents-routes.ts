@@ -20,7 +20,7 @@ import {
 } from '../shared/documents/form-document-intake.js';
 import { sendResolvedDomainError } from '../http/domain-error-mapper.js';
 import { PATIENT_UPLOAD_MAX_BYTES } from '../shared/documents/patient-upload-limits.js';
-import { normalizePatientUploadFileName } from '@praxis-flow/server-shared';
+import { normalizePatientUploadFileName } from '@wartezimmer/server-shared';
 import {
   purgeDocumentArtifacts,
   purgeSandboxDocumentBestEffort,

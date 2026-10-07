@@ -1,5 +1,5 @@
 import { t } from '$lib/i18n/i18nStore.svelte';
-import { formatTicketCode } from '@praxis-flow/domain';
+import { formatTicketCode } from '@wartezimmer/domain';
 export type { TvQueueItem, TvQueueResponse } from '$lib/queue/openapi-types';
 import type { TvQueueItem } from '$lib/queue/openapi-types';
 

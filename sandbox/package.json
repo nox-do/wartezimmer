@@ -1,5 +1,5 @@
 {
-  "name": "@praxis-flow/sandbox",
+  "name": "@wartezimmer/sandbox",
   "private": true,
   "version": "6.1.1",
   "type": "module",
@@ -13,7 +13,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@praxis-flow/server-shared": "*",
+    "@wartezimmer/server-shared": "*",
     "fastify": "^5.8.5"
   }
 }

@@ -9,7 +9,7 @@ import type {
   Surface,
   SurfaceDisplayRule,
   Topic,
-} from '@praxis-flow/flow-core';
+} from '@wartezimmer/flow-core';
 
 type SqlRow = Record<string, unknown>;
 

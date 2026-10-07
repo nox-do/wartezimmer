@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { normalizeRoomPanelsSettings } from '@praxis-flow/domain';
+import { normalizeRoomPanelsSettings } from '@wartezimmer/domain';
 import type { CoreDatabase } from '../db/database.js';
 import { resolveRoomPanelForSession } from './room-panel-policy.js';
 

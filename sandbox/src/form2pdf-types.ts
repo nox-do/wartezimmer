@@ -3,5 +3,5 @@ export type {
   FormPdfDisplayField,
   FormPdfDisplayMeta,
   FormPdfDisplaySection,
-} from '@praxis-flow/server-shared';
-export { isFormPdfDisplay } from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
+export { isFormPdfDisplay } from '@wartezimmer/server-shared';

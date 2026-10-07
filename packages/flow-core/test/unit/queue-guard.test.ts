@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assertQueueRemovable, queueReferences } from '@praxis-flow/flow-core';
+import { assertQueueRemovable, queueReferences } from '@wartezimmer/flow-core';
 
 const catalog = {
   journeySteps: [

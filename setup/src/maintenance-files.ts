@@ -60,7 +60,7 @@ export function syncMaintenanceHostFiles(home: string, additionalPaths: string[]
 }
 
 export function assertMaintenanceRollbackComplete(rollbackDir: string): void {
-  for (const file of ['.env', 'app-data/praxis-flow.db']) {
+  for (const file of ['.env', 'app-data/wartezimmer.db']) {
     if (!fs.statSync(path.join(rollbackDir, file)).isFile())
       throw new Error('MAINTENANCE_BACKUP_INCOMPLETE');
   }

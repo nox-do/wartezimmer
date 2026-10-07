@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
+import { ManagerApiError } from '@wartezimmer/server-shared/setup-api';
 import { composePs, composeRemoveServices, composeStop, type ComposeRunOptions } from './docker.js';
 import { readEnvMap } from './env-file.js';
 import { readInstalledPortalContract } from './proxy-tls.js';

@@ -3,7 +3,7 @@ import {
   resolveBusinessDay as defaultResolveBusinessDay,
   type ResolveBusinessDay,
   type ReturnToWaitingDestination,
-} from '@praxis-flow/flow-core';
+} from '@wartezimmer/flow-core';
 import { createCatalogRepository } from './catalog-repository.js';
 import { createVisitRepository } from './visit-repository.js';
 import { createVisitService } from './visit-service.js';

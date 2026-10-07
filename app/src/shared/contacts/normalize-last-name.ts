@@ -2,7 +2,7 @@ import {
   hasValidTerminalLastNameChars,
   isAllowedTerminalLastNameChar,
   TERMINAL_LAST_NAME_MAX_LENGTH,
-} from '@praxis-flow/domain';
+} from '@wartezimmer/domain';
 
 export {
   hasValidTerminalLastNameChars,

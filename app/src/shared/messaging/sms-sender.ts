@@ -1,5 +1,5 @@
 import type { CoreDatabase } from '../db/database.js';
-import { isTerminalPatientLocale, type TerminalPatientLocale } from '@praxis-flow/domain';
+import { isTerminalPatientLocale, type TerminalPatientLocale } from '@wartezimmer/domain';
 import { isRecord } from '../type-guards.js';
 import { parsePracticeProfileJson } from '../practice/practice-profile.js';
 import { resolveBusinessTimeZone } from '../practice-time-windows.js';

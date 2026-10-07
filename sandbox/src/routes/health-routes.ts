@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { ScannerService } from '../scanner-service.js';
-import { SILENT_ROUTE_LOG } from '@praxis-flow/server-shared/logger';
+import { SILENT_ROUTE_LOG } from '@wartezimmer/server-shared/logger';
 import { SANDBOX_RUNTIME_INSTANCE_ID } from '../runtime-instance.js';
 
 export function registerHealthRoutes(app: FastifyInstance, scanner: ScannerService): void {

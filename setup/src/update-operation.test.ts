@@ -29,8 +29,8 @@ function fixture(t: test.TestContext) {
   };
   const data = path.join(home, 'data');
   fs.mkdirSync(data);
-  fs.writeFileSync(path.join(data, 'praxis-flow.db'), 'old-db');
-  fs.writeFileSync(path.join(home, '.env'), 'PRAXIS_FLOW_APP_IMAGE=app:old\n');
+  fs.writeFileSync(path.join(data, 'wartezimmer.db'), 'old-db');
+  fs.writeFileSync(path.join(home, '.env'), 'WARTEZIMMER_APP_IMAGE=app:old\n');
   fs.writeFileSync(path.join(home, 'manager-state.json'), '{"release":{"releaseVersion":"old"}}');
   fs.writeFileSync(path.join(home, 'docker-compose.delivery.yml'), 'old-template');
   fs.mkdirSync(path.join(home, 'state/tls'), { recursive: true });
@@ -83,11 +83,11 @@ function fixture(t: test.TestContext) {
   }
   function mutate() {
     writeUpdateOperation(home, { ...operation, phase: 'cutover' });
-    fs.writeFileSync(path.join(home, '.env'), 'PRAXIS_FLOW_APP_IMAGE=app:new\n');
+    fs.writeFileSync(path.join(home, '.env'), 'WARTEZIMMER_APP_IMAGE=app:new\n');
     fs.writeFileSync(path.join(home, 'manager-state.json'), '{"release":{"releaseVersion":"new"}}');
     fs.writeFileSync(path.join(home, 'docker-compose.delivery.yml'), 'new-template');
     fs.writeFileSync(path.join(home, 'state/tls/test-key'), 'new-key');
-    fs.writeFileSync(path.join(data, 'praxis-flow.db'), 'new-db');
+    fs.writeFileSync(path.join(data, 'wartezimmer.db'), 'new-db');
   }
   function assertOld() {
     assert.match(fs.readFileSync(path.join(home, '.env'), 'utf8'), /app:old/);
@@ -97,7 +97,7 @@ function fixture(t: test.TestContext) {
       'old-template',
     );
     assert.equal(fs.readFileSync(path.join(home, 'state/tls/test-key'), 'utf8'), 'private-key');
-    assert.equal(fs.readFileSync(path.join(data, 'praxis-flow.db'), 'utf8'), 'old-db');
+    assert.equal(fs.readFileSync(path.join(data, 'wartezimmer.db'), 'utf8'), 'old-db');
   }
   return { home, ctx, operation, deps, calls, data, snapshot, mutate, assertOld };
 }
@@ -145,7 +145,7 @@ test('interrupted cutover restores all previous state; failed runtime audit reta
   assert.equal(JSON.stringify(readUpdateOperationStatus(f.home)).includes('secret'), false);
   assert.equal(
     fs.readFileSync(
-      path.join(updateRollbackDirectory(f.home, f.operation.id), 'app-data/praxis-flow.db'),
+      path.join(updateRollbackDirectory(f.home, f.operation.id), 'app-data/wartezimmer.db'),
       'utf8',
     ),
     'old-db',
@@ -172,7 +172,7 @@ test('durable commit only cleans up, even with incomplete remaining recovery art
   assert.equal((await recoverUpdateOperation(f.ctx, f.deps)).ok, true);
   assert.deepEqual(f.calls, []);
   assert.match(fs.readFileSync(path.join(f.home, '.env'), 'utf8'), /app:new/);
-  assert.equal(fs.readFileSync(path.join(f.data, 'praxis-flow.db'), 'utf8'), 'new-db');
+  assert.equal(fs.readFileSync(path.join(f.data, 'wartezimmer.db'), 'utf8'), 'new-db');
   assert.equal(readUpdateOperation(f.home), null);
   assert.equal(fs.existsSync(backup), true);
   assert.equal(fs.existsSync(updateStagingDirectory(f.home, f.operation.id)), false);
@@ -222,12 +222,12 @@ test('confirmed configuration follows the update decision and rejects missing re
   f.mutate();
   const confirmed = readConfirmedHostConfig(f.home);
   assert.equal(confirmed.unknown, false);
-  assert.equal(confirmed.env.get('PRAXIS_FLOW_APP_IMAGE'), 'app:old');
+  assert.equal(confirmed.env.get('WARTEZIMMER_APP_IMAGE'), 'app:old');
   assert.equal(confirmed.root, updateRollbackDirectory(f.home, f.operation.id));
   fs.unlinkSync(path.join(confirmed.root, '.env'));
   assert.equal(readConfirmedHostConfig(f.home).unknown, true);
   writeUpdateOperation(f.home, { ...f.operation, phase: 'committed' });
-  assert.equal(readConfirmedHostConfig(f.home).env.get('PRAXIS_FLOW_APP_IMAGE'), 'app:new');
+  assert.equal(readConfirmedHostConfig(f.home).env.get('WARTEZIMMER_APP_IMAGE'), 'app:new');
   fs.writeFileSync(updateOperationPath(f.home), 'broken');
   assert.equal(readConfirmedHostConfig(f.home).unknown, true);
 });

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { formatVisitId, parseVisitId } from '@praxis-flow/flow-core';
+import { formatVisitId, parseVisitId } from '@wartezimmer/flow-core';
 
 test('formatVisitId: oeffentliche Visit-ID', () => {
   assert.equal(formatVisitId('2026-06-02', 'A', 17), '20260602-A-017');

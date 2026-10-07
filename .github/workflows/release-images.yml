@@ -41,12 +41,12 @@ jobs:
 
       - name: Build and pack release images
         env:
-          PRAXIS_FLOW_RELEASE_VERSION: ${{ steps.version.outputs.value }}
+          WARTEZIMMER_RELEASE_VERSION: ${{ steps.version.outputs.value }}
         run: npm run release:images
 
       - name: Upload release artifact
         uses: actions/upload-artifact@v4
         with:
-          name: praxis-flow-release-${{ steps.version.outputs.value }}
-          path: dist/releases/praxis-flow-${{ steps.version.outputs.value }}/
+          name: wartezimmer-release-${{ steps.version.outputs.value }}
+          path: dist/releases/wartezimmer-${{ steps.version.outputs.value }}/
           retention-days: 90

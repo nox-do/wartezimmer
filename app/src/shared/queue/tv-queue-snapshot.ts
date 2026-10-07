@@ -1,5 +1,5 @@
-import { explainVisibility } from '@praxis-flow/flow-core';
-import type { Runtime } from '@praxis-flow/flow-core/server';
+import { explainVisibility } from '@wartezimmer/flow-core';
+import type { Runtime } from '@wartezimmer/flow-core/server';
 import type { CoreDatabase } from '../db/database.js';
 import type { OpsSettings } from '../db/db-types.js';
 import { getBusinessDay } from '../db/database-time.js';

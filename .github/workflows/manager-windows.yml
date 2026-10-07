@@ -25,11 +25,11 @@ jobs:
       - run: node --test scripts/release-archive.test.mjs
       - run: npm ci
       - run: npm run build:server-shared
-      - run: npm run -w @praxis-flow/manager test:packaging
-      - run: npm run -w @praxis-flow/setup typecheck
-      - run: npm run -w @praxis-flow/manager typecheck
-      - run: npm run -w @praxis-flow/setup lint
-      - run: npm run -w @praxis-flow/manager lint
+      - run: npm run -w @wartezimmer/manager test:packaging
+      - run: npm run -w @wartezimmer/setup typecheck
+      - run: npm run -w @wartezimmer/manager typecheck
+      - run: npm run -w @wartezimmer/setup lint
+      - run: npm run -w @wartezimmer/manager lint
       - name: Native filesystem, argv, archive and recovery regression tests
         run: >-
           node --import tsx --test

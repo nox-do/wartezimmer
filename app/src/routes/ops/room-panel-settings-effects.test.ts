@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { normalizeRoomPanelsSettings } from '@praxis-flow/domain';
+import { normalizeRoomPanelsSettings } from '@wartezimmer/domain';
 import type { OpsSettings } from '../../shared/db/db-types.js';
 import { applyRoomPanelSettingsEffects } from './room-panel-settings-effects.js';
 

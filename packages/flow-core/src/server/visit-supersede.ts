@@ -5,7 +5,7 @@ import type {
   Visit,
   VisitEvent,
   VisitView,
-} from '@praxis-flow/flow-core';
+} from '@wartezimmer/flow-core';
 import {
   TERMINAL_VISIT_STATUSES,
   effectiveEscortPolicy,
@@ -18,7 +18,7 @@ import {
   resolveLaneCodeForCheckIn,
   ruleForTopicAtSurface,
   stepToVisitPatch,
-} from '@praxis-flow/flow-core';
+} from '@wartezimmer/flow-core';
 import { resolveCheckInRouting } from './escort.js';
 import { allocateQueueSequence } from './queue-counter.js';
 import type { CatalogRepository } from './catalog-repository.js';

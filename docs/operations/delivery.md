@@ -37,17 +37,17 @@ Drei Zahlen — nicht vermischen:
 | Begriff             | Beispiel | Wo                                                     | Wofür                                                                                            |
 | ------------------- | -------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
 | **Manager-Version** | `6.1.0`  | `manager/package.json`                                 | Electron-App, DMG-Name, `minimumManagerVersion` im Update-Paket                                  |
-| **Stack-Release**   | `6.1.0`  | `--version` / `PRAXIS_FLOW_RELEASE_VERSION` beim Build | Image-Tags `praxis-flow/app:<ver>` + `sandbox:<ver>`, `manager-state`, Manifest `releaseVersion` |
+| **Stack-Release**   | `6.1.0`  | `--version` / `WARTEZIMMER_RELEASE_VERSION` beim Build | Image-Tags `wartezimmer/app:<ver>` + `sandbox:<ver>`, `manager-state`, Manifest `releaseVersion` |
 | **Monorepo**        | `6.1.0`  | Root-`package.json`                                    | npm-Workspaces — **nur Default**, wenn `--version` fehlt                                         |
 
 Stack-Release und Monorepo sind **nicht gekoppelt**. Kunden-Release immer explizit:
 
 ```bash
-export PRAXIS_FLOW_RELEASE_VERSION=6.1.0
-npm run release:pfupdate -- --version "$PRAXIS_FLOW_RELEASE_VERSION"
+export WARTEZIMMER_RELEASE_VERSION=6.1.0
+npm run release:pfupdate -- --version "$WARTEZIMMER_RELEASE_VERSION"
 ```
 
-**Anzeige (keine vierte Version):** Beim App-Image-Build setzt `scripts/release-app-image.mjs` `PRAXIS_FLOW_STACK_VERSION` auf denselben Wert wie `--version`. Die UI liest ihn über `GET /api/v1/ops/health` → `stackVersion`. Lokal/Dev: Feld leer.
+**Anzeige (keine vierte Version):** Beim App-Image-Build setzt `scripts/release-app-image.mjs` `WARTEZIMMER_STACK_VERSION` auf denselben Wert wie `--version`. Die UI liest ihn über `GET /api/v1/ops/health` → `stackVersion`. Lokal/Dev: Feld leer.
 
 **Empfehlung:** Stack-Tags als Semver, unabhängig von der Manager-Semver (Manager darf öfter patchen). Major am Stack bei Breaking Changes an API/Images.
 
@@ -57,7 +57,7 @@ npm run release:pfupdate -- --version "$PRAXIS_FLOW_RELEASE_VERSION"
 | -------------------- | ------------------------ | --------------------------------------------- |
 | Manager → Wartung    | aktuelles Release        | `HostStatus.deliveryImages` / `manager-state` |
 | `manager-state.json` | `release.releaseVersion` | aktives Stack-Release                         |
-| `.env`               | `PRAXIS_FLOW_*_IMAGE`    | Compose-Image-Refs                            |
+| `.env`               | `WARTEZIMMER_*_IMAGE`    | Compose-Image-Refs                            |
 | Health               | `stackVersion`           | in die App eingebranntes Release              |
 
 ---
@@ -76,13 +76,13 @@ npm run release:pfupdate -- --version "$PRAXIS_FLOW_RELEASE_VERSION"
 ### Image-Refs
 
 ```text
-praxis-flow/app:<releaseVersion>       # Pflicht
-praxis-flow/sandbox:<releaseVersion>   # Pflicht
-praxis-flow-proxy:2.11.4-acmedns       # neue Pakete (PRAXIS_FLOW_PROXY_IMAGE)
+wartezimmer/app:<releaseVersion>       # Pflicht
+wartezimmer/sandbox:<releaseVersion>   # Pflicht
+wartezimmer-proxy:2.11.4-acmedns       # neue Pakete (WARTEZIMMER_PROXY_IMAGE)
 caddy:2.11.4                           # Compose-Default / Legacy-Pakete ohne Custom-Proxy
 ```
 
-Konstante im Code: `PRAXIS_FLOW_PROXY_IMAGE_REF` in `packages/server-shared/src/pfupdate.ts`.
+Konstante im Code: `WARTEZIMMER_PROXY_IMAGE_REF` in `packages/server-shared/src/pfupdate.ts`.
 
 `<releaseVersion>` muss übereinstimmen mit Manifest `releaseVersion`, gesetzten versionierten `images.app|sandbox` und `manager-state` → `release.releaseVersion`.
 
@@ -91,7 +91,7 @@ Konstante im Code: `PRAXIS_FLOW_PROXY_IMAGE_REF` in `packages/server-shared/src/
 **Dev-Tags:**
 
 ```bash
-docker compose build                                  # praxis-flow/app:local, sandbox:local
+docker compose build                                  # wartezimmer/app:local, sandbox:local
 npm run release:pfupdate:current -- --version local   # packt :local ohne Rebuild
 ```
 
@@ -121,7 +121,7 @@ CI: `.github/workflows/release-images.yml` baut bei Tag `v*` das Erstinstall-Art
 | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
 | **Docker** (Desktop oder Engine) + Compose v2, Daemon läuft              | Stack starten; Wizard-Schritt 1 prüft Installation/Daemon/Compose                                                                       |
 | **Manager** (DMG oder `npm run dev:manager`)                             | Operative Hülle; startet die Setup-API als eigenen Child auf Loopback (ephemerer Port, nicht still `:9190`)                             |
-| **Release-Paket** `.pfinstall` (internes Manifest und Inhaltsprüfsummen) | Delivery: Images laden (`POST /api/setup/host/images/load`). Dev-Profil (`PRAXIS_FLOW_COMPOSE_PROFILE=dev`): oft **nicht** erforderlich |
+| **Release-Paket** `.pfinstall` (internes Manifest und Inhaltsprüfsummen) | Delivery: Images laden (`POST /api/setup/host/images/load`). Dev-Profil (`WARTEZIMMER_COMPOSE_PROFILE=dev`): oft **nicht** erforderlich |
 | **Freie Ports**                                                          | App intern am Host immer **8080** (ohne Proxy offen, mit Proxy nur Loopback); Proxy zusätzlich **80** und bei TLS **443**               |
 | **Import- & Export-Ordner** auf dem Host                                 | Wizard-Schritt 2; unter Docker Desktop: File Sharing für diese Pfade                                                                    |
 | **Feste LAN-IPv4** / DHCP-Reservierung                                   | Für Demo ohne Proxy optional; für Proxy-Staff-Binding, Geräte-URLs und TLS verbindlich                                                  |
@@ -130,13 +130,13 @@ Setup-API und Manager sprechen nur Loopback — kein Setup aus dem Praxis-LAN.
 
 ### 4.2 Install-Home
 
-| Plattform | Default ohne `PRAXIS_FLOW_HOME`            |
+| Plattform | Default ohne `WARTEZIMMER_HOME`            |
 | --------- | ------------------------------------------ |
-| macOS     | `~/Library/Application Support/PraxisFlow` |
-| Windows   | `%LOCALAPPDATA%\PraxisFlow` (Legacy: `%ProgramData%\PraxisFlow`) |
-| Linux     | `~/.local/share/PraxisFlow`                |
+| macOS     | `~/Library/Application Support/Wartezimmer` |
+| Windows   | `%LOCALAPPDATA%\Wartezimmer` |
+| Linux     | `~/.local/share/Wartezimmer`                |
 
-Override: `PRAXIS_FLOW_HOME` (absolut). Compose-Projektname: Default-Install-Home → `praxis-flow`; abweichender Basename → `pf-<basename>`; Override `COMPOSE_PROJECT_NAME` — isoliert parallele Test-Installs.
+Override: `WARTEZIMMER_HOME` (absolut). Compose-Projektname: Default-Install-Home → `wartezimmer`; abweichender Basename → `wz-<basename>`; Override `COMPOSE_PROJECT_NAME` — isoliert parallele Test-Installs.
 
 Der Manager speichert sein Electron-Profil einschließlich Chromium-Cache,
 Preferences und Session Storage im Unterordner `manager/` des Install-Home;
@@ -144,12 +144,9 @@ Manager-Logs liegen in `manager/logs/`. `.env`, Compose-Dateien, `state/`,
 `updates/`, `rollback/` und `backups/` behalten ihre bestehenden Pfade.
 Diese Profildaten gehören nicht zum fachlichen `.pfbackup`.
 
-Der Manager legt ausschließlich die neue Profilstruktur an. Es gibt keine
-Migration oder Übernahme aus dem bisherigen separaten Ordner `Praxis Flow`.
-
 Dev-Manager verwenden `manager/instance-<Hash des Install-Home>` unter dem
-plattformüblichen `PraxisFlow`-Ordner. Ihr Setup arbeitet weiterhin im
-Repository beziehungsweise im expliziten `PRAXIS_FLOW_HOME`. So landen
+plattformüblichen `Wartezimmer`-Ordner. Ihr Setup arbeitet weiterhin im
+Repository beziehungsweise im expliziten `WARTEZIMMER_HOME`. So landen
 Electron-Profile nicht im Quellcode und verschiedene Dev-Instanzen bleiben
 getrennt. Die Profilpfade werden vor dem Single-Instance-Lock und `app.ready`
 festgelegt. Diese Änderung benötigt einen neuen Manager-Build; ein reines
@@ -182,8 +179,8 @@ Abweichungen zum Manager: CLI fragt den **Praxisnamen**. Captive-/Gateway-Einric
 ### 4.5 Dev-Iteration
 
 ```bash
-export PRAXIS_FLOW_HOME=/tmp/pf-dev-001
-export PRAXIS_FLOW_COMPOSE_PROFILE=dev
+export WARTEZIMMER_HOME=/tmp/pf-dev-001
+export WARTEZIMMER_COMPOSE_PROFILE=dev
 npm run setup:reset -- --yes
 npm run dev:manager
 ```
@@ -256,7 +253,7 @@ Vorbereitung (**Stack noch oben**, Backup über `:8082`):
 | `stage_package`          | Archiv extrahieren                                |
 | `validate_package`       | Struktur + Kompatibilität                         |
 | `create_settings_backup` | `.pfbackup` → u. a. `<install-home>/backups/`     |
-| `load_images`            | `docker load` aus `images/praxis-flow-images.tar` |
+| `load_images`            | `docker load` aus `images/wartezimmer-images.tar` |
 
 Cutover (**Stack gestoppt**):
 
@@ -282,9 +279,9 @@ Fresh-DB-Cutover ist dasselbe Muster wie Restore, **außer** dass Restore die Ge
   "supportedSettingsFormatVersions": [1],
   "targetSchemaVersion": 1,
   "images": {
-    "app": "praxis-flow/app:2.1.0",
-    "sandbox": "praxis-flow/sandbox:2.1.0",
-    "proxy": "praxis-flow-proxy:2.11.4-acmedns"
+    "app": "wartezimmer/app:2.1.0",
+    "sandbox": "wartezimmer/sandbox:2.1.0",
+    "proxy": "wartezimmer-proxy:2.11.4-acmedns"
   },
   "imageDigests": {
     "proxy": {
@@ -311,15 +308,15 @@ Fresh-DB-Cutover ist dasselbe Muster wie Restore, **außer** dass Restore die Ge
 
 ## 6. Build — wie die Artefakte entstehen
 
-Gemeinsam (Stack-Pakete): Docker muss laufen. `--version` / `PRAXIS_FLOW_RELEASE_VERSION` setzt den Stack-Tag.
+Gemeinsam (Stack-Pakete): Docker muss laufen. `--version` / `WARTEZIMMER_RELEASE_VERSION` setzt den Stack-Tag.
 `:pack` / `--no-build` überspringt `docker build` und packt vorhandene lokale Tags.
 `:current` = `--no-build`; es verwendet den explizit gesetzten
-`PRAXIS_FLOW_RELEASE_VERSION` oder sonst die Version aus `package.json` und erzwingt keinen
+`WARTEZIMMER_RELEASE_VERSION` oder sonst die Version aus `package.json` und erzwingt keinen
 `local`-Tag.
 
-Proxy-Schritt (beide Stack-Pakete): Beim Build Base `caddy:2.11.4@<Registry-Digest>` pullen, Custom-Image `praxis-flow-proxy:2.11.4-acmedns` aus `proxy/Dockerfile` bauen, Modul `dns.providers.acmedns` prüfen, Digest-Metadaten ins Manifest. Im Pack-only-Modus (`--no-build`) werden die vorhandenen lokalen Images inklusive Custom-Proxy nur inspiziert; es gibt keinen Registry-Zugriff. Konstanten: `packages/server-shared/src/pfupdate.ts`.
+Proxy-Schritt (beide Stack-Pakete): Beim Build Base `caddy:2.11.4@<Registry-Digest>` pullen, Custom-Image `wartezimmer-proxy:2.11.4-acmedns` aus `proxy/Dockerfile` bauen, Modul `dns.providers.acmedns` prüfen, Digest-Metadaten ins Manifest. Im Pack-only-Modus (`--no-build`) werden die vorhandenen lokalen Images inklusive Custom-Proxy nur inspiziert; es gibt keinen Registry-Zugriff. Konstanten: `packages/server-shared/src/pfupdate.ts`.
 
-App/Sandbox-Build: `scripts/release-app-image.mjs` (u. a. Build-Arg `PRAXIS_FLOW_STACK_VERSION`); Release-Builds mit SBOM + Provenance (`--sbom=true`, `--provenance=mode=max`).
+App/Sandbox-Build: `scripts/release-app-image.mjs` (u. a. Build-Arg `WARTEZIMMER_STACK_VERSION`); Release-Builds mit SBOM + Provenance (`--sbom=true`, `--provenance=mode=max`).
 
 Beide Paket-Builds verwenden `scripts/release-archive.mjs`. Unter macOS werden
 AppleDouble-Metadaten und Extended Attributes beim Verpacken deaktiviert
@@ -336,8 +333,8 @@ Script: `scripts/build-release-images.mjs`
 `npm run release:images` baut standardmäßig **beide** Plattformen, jeweils App,
 Sandbox und Proxy. Getrennte Ausgaben:
 
-- `dist/releases/praxis-flow-<ver>/linux-amd64/praxis-flow-<ver>-linux-amd64.pfinstall` — Intel/AMD x64
-- `dist/releases/praxis-flow-<ver>/linux-arm64/praxis-flow-<ver>-linux-arm64.pfinstall` — ARM64, unter anderem Apple Silicon
+- `dist/releases/wartezimmer-<ver>/linux-amd64/wartezimmer-<ver>-linux-amd64.pfinstall` — Intel/AMD x64
+- `dist/releases/wartezimmer-<ver>/linux-arm64/wartezimmer-<ver>-linux-arm64.pfinstall` — ARM64, unter anderem Apple Silicon
 
 Nur eine Plattform: `npm run release:images -- --platform amd64` bzw. `--platform arm64`.
 Auch `linux/amd64`, `linux/arm64` und `all` sind gültig. Pack-only:
@@ -361,12 +358,12 @@ Architektur ergibt einen verständlichen API-Validierungsfehler mit passendem
 Dateinamenssuffix. ARM64-Images sind keine Freigabe des Windows-ARM64-Managers
 oder des Restricted-Zugangs; deren reale Abnahmen bleiben erforderlich.
 
-1. Optional: `docker build` → `praxis-flow/app:<ver>`, `praxis-flow/sandbox:<ver>`
+1. Optional: `docker build` → `wartezimmer/app:<ver>`, `wartezimmer/sandbox:<ver>`
 2. Proxy-Image wie oben vorbereiten
-3. `docker save` der drei Images → `images/praxis-flow-images.tar`
+3. `docker save` der drei Images → `images/wartezimmer-images.tar`
 4. Compose-Templates und `proxy/Caddyfile` nach `templates/` kopieren
 5. Lizenznachweise und internes `manifest.json` mit `installFormatVersion: 2`, Image-Metadaten und SHA256 pro Nutzdatei einbetten
-6. Bundle → `praxis-flow-<ver>-linux-<arch>.pfinstall`; externe Build-Metadaten und `SHA256SUMS.txt` bleiben optional für Transferkontrollen
+6. Bundle → `wartezimmer-<ver>-linux-<arch>.pfinstall`; externe Build-Metadaten und `SHA256SUMS.txt` bleiben optional für Transferkontrollen
 
 Für die Weitergabe genügt die einzelne `.pfinstall`. Der aktualisierte Manager prüft
 Archivpfade, Dateitypen, die vollständige Dateiliste und Inhaltsprüfsummen vor Compose-Prüfung
@@ -381,7 +378,7 @@ Manifest und Format 1 werden abgelehnt; externe Begleitdateien ermöglichen kein
 Alte Manager können das neue Format nicht lesen: zuerst den Manager aktualisieren.
 Bestehende Pakete werden nicht nachträglich umgewandelt; für das Ein-Datei-Format neu bauen.
 
-**Ausgabe:** `dist/releases/praxis-flow-<ver>/`
+**Ausgabe:** `dist/releases/wartezimmer-<ver>/`
 
 Kein Gateway im Produkt-Archiv. Compose-Templates und Basis-Caddyfile kommen aus diesem vollständigen Release-Bundle; das TLS-Caddyfile wird später aus dem Installationszustand erzeugt.
 
@@ -392,7 +389,7 @@ Script: `scripts/build-pfupdate.mjs`
 Wie bei `release:images` werden standardmäßig AMD64 **und** ARM64 gebaut.
 Eine Plattform: `npm run release:pfupdate -- --platform amd64` bzw. `--platform arm64`.
 Pack-only: `npm run release:pfupdate:current -- --platform amd64`.
-Ausgabe: `dist/releases/praxis-flow-<ver>/linux-<arch>/praxis-flow-update-<ver>-linux-<arch>.pfupdate`.
+Ausgabe: `dist/releases/wartezimmer-<ver>/linux-<arch>/wartezimmer-update-<ver>-linux-<arch>.pfupdate`.
 Build, Proxy-Modulprobe, App-Vertragsprobe, Inspektion und Export verwenden die
 gewählte Plattform explizit (Build-Engine API ≥ 1.49). Der Manager prüft die
 Manifest-Plattform gegen den Docker-Daemon bereits vor Backup und Image-Import;
@@ -401,11 +398,11 @@ Die vorhandene Manifestversion und der Proxy-Digestvertrag bleiben erhalten.
 
 1. Optional: `docker build` app + sandbox
 2. Proxy-Image wie oben
-3. Staging: `docker save` → **unkomprimiertes** `images/praxis-flow-images.tar`
+3. Staging: `docker save` → **unkomprimiertes** `images/wartezimmer-images.tar`
 4. Templates kopieren: `docker-compose.delivery.yml`, `docker-compose.proxy.delivery.yml`, `docker-compose.proxy-tls.delivery.yml`, `proxy/Caddyfile`, generiertes `templates/.env.example` (Image-Tags gesetzt)
 5. `manifest.json` inkl. `minimumManagerVersion` (Default = aktuelle `manager/package.json`-Version), `imageDigests.proxy`, Dateiliste
 6. `SHA256SUMS.txt` + Lizenzen/Notices
-7. `tar czf` → `dist/releases/praxis-flow-<ver>/linux-<arch>/praxis-flow-update-<ver>-linux-<arch>.pfupdate`
+7. `tar czf` → `dist/releases/wartezimmer-<ver>/linux-<arch>/wartezimmer-update-<ver>-linux-<arch>.pfupdate`
 8. Roundtrip: `validatePfupdatePackage()` — bricht bei Fehler ab
 
 **Layout nach Extraktion (Produkt):**
@@ -413,7 +410,7 @@ Die vorhandene Manifestversion und der Proxy-Digestvertrag bleiben erhalten.
 ```text
 manifest.json
 SHA256SUMS.txt
-images/praxis-flow-images.tar
+images/wartezimmer-images.tar
 templates/docker-compose.delivery.yml
 templates/docker-compose.proxy.delivery.yml
 templates/docker-compose.proxy-tls.delivery.yml
@@ -431,12 +428,12 @@ licenses/caddy/LICENSE.txt
 2. `electron-vite build` (Main, Preload CJS, Renderer)
 3. `electron-builder --mac dmg` → `manager/dist/WartezimmerManager-<managerVersion>-<arch>.dmg`
 
-Gepackter Manager startet Setup-API aus `resources/setup/`; Default-Install-Home macOS: `~/Library/Application Support/PraxisFlow`. Aktuell unsigned / nicht notarisiert.
+Gepackter Manager startet Setup-API aus `resources/setup/`; Default-Install-Home macOS: `~/Library/Application Support/Wartezimmer`. Aktuell unsigned / nicht notarisiert.
 
 ### 6.4 Release-Checkliste (kurz)
 
 1. Manager-Version: `minimumManagerVersion` im `.pfupdate` ≤ ausgelieferte DMG?
-2. `PRAXIS_FLOW_RELEASE_VERSION` explizit setzen
+2. `WARTEZIMMER_RELEASE_VERSION` explizit setzen
 3. `npm run release:pfupdate -- --version …` → „Package validation OK“
 4. Optional: `npm run release:images` für Erstinstall-Ordner
 5. Manifest: Proxy-Registry-Digest = Pin in `pfupdate.ts`; Image-ID + Plattform gesetzt
@@ -478,9 +475,8 @@ Zeitstempel und Prüfung von EXE **und** Installer festlegen; SmartScreen-
 Verhalten auf sauberem Host prüfen. Keine privaten Signierschlüssel im Repo.
 
 Programmdateien/ASAR und Daten sind getrennt. Neue Windows-Installationen
-verwenden `%LOCALAPPDATA%\PraxisFlow`; ein vorhandenes
-`%ProgramData%\PraxisFlow` bleibt als Legacy-Home erhalten und wird nicht
-still migriert. `PRAXIS_FLOW_HOME` überschreibt bewusst diese Auswahl.
+verwenden `%LOCALAPPDATA%\Wartezimmer`. `WARTEZIMMER_HOME` überschreibt
+diesen Standardpfad.
 Das Betriebskonto muss Schreibrechte haben; kein automatischer UAC-Fallback.
 Installer-Upgrade und Deinstallation dürfen dieses Home, externe Ordner und
 Docker-Volumes nicht entfernen. Die NSIS-Konfiguration setzt
@@ -543,7 +539,7 @@ Backup/Restore/Update samt erzwungenem Abbruch prüfen, anschließend HTTPS-/Net
 und ACL-Abnahme. Die ausführlichen Schritte bleiben im bestehenden
 [Windows-Abnahmeprotokoll](../open-items.md#windows-abnahmeprotokoll).
 
-`/bin/sh`, `/tmp`, `/imports`, `/exports` und `/var/lib/praxis-flow/app` in
+`/bin/sh`, `/tmp`, `/imports`, `/exports` und `/var/lib/wartezimmer/app` in
 Docker-Argumenten sind Linux-**Container**pfade, keine Windows-Hostfehler.
 Externe Import-/Exportordner bleiben bei Reset/Recovery außerhalb der
 verwalteten Löschgrenze. Der Host-Mutex bleibt pro Prozess; der Manager ist
@@ -639,8 +635,8 @@ Konkrete Codebefunde:
   des Manager-Prozesses. Emulierter x64-Betrieb auf Snapdragon bleibt real abzunehmen.
 - `release:images` und `release:pfupdate` bauen beide Architekturen explizit,
   mit getrennten Dateinamen, Ausgabeordnern und geprüftem Export (Abschnitt 6).
-- Lokal rein lesend geprüft: `praxis-flow/app:6.1.0`,
-  `praxis-flow/sandbox:6.1.0` und `praxis-flow-proxy:2.11.4-acmedns` melden jeweils
+- Lokal rein lesend geprüft: `wartezimmer/app:6.1.0`,
+  `wartezimmer/sandbox:6.1.0` und `wartezimmer-proxy:2.11.4-acmedns` melden jeweils
   `linux/arm64`. Das belegt vorhandene ARM-Images, keine Windows-Laufzeitabnahme.
   App/Flow-Core verwenden `node:sqlite`; Sandbox enthält ClamAV und libunrar;
   Proxy baut Caddy mit acmedns. ARM64-Pakete sind verfügbar

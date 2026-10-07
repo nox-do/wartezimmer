@@ -6,7 +6,7 @@ import {
   matchingSurfaceDisplayRules,
   resolveSurfaceDisplayRule,
   ruleSpecificity,
-} from '@praxis-flow/flow-core';
+} from '@wartezimmer/flow-core';
 
 const surfaces = {
   waiting_tv: { id: 'waiting_tv', locationId: 'waiting_general', type: 'public_display' },

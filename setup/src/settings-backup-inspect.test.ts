@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { buildPfbackupArchive, serializePfbackupArchive } from '@praxis-flow/server-shared';
+import { buildPfbackupArchive, serializePfbackupArchive } from '@wartezimmer/server-shared';
 import {
   buildPfbackupInspectBackupSummary,
   buildPfbackupInspectWarnings,
@@ -75,18 +75,18 @@ const sampleSettings = {
     CANONICAL_BASE_URL: 'http://192.168.1.50:8080',
     IMPORTS_HOST_PATH: '/data/imports',
     EXPORTS_HOST_PATH: '/data/exports',
-    PRAXIS_FLOW_APP_IMAGE: 'praxis-flow/app:2026.07.1',
-    PRAXIS_FLOW_SANDBOX_IMAGE: 'praxis-flow/sandbox:2026.07.1',
-    PRAXIS_FLOW_GATEWAY_IMAGE: 'praxis-flow/gateway:2026.07.1',
+    WARTEZIMMER_APP_IMAGE: 'wartezimmer/app:2026.07.1',
+    WARTEZIMMER_SANDBOX_IMAGE: 'wartezimmer/sandbox:2026.07.1',
+    WARTEZIMMER_GATEWAY_IMAGE: 'wartezimmer/gateway:2026.07.1',
   },
 };
 
 const sampleManagerState = {
   release: {
     releaseVersion: '2026.07.1',
-    appImage: 'praxis-flow/app:2026.07.1',
-    sandboxImage: 'praxis-flow/sandbox:2026.07.1',
-    gatewayImage: 'praxis-flow/gateway:2026.07.1',
+    appImage: 'wartezimmer/app:2026.07.1',
+    sandboxImage: 'wartezimmer/sandbox:2026.07.1',
+    gatewayImage: 'wartezimmer/gateway:2026.07.1',
     archiveSha256: null,
   },
 };
@@ -120,8 +120,8 @@ test('extractPfbackupInspectEnvironment collects paths network and images', () =
   assert.equal(environment.hostPaths.IMPORTS_HOST_PATH, '/data/imports');
   assert.equal(environment.hostPaths.exportBasePath, '/tmp/exports');
   assert.equal(environment.network.SETUP_LAN_APP_IP, '192.168.1.50');
-  assert.equal(environment.imageReferences.appImage, 'praxis-flow/app:2026.07.1');
-  assert.equal(environment.imageReferences.gatewayImage, 'praxis-flow/gateway:2026.07.1');
+  assert.equal(environment.imageReferences.appImage, 'wartezimmer/app:2026.07.1');
+  assert.equal(environment.imageReferences.gatewayImage, 'wartezimmer/gateway:2026.07.1');
 });
 
 test('buildPfbackupInspectBackupSummary exposes restore preview fields', () => {
@@ -146,18 +146,18 @@ test('buildPfbackupInspectWarnings reports path release and stack image mismatch
       backupEnv: {
         IMPORTS_HOST_PATH: '/missing/imports',
         EXPORTS_HOST_PATH: '/missing/exports',
-        PRAXIS_FLOW_APP_IMAGE: 'praxis-flow/app:backup',
-        PRAXIS_FLOW_SANDBOX_IMAGE: 'praxis-flow/sandbox:2026.07.1',
+        WARTEZIMMER_APP_IMAGE: 'wartezimmer/app:backup',
+        WARTEZIMMER_SANDBOX_IMAGE: 'wartezimmer/sandbox:2026.07.1',
       },
       currentEnv: {
         IMPORTS_HOST_PATH: existingImports,
         EXPORTS_HOST_PATH: '/current/exports',
-        PRAXIS_FLOW_APP_IMAGE: 'praxis-flow/app:current',
+        WARTEZIMMER_APP_IMAGE: 'wartezimmer/app:current',
       },
       backupManagerState: {
         release: {
           ...sampleManagerState.release!,
-          appImage: 'praxis-flow/app:manager',
+          appImage: 'wartezimmer/app:manager',
         },
       },
       currentManagerState: {
@@ -169,7 +169,7 @@ test('buildPfbackupInspectWarnings reports path release and stack image mismatch
     });
 
     assert.match(warnings.join(' '), /IMPORTS_HOST_PATH/);
-    assert.match(warnings.join(' '), /PRAXIS_FLOW_APP_IMAGE/);
+    assert.match(warnings.join(' '), /WARTEZIMMER_APP_IMAGE/);
     assert.match(warnings.join(' '), /manager-state\.release\.appImage/);
     assert.match(warnings.join(' '), /Release-Version/);
     assert.doesNotMatch(warnings.join(' '), /contactLookupFolderPath/);

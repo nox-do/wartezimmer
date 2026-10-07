@@ -17,7 +17,7 @@ import { syncMaintenanceHostFiles } from './maintenance-files.js';
 import { createRuntimePostcondition, auditRuntimePostcondition } from './runtime-postcondition.js';
 import { runDefaultMaintenanceHealthChecks } from './maintenance-rollback.js';
 import { LOCAL_SETUP_APP_BASE_URL, resolveCanonicalBaseUrl } from './urls.js';
-import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
+import { ManagerApiError } from '@wartezimmer/server-shared/setup-api';
 import { readInstallOperation } from './install-operation.js';
 import crypto, { X509Certificate } from 'node:crypto';
 import { Resolver } from 'node:dns/promises';
@@ -41,8 +41,8 @@ import type {
   TlsState,
   TlsStatus,
   TlsVerifyDnsResult,
-} from '@praxis-flow/server-shared';
-import { TLS_OPERATOR_ZONE_DEFAULT } from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
+import { TLS_OPERATOR_ZONE_DEFAULT } from '@wartezimmer/server-shared';
 import { composeExec, composePs, composeUp, composeRemoveServices } from './docker.js';
 import { readEnvMap, removeEnvKeys, writeEnvRecordAtomically } from './env-file.js';
 import {
@@ -60,7 +60,7 @@ import { SetupApiValidationError } from './setup-api-normalize.js';
 import type { SetupContext } from './setup-context.js';
 import { assertHostLifecycleAction } from './host-lifecycle-guard.js';
 
-export { TLS_OPERATOR_ZONE_DEFAULT } from '@praxis-flow/server-shared';
+export { TLS_OPERATOR_ZONE_DEFAULT } from '@wartezimmer/server-shared';
 export const TLS_ACME_DNS_API_DEFAULT = 'https://auth.acme-dns.io';
 export const TLS_DNS_RESOLVERS_DEFAULT = ['1.1.1.1', '8.8.8.8'] as const;
 export const TLS_INSTALLATION_ID_ALPHABET = 'abcdefghijkmnpqrstuvwxyz23456789';
@@ -852,7 +852,7 @@ async function localChecksDefault(
       clearTimeout(timer);
       resolve(false);
     });
-    const request = client.request({ ':path': '/__praxis-flow/setup/tls-sse', ':method': 'GET' });
+    const request = client.request({ ':path': '/__wartezimmer/setup/tls-sse', ':method': 'GET' });
     let body = '';
     request.setEncoding('utf8');
     request.on('data', (chunk) => {

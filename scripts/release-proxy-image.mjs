@@ -60,7 +60,7 @@ function inspectImage(runCapture, imageRef, platform) {
 
 /**
  * For a build, pulls the approved stock Caddy digest, tags the Compose base name,
- * then builds the delivery proxy (`praxis-flow-proxy:…-acmedns`) from `proxy/Dockerfile`.
+ * then builds the delivery proxy (`wartezimmer-proxy:…-acmedns`) from `proxy/Dockerfile`.
  * Pack-only mode verifies the existing local custom image without contacting the registry.
  * Compose HTTP-only defaults stay on stock Caddy; only release packs ship the custom tag.
  */

@@ -4,7 +4,7 @@ import type { SandboxConfig } from '../sandbox-config.js';
 import {
   decodeIntakeFileNameHeader,
   INTAKE_FILE_NAME_ENCODING_HEADER,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import { processIntakeDocument } from '../intake-document.js';
 import { IntakeStore, SANDBOX_INTAKE_MAX_BYTES } from '../intake-store.js';
 import type { ScannerService } from '../scanner-service.js';

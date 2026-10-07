@@ -1,4 +1,4 @@
-import type { HostLifecycle, HostOperatingMode } from '@praxis-flow/server-shared/setup-api';
+import type { HostLifecycle, HostOperatingMode } from '@wartezimmer/server-shared/setup-api';
 
 const labels: Record<HostOperatingMode, string> = {
   uninstalled: 'Nicht installiert',

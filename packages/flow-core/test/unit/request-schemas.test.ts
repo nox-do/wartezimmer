@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseCheckInBody } from '@praxis-flow/flow-core';
+import { parseCheckInBody } from '@wartezimmer/flow-core';
 
 test('parseCheckInBody: normalisiert gueltige Check-in-Bodies', () => {
   assert.deepEqual(parseCheckInBody({ topicId: 'general' }), {

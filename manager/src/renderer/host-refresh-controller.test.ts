@@ -1,7 +1,7 @@
-import { ManagerApiError, type ManagerError } from '@praxis-flow/server-shared/setup-api';
+import { ManagerApiError, type ManagerError } from '@wartezimmer/server-shared/setup-api';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { HostRuntimeHealth } from '@praxis-flow/server-shared/setup-api';
+import type { HostRuntimeHealth } from '@wartezimmer/server-shared/setup-api';
 import type { HostStatus } from '../shared/host-status.js';
 import { freshInstallHostStatus, minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 import { createHostRefreshController } from './host-refresh-controller.js';

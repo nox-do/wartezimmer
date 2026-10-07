@@ -1,4 +1,4 @@
-import { normalizePatientUploadFileName } from '@praxis-flow/server-shared';
+import { normalizePatientUploadFileName } from '@wartezimmer/server-shared';
 
 export function splitDocumentFileName(fileName: string): { base: string; extension: string } {
   const trimmed = fileName.trim();

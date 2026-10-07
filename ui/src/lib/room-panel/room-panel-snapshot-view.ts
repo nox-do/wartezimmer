@@ -1,4 +1,4 @@
-import { formatTicketCode } from '@praxis-flow/domain';
+import { formatTicketCode } from '@wartezimmer/domain';
 import type {
   RoomPanelCallCandidate,
   RoomPanelItem,

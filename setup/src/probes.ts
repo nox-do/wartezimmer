@@ -3,9 +3,9 @@ import https from 'node:https';
 import net from 'node:net';
 import { Resolver } from 'node:dns/promises';
 
-import type { ProbeResult } from '@praxis-flow/server-shared';
+import type { ProbeResult } from '@wartezimmer/server-shared';
 
-export type { ProbeResult } from '@praxis-flow/server-shared';
+export type { ProbeResult } from '@wartezimmer/server-shared';
 
 export type FetchStatusFn = (url: string) => Promise<{ ok: boolean; status: number; body: string }>;
 export type DnsRebindDetector = (hostname: string) => Promise<boolean>;

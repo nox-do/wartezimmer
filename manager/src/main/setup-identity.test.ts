@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import test from 'node:test';
-import { SETUP_API_PROTOCOL_VERSION } from '@praxis-flow/server-shared/setup-api';
+import { SETUP_API_PROTOCOL_VERSION } from '@wartezimmer/server-shared/setup-api';
 import {
   createLineAssembler,
   evaluateSetupHealthIdentity,
@@ -11,30 +11,30 @@ import {
 
 test('parseSetupReadyLine reads the dedicated ready marker even with npm noise', () => {
   assert.equal(parseSetupReadyLine('npm warn something'), null);
-  assert.equal(parseSetupReadyLine('PRAXIS_FLOW_SETUP_READY {"port":43121}'), 43121);
+  assert.equal(parseSetupReadyLine('WARTEZIMMER_SETUP_READY {"port":43121}'), 43121);
   assert.equal(
-    parseSetupReadyLine('> setup@0.4.0 serve\nPRAXIS_FLOW_SETUP_READY {"port":9190}'),
+    parseSetupReadyLine('> setup@0.4.0 serve\nWARTEZIMMER_SETUP_READY {"port":9190}'),
     9190,
   );
-  assert.equal(parseSetupReadyLine('PRAXIS_FLOW_SETUP_READY {"port":0}'), null);
+  assert.equal(parseSetupReadyLine('WARTEZIMMER_SETUP_READY {"port":0}'), null);
 });
 
 test('createLineAssembler parses a ready marker split across chunks', () => {
   const lines = createLineAssembler();
-  assert.deepEqual(lines.push('PRAXIS_FLOW_SETUP_READY {"por'), []);
+  assert.deepEqual(lines.push('WARTEZIMMER_SETUP_READY {"por'), []);
   assert.deepEqual(lines.push('t":43121}\n[setup] more\n'), [
-    'PRAXIS_FLOW_SETUP_READY {"port":43121}',
+    'WARTEZIMMER_SETUP_READY {"port":43121}',
     '[setup] more',
   ]);
-  assert.equal(parseSetupReadyLine('PRAXIS_FLOW_SETUP_READY {"port":43121}'), 43121);
+  assert.equal(parseSetupReadyLine('WARTEZIMMER_SETUP_READY {"port":43121}'), 43121);
 });
 
 test('isAttachExistingSetupEnabled is opt-in only', () => {
   assert.equal(isAttachExistingSetupEnabled({}), false);
-  assert.equal(isAttachExistingSetupEnabled({ PRAXIS_FLOW_SETUP_ATTACH: '1' }), true);
-  assert.equal(isAttachExistingSetupEnabled({ PRAXIS_FLOW_SETUP_ATTACH: 'true' }), true);
-  assert.equal(isAttachExistingSetupEnabled({ PRAXIS_FLOW_SETUP_ATTACH: 'yes' }), true);
-  assert.equal(isAttachExistingSetupEnabled({ PRAXIS_FLOW_SETUP_ATTACH: '0' }), false);
+  assert.equal(isAttachExistingSetupEnabled({ WARTEZIMMER_SETUP_ATTACH: '1' }), true);
+  assert.equal(isAttachExistingSetupEnabled({ WARTEZIMMER_SETUP_ATTACH: 'true' }), true);
+  assert.equal(isAttachExistingSetupEnabled({ WARTEZIMMER_SETUP_ATTACH: 'yes' }), true);
+  assert.equal(isAttachExistingSetupEnabled({ WARTEZIMMER_SETUP_ATTACH: '0' }), false);
 });
 
 test('evaluateSetupHealthIdentity rejects leftover { ok: true } health', () => {

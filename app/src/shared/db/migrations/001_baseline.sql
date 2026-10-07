@@ -1,4 +1,4 @@
--- praxis_flow schema baseline (2026-06): Wartezimmer / Patientenfluss
+-- wartezimmer schema baseline (2026-06): Wartezimmer / Patientenfluss
 -- Fresh databases only. Schema change = delete SQLite file / Docker volume and restart (no in-place upgrades).
 -- Phase B3: tickets/queue_entries removed; portal tables use visit_id (FK added at runtime via ensureVisitPortalSchema).
 
@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS ops_settings (
   terminal_auth_egk_enabled INTEGER NOT NULL DEFAULT 0,
   terminal_patient_locales TEXT NOT NULL DEFAULT '["de-DE"]',
   sms_provider TEXT NOT NULL DEFAULT 'mock',
-  export_base_path TEXT NOT NULL DEFAULT '/var/lib/praxis-flow/exports',
+  export_base_path TEXT NOT NULL DEFAULT '/var/lib/wartezimmer/exports',
   practice_profile_json TEXT NOT NULL DEFAULT '{}',
   setup_completed_at TEXT,
   setup_last_step TEXT NOT NULL DEFAULT 'welcome',
@@ -169,7 +169,7 @@ SELECT
   0,
   '["de-DE"]',
   'mock',
-  '/var/lib/praxis-flow/exports',
+  '/var/lib/wartezimmer/exports',
   '{}',
   'welcome',
   0,

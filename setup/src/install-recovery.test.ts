@@ -8,9 +8,9 @@ import test from 'node:test';
 import {
   buildPfbackupArchive,
   serializePfbackupArchive,
-  PRAXIS_FLOW_PROXY_IMAGE_REF,
-  PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
-} from '@praxis-flow/server-shared';
+  WARTEZIMMER_PROXY_IMAGE_REF,
+  WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST,
+} from '@wartezimmer/server-shared';
 import {
   prepareInstallOperation,
   commitPreparedInstallOperation,
@@ -30,13 +30,13 @@ async function withInstallFixture(
   }) => Promise<void>,
 ) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-install-recovery-'));
-  const oldCli = process.env.PRAXIS_FLOW_DOCKER_CLI;
+  const oldCli = process.env.WARTEZIMMER_DOCKER_CLI;
   try {
     const home = path.join(root, 'home');
     const bundle = path.join(root, 'bundle');
     fs.mkdirSync(home);
     fs.mkdirSync(path.join(bundle, 'images'), { recursive: true });
-    fs.writeFileSync(path.join(bundle, 'images/praxis-flow-images.tar'), 'test images');
+    fs.writeFileSync(path.join(bundle, 'images/wartezimmer-images.tar'), 'test images');
     for (const relative of [
       '.env.example',
       'docker-compose.delivery.yml',
@@ -51,9 +51,9 @@ async function withInstallFixture(
     }
     const archivePath = path.join(root, 'release.pfinstall');
     const images = {
-      app: 'praxis-flow/app:1.4.2',
-      sandbox: 'praxis-flow/sandbox:1.4.2',
-      proxy: PRAXIS_FLOW_PROXY_IMAGE_REF,
+      app: 'wartezimmer/app:1.4.2',
+      sandbox: 'wartezimmer/sandbox:1.4.2',
+      proxy: WARTEZIMMER_PROXY_IMAGE_REF,
     };
     const imageId = `sha256:${'d'.repeat(64)}`;
     const arch = process.arch === 'x64' ? 'amd64' : process.arch;
@@ -81,7 +81,7 @@ async function withInstallFixture(
         images,
         imageDigests: {
           proxy: {
-            registryDigest: PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
+            registryDigest: WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST,
             archiveImageId: imageId,
             platform: `linux/${arch}`,
           },
@@ -112,7 +112,7 @@ if (args[0] === 'image' && args[1] === 'inspect') console.log(JSON.stringify({ I
 `,
       { mode: 0o755 },
     );
-    process.env.PRAXIS_FLOW_DOCKER_CLI = cli;
+    process.env.WARTEZIMMER_DOCKER_CLI = cli;
     await run({
       home,
       archivePath,
@@ -125,8 +125,8 @@ if (args[0] === 'image' && args[1] === 'inspect') console.log(JSON.stringify({ I
           .map((line) => JSON.parse(line) as string[]),
     });
   } finally {
-    if (oldCli === undefined) delete process.env.PRAXIS_FLOW_DOCKER_CLI;
-    else process.env.PRAXIS_FLOW_DOCKER_CLI = oldCli;
+    if (oldCli === undefined) delete process.env.WARTEZIMMER_DOCKER_CLI;
+    else process.env.WARTEZIMMER_DOCKER_CLI = oldCli;
     fs.rmSync(root, { recursive: true, force: true });
   }
 }
@@ -203,7 +203,7 @@ test('fresh retry requires confirmation and resets partial state while retaining
 test('replace pins the chosen v2 backup and reset preserves those bytes', async () => {
   await withInstallFixture(async ({ home, archivePath }) => {
     fs.mkdirSync(path.join(home, 'backups'));
-    const backupPath = path.join(home, 'backups/praxis-flow-backup-test.pfbackup');
+    const backupPath = path.join(home, 'backups/wartezimmer-backup-test.pfbackup');
     const content = serializePfbackupArchive(
       buildPfbackupArchive({
         settings: {

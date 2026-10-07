@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
 import Fastify from 'fastify';
-import { normalizeRoomPanelsSettings } from '@praxis-flow/domain';
+import { normalizeRoomPanelsSettings } from '@wartezimmer/domain';
 import { registerQueueRoutes } from './queue-routes.js';
 import type { CoreDatabase } from '../shared/db/database.js';
 import { DEFAULT_TERMINAL_TOPIC_DEFINITIONS } from '../shared/checkin-topic-settings.js';

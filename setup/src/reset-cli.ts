@@ -16,9 +16,9 @@ async function main() {
 
   if (ctx.mode === 'repo' && !targets.envOverride) {
     p.log.warn(
-      'Kein PRAXIS_FLOW_HOME gesetzt — es wird das Monorepo zurückgesetzt (.env, Container praxis-flow).',
+      'Kein WARTEZIMMER_HOME gesetzt — es wird das Monorepo zurückgesetzt (.env, Container wartezimmer).',
     );
-    p.log.warn('Für Test-Installs: PRAXIS_FLOW_HOME=/tmp/pf-dev-001 npm run setup:reset');
+    p.log.warn('Für Test-Installs: WARTEZIMMER_HOME=/tmp/pf-dev-001 npm run setup:reset');
   }
 
   p.log.message(`Home: ${ctx.home}`);

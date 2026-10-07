@@ -1,4 +1,4 @@
-import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
+import { ManagerApiError } from '@wartezimmer/server-shared/setup-api';
 import { replaceFile } from './maintenance-files.js';
 import { archiveTool } from './pfupdate-package.js';
 import { spawnSync } from 'node:child_process';
@@ -7,11 +7,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {
-  PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY,
-  PRAXIS_FLOW_PROXY_IMAGE_REF,
-  PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
+  WARTEZIMMER_PROXY_IMAGE_ENV_KEY,
+  WARTEZIMMER_PROXY_IMAGE_REF,
+  WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST,
   type DeliveryImagesStatus,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import type { DockerStatus } from './docker.js';
 import { runDockerCommand } from './docker-cli.js';
 import { updateEnvKeys } from './env-file.js';
@@ -38,7 +38,7 @@ import {
   type InstallOperation,
 } from './install-operation.js';
 
-export type { DeliveryImagesStatus } from '@praxis-flow/server-shared';
+export type { DeliveryImagesStatus } from '@wartezimmer/server-shared';
 
 export type LocalDeliveryImagePair = {
   appImage: string;
@@ -78,7 +78,7 @@ export function parseDockerLoadOutput(output: string): string[] {
   return loaded;
 }
 
-export function classifyPraxisFlowImages(refs: string[]): {
+export function classifyWartezimmerImages(refs: string[]): {
   appImage: string | null;
   sandboxImage: string | null;
 } {
@@ -94,7 +94,7 @@ export function classifyPraxisFlowImages(refs: string[]): {
       sandboxImage = ref;
       continue;
     }
-    if (lower.includes('/app') || lower.includes('-app') || lower.includes('praxis-flow/app')) {
+    if (lower.includes('/app') || lower.includes('-app') || lower.includes('wartezimmer/app')) {
       appImage = ref;
     }
   }
@@ -127,12 +127,12 @@ export function selectLocalDeliveryImagePair(refs: string[]): LocalDeliveryImage
   const appImages = refs
     .map(parseImageRef)
     .filter((ref): ref is NonNullable<ReturnType<typeof parseImageRef>> =>
-      Boolean(ref && ref.repository === 'praxis-flow/app'),
+      Boolean(ref && ref.repository === 'wartezimmer/app'),
     );
   const sandboxImages = refs
     .map(parseImageRef)
     .filter((ref): ref is NonNullable<ReturnType<typeof parseImageRef>> =>
-      Boolean(ref && ref.repository === 'praxis-flow/sandbox'),
+      Boolean(ref && ref.repository === 'wartezimmer/sandbox'),
     );
 
   if (appImages.length === 0 || sandboxImages.length === 0) {
@@ -298,7 +298,7 @@ function prepareReleaseBundle(archivePath: string): PreparedReleaseBundle {
       );
     }
   })();
-  const dockerArchive = 'images/praxis-flow-images.tar';
+  const dockerArchive = 'images/wartezimmer-images.tar';
   if (!entries.some((entry) => entry.name === 'manifest.json')) {
     throw releaseValidationError(
       'PFINSTALL_MANIFEST_REQUIRED',
@@ -324,7 +324,7 @@ function prepareReleaseBundle(archivePath: string): PreparedReleaseBundle {
     throw new Error('RELEASE_BUNDLE_UNSUPPORTED');
   }
 
-  const stagingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'praxis-flow-release-'));
+  const stagingDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wartezimmer-release-'));
   const extracted = spawnSync(archiveTool(), ['-xzf', archivePath, '-C', stagingDir], {
     encoding: 'utf8',
     windowsHide: true,
@@ -428,8 +428,8 @@ export function resolveDeliveryImageConfig(input: {
     return release;
   }
 
-  const appImage = input.envMap.get('PRAXIS_FLOW_APP_IMAGE')?.trim() || null;
-  const sandboxImage = input.envMap.get('PRAXIS_FLOW_SANDBOX_IMAGE')?.trim() || null;
+  const appImage = input.envMap.get('WARTEZIMMER_APP_IMAGE')?.trim() || null;
+  const sandboxImage = input.envMap.get('WARTEZIMMER_SANDBOX_IMAGE')?.trim() || null;
   if (!appImage || !sandboxImage) {
     return null;
   }
@@ -447,7 +447,7 @@ export function writeDeliveryImageEnvFromState(projectRoot: string): {
   keysWritten: string[];
 } | null {
   const updates = releaseEnvFromManagerState(readManagerState(projectRoot));
-  if (!updates.PRAXIS_FLOW_APP_IMAGE || !updates.PRAXIS_FLOW_SANDBOX_IMAGE) {
+  if (!updates.WARTEZIMMER_APP_IMAGE || !updates.WARTEZIMMER_SANDBOX_IMAGE) {
     return null;
   }
 
@@ -529,9 +529,9 @@ async function validatePreparedCompose(templatesRoot: string): Promise<void> {
   const envPath = path.join(templatesRoot, '.env');
   fs.copyFileSync(path.join(templatesRoot, '.env.example'), envPath);
   updateEnvKeys(envPath, {
-    PRAXIS_FLOW_APP_IMAGE: 'praxis-flow/app:validation',
-    PRAXIS_FLOW_SANDBOX_IMAGE: 'praxis-flow/sandbox:validation',
-    PRAXIS_FLOW_PROXY_IMAGE: PRAXIS_FLOW_PROXY_IMAGE_REF,
+    WARTEZIMMER_APP_IMAGE: 'wartezimmer/app:validation',
+    WARTEZIMMER_SANDBOX_IMAGE: 'wartezimmer/sandbox:validation',
+    WARTEZIMMER_PROXY_IMAGE: WARTEZIMMER_PROXY_IMAGE_REF,
     MAINTENANCE_TOKEN: 'validation-maintenance-token',
     AUTH_KEY_CAPTIVE: 'validation-auth-key',
     SANDBOX_INTERNAL_TOKEN: 'validation-sandbox-token',
@@ -571,8 +571,8 @@ async function validatePreparedCompose(templatesRoot: string): Promise<void> {
 }
 
 function validatePfinstallManifest(manifest: ReleaseManifest): ReleaseManifest {
-  const expectedApp = `praxis-flow/app:${manifest.version}`;
-  const expectedSandbox = `praxis-flow/sandbox:${manifest.version}`;
+  const expectedApp = `wartezimmer/app:${manifest.version}`;
+  const expectedSandbox = `wartezimmer/sandbox:${manifest.version}`;
   if (
     manifest.installFormatVersion !== 2 ||
     (manifest.platform !== undefined &&
@@ -585,9 +585,9 @@ function validatePfinstallManifest(manifest: ReleaseManifest): ReleaseManifest {
     typeof manifest.imageDigests?.proxy?.platform !== 'string' ||
     manifest.images?.app !== expectedApp ||
     manifest.images?.sandbox !== expectedSandbox ||
-    manifest.images?.proxy !== PRAXIS_FLOW_PROXY_IMAGE_REF ||
+    manifest.images?.proxy !== WARTEZIMMER_PROXY_IMAGE_REF ||
     manifest.imageDigests?.proxy?.registryDigest?.toLowerCase() !==
-      PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST
+      WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST
   ) {
     throw releaseValidationError(
       'PFINSTALL_IMAGE_CONTRACT_INVALID',
@@ -705,8 +705,8 @@ export function activatePreparedPfinstall(
   try {
     installBundleTemplatesAtomically(projectRoot, bundle.stagingDir!);
     const envPath = ensureEnvFromExample(projectRoot);
-    const appImage = `praxis-flow/app:${operation.package.releaseVersion}`;
-    const sandboxImage = `praxis-flow/sandbox:${operation.package.releaseVersion}`;
+    const appImage = `wartezimmer/app:${operation.package.releaseVersion}`;
+    const sandboxImage = `wartezimmer/sandbox:${operation.package.releaseVersion}`;
     writeManagerReleaseState(projectRoot, {
       releaseVersion: operation.package.releaseVersion,
       appImage,
@@ -714,7 +714,7 @@ export function activatePreparedPfinstall(
       archiveSha256: operation.package.sha256,
     });
     writeDeliveryImageEnvFromState(projectRoot);
-    updateEnvKeys(envPath, { [PRAXIS_FLOW_PROXY_IMAGE_ENV_KEY]: PRAXIS_FLOW_PROXY_IMAGE_REF });
+    updateEnvKeys(envPath, { [WARTEZIMMER_PROXY_IMAGE_ENV_KEY]: WARTEZIMMER_PROXY_IMAGE_REF });
     return {
       envPath,
       backupPath: null,
@@ -759,8 +759,8 @@ export function extractPreparedPfinstallTemplates(
   const envPath = path.join(templatesRoot, '.env');
   fs.copyFileSync(path.join(templatesRoot, '.env.example'), envPath);
   updateEnvKeys(envPath, {
-    PRAXIS_FLOW_APP_IMAGE: `praxis-flow/app:${operation.package.releaseVersion}`,
-    PRAXIS_FLOW_SANDBOX_IMAGE: `praxis-flow/sandbox:${operation.package.releaseVersion}`,
+    WARTEZIMMER_APP_IMAGE: `wartezimmer/app:${operation.package.releaseVersion}`,
+    WARTEZIMMER_SANDBOX_IMAGE: `wartezimmer/sandbox:${operation.package.releaseVersion}`,
     MAINTENANCE_TOKEN: 'factory-reset-only',
     AUTH_KEY_CAPTIVE: 'factory-reset-only',
     SANDBOX_INTERNAL_TOKEN: 'factory-reset-only',

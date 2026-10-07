@@ -5,7 +5,7 @@ if ($env:GITHUB_ACTIONS -ne 'true' -or $env:RUNNER_OS -ne 'Windows') {
 }
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $installDirectory = Join-Path $env:RUNNER_TEMP 'Wartezimmer Manager Test'
-$dataDirectory = Join-Path $env:LOCALAPPDATA 'PraxisFlow'
+$dataDirectory = Join-Path $env:LOCALAPPDATA 'Wartezimmer'
 if ((Test-Path $installDirectory) -or (Test-Path $dataDirectory)) {
   throw 'Refusing installer test: test install or data directory already exists.'
 }

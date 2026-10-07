@@ -4,7 +4,7 @@ import {
   normalizeRoomPanelsSettings,
   listEnabledRooms,
   WAITING_ROOM_LOCATION_ID,
-} from '@praxis-flow/domain';
+} from '@wartezimmer/domain';
 
 export const DEV_ROOM_LABELS = [
   'Empfang',

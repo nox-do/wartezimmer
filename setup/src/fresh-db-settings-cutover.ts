@@ -2,7 +2,7 @@ import path from 'node:path';
 import {
   settingsDbSnapshotsEquivalentForRestore,
   type ComposeStatus,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import type { AppDataVolumeAccess } from './app-data-volume.js';
 import type { ComposeRunOptions } from './docker.js';
 import type { SettingsSnapshotImportViaAppReport } from './settings-backup.js';

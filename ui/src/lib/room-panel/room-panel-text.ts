@@ -1,4 +1,4 @@
-import { resolveRoomPanelDisplayTextConfig, type RoomPanelTextPreset } from '@praxis-flow/domain';
+import { resolveRoomPanelDisplayTextConfig, type RoomPanelTextPreset } from '@wartezimmer/domain';
 
 const PRESET_I18N_KEY: Record<Exclude<RoomPanelTextPreset, 'custom'>, string> = {
   you_are_right: 'roomPanel.text_you_are_right',

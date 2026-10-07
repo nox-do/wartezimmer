@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import type { AddressInfo } from 'node:net';
 import test, { afterEach, beforeEach } from 'node:test';
 import Fastify from 'fastify';
-import { normalizeRoomPanelsSettings } from '@praxis-flow/domain';
+import { normalizeRoomPanelsSettings } from '@wartezimmer/domain';
 import { registerClientAuth } from '../auth/client-auth.js';
 import { getStaffSessionCookieName, createStaffSessionManager } from '../auth/session-grants.js';
 import type { CoreDatabase } from '../shared/db/database.js';

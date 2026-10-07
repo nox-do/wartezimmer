@@ -1,4 +1,4 @@
-import { getTerminalLastNameIssue, TERMINAL_LAST_NAME_MAX_LENGTH } from '@praxis-flow/domain';
+import { getTerminalLastNameIssue, TERMINAL_LAST_NAME_MAX_LENGTH } from '@wartezimmer/domain';
 import type { NameKeyboardLocale } from './terminal-name-keyboard-layout';
 
 export { TERMINAL_LAST_NAME_MAX_LENGTH };

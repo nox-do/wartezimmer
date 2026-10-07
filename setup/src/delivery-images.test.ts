@@ -6,12 +6,12 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import {
-  PRAXIS_FLOW_PROXY_IMAGE_REF,
-  PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
-} from '@praxis-flow/server-shared';
+  WARTEZIMMER_PROXY_IMAGE_REF,
+  WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST,
+} from '@wartezimmer/server-shared';
 import {
   auditDeliveryImages,
-  classifyPraxisFlowImages,
+  classifyWartezimmerImages,
   isDeliveryProfile,
   preparePfinstall,
   activatePreparedPfinstall,
@@ -33,7 +33,7 @@ import { sha256File } from './sha256-file.js';
 
 function createBundleSource(): string {
   const bundleRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-delivery-unsafe-source-'));
-  const imagesPath = path.join(bundleRoot, 'images', 'praxis-flow-images.tar');
+  const imagesPath = path.join(bundleRoot, 'images', 'wartezimmer-images.tar');
   fs.mkdirSync(path.dirname(imagesPath), { recursive: true });
   fs.writeFileSync(imagesPath, 'fake-images');
   fs.mkdirSync(path.join(bundleRoot, 'templates', 'proxy'), { recursive: true });
@@ -65,13 +65,13 @@ function testReleaseManifest() {
     installFormatVersion: 2 as const,
     version: '1.4.2',
     images: {
-      app: 'praxis-flow/app:1.4.2',
-      sandbox: 'praxis-flow/sandbox:1.4.2',
-      proxy: PRAXIS_FLOW_PROXY_IMAGE_REF,
+      app: 'wartezimmer/app:1.4.2',
+      sandbox: 'wartezimmer/sandbox:1.4.2',
+      proxy: WARTEZIMMER_PROXY_IMAGE_REF,
     },
     imageDigests: {
       proxy: {
-        registryDigest: PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
+        registryDigest: WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST,
         archiveImageId: `sha256:${'d'.repeat(64)}`,
         platform: `linux/${process.arch === 'x64' ? 'amd64' : process.arch}`,
       },
@@ -81,50 +81,50 @@ function testReleaseManifest() {
 
 test('parseDockerLoadOutput extracts repository tags', () => {
   const output = [
-    'Loaded image: praxis-flow/app:1.4.2',
-    'Loaded image: praxis-flow/sandbox:1.4.2',
+    'Loaded image: wartezimmer/app:1.4.2',
+    'Loaded image: wartezimmer/sandbox:1.4.2',
   ].join('\n');
   assert.deepEqual(parseDockerLoadOutput(output), [
-    'praxis-flow/app:1.4.2',
-    'praxis-flow/sandbox:1.4.2',
+    'wartezimmer/app:1.4.2',
+    'wartezimmer/sandbox:1.4.2',
   ]);
 });
 
-test('classifyPraxisFlowImages maps app and sandbox tags', () => {
-  const result = classifyPraxisFlowImages(['praxis-flow/app:1.4.2', 'praxis-flow/sandbox:1.4.2']);
-  assert.equal(result.appImage, 'praxis-flow/app:1.4.2');
-  assert.equal(result.sandboxImage, 'praxis-flow/sandbox:1.4.2');
+test('classifyWartezimmerImages maps app and sandbox tags', () => {
+  const result = classifyWartezimmerImages(['wartezimmer/app:1.4.2', 'wartezimmer/sandbox:1.4.2']);
+  assert.equal(result.appImage, 'wartezimmer/app:1.4.2');
+  assert.equal(result.sandboxImage, 'wartezimmer/sandbox:1.4.2');
 });
 
 test('selectLocalDeliveryImagePair adopts matching local app and sandbox tags', () => {
   const result = selectLocalDeliveryImagePair([
-    'praxis-flow/app:local',
-    'praxis-flow/sandbox:local',
-    'praxis-flow/gateway:local',
+    'wartezimmer/app:local',
+    'wartezimmer/sandbox:local',
+    'wartezimmer/gateway:local',
   ]);
   assert.deepEqual(result, {
-    appImage: 'praxis-flow/app:local',
-    sandboxImage: 'praxis-flow/sandbox:local',
+    appImage: 'wartezimmer/app:local',
+    sandboxImage: 'wartezimmer/sandbox:local',
     releaseVersion: 'local',
   });
 });
 
 test('selectLocalDeliveryImagePair returns null when app or sandbox is missing', () => {
-  assert.equal(selectLocalDeliveryImagePair(['praxis-flow/app:local']), null);
-  assert.equal(selectLocalDeliveryImagePair(['praxis-flow/sandbox:local']), null);
+  assert.equal(selectLocalDeliveryImagePair(['wartezimmer/app:local']), null);
+  assert.equal(selectLocalDeliveryImagePair(['wartezimmer/sandbox:local']), null);
 });
 
 test('releaseStateFromLocalDeliveryImagePair maps local images without persistence metadata', () => {
   assert.deepEqual(
     releaseStateFromLocalDeliveryImagePair({
-      appImage: 'praxis-flow/app:local',
-      sandboxImage: 'praxis-flow/sandbox:local',
+      appImage: 'wartezimmer/app:local',
+      sandboxImage: 'wartezimmer/sandbox:local',
       releaseVersion: 'local',
     }),
     {
       releaseVersion: 'local',
-      appImage: 'praxis-flow/app:local',
-      sandboxImage: 'praxis-flow/sandbox:local',
+      appImage: 'wartezimmer/app:local',
+      sandboxImage: 'wartezimmer/sandbox:local',
       archiveSha256: null,
     },
   );
@@ -148,8 +148,8 @@ test('auditDeliveryImages reads imported release images from manager state', asy
     fs.writeFileSync(path.join(root, 'docker-compose.delivery.yml'), 'services: {}\n');
     writeManagerReleaseState(root, {
       releaseVersion: '1.4.2',
-      appImage: 'praxis-flow/app:1.4.2',
-      sandboxImage: 'praxis-flow/sandbox:1.4.2',
+      appImage: 'wartezimmer/app:1.4.2',
+      sandboxImage: 'wartezimmer/sandbox:1.4.2',
       archiveSha256: 'c'.repeat(64),
     });
 
@@ -166,8 +166,8 @@ test('auditDeliveryImages reads imported release images from manager state', asy
 
     assert.equal(status.required, true);
     assert.equal(status.configured, true);
-    assert.equal(status.appImage, 'praxis-flow/app:1.4.2');
-    assert.equal(status.sandboxImage, 'praxis-flow/sandbox:1.4.2');
+    assert.equal(status.appImage, 'wartezimmer/app:1.4.2');
+    assert.equal(status.sandboxImage, 'wartezimmer/sandbox:1.4.2');
     assert.equal(status.releaseVersion, '1.4.2');
     assert.equal(status.archiveSha256, 'c'.repeat(64));
   } finally {
@@ -190,8 +190,8 @@ test('auditDeliveryImages reports local images without treating them as configur
         detail: null,
       },
       localDeliveryImagePair: {
-        appImage: 'praxis-flow/app:local',
-        sandboxImage: 'praxis-flow/sandbox:local',
+        appImage: 'wartezimmer/app:local',
+        sandboxImage: 'wartezimmer/sandbox:local',
         releaseVersion: 'local',
       },
       imageExists: async () => true,
@@ -200,8 +200,8 @@ test('auditDeliveryImages reports local images without treating them as configur
     assert.equal(status.required, true);
     assert.equal(status.configured, false);
     assert.equal(status.ready, false);
-    assert.equal(status.appImage, 'praxis-flow/app:local');
-    assert.equal(status.sandboxImage, 'praxis-flow/sandbox:local');
+    assert.equal(status.appImage, 'wartezimmer/app:local');
+    assert.equal(status.sandboxImage, 'wartezimmer/sandbox:local');
     assert.equal(status.releaseVersion, 'local');
     assert.equal(status.archiveSha256, null);
     assert.equal(fs.existsSync(path.join(root, '.env')), false);
@@ -218,15 +218,15 @@ test('writeDeliveryImageEnvFromState materializes compose image keys into env', 
       path.join(root, '.env.example'),
       [
         'PRACTICE_DISPLAY_NAME=Wartezimmer',
-        '# PRAXIS_FLOW_APP_IMAGE=ghcr.io/example/app:v1',
-        '# PRAXIS_FLOW_SANDBOX_IMAGE=ghcr.io/example/sandbox:v1',
+        '# WARTEZIMMER_APP_IMAGE=ghcr.io/example/app:v1',
+        '# WARTEZIMMER_SANDBOX_IMAGE=ghcr.io/example/sandbox:v1',
         '',
       ].join('\n'),
     );
     writeManagerReleaseState(root, {
       releaseVersion: '1.4.2',
-      appImage: 'praxis-flow/app:1.4.2',
-      sandboxImage: 'praxis-flow/sandbox:1.4.2',
+      appImage: 'wartezimmer/app:1.4.2',
+      sandboxImage: 'wartezimmer/sandbox:1.4.2',
       archiveSha256: 'd'.repeat(64),
     });
 
@@ -234,8 +234,8 @@ test('writeDeliveryImageEnvFromState materializes compose image keys into env', 
     assert.equal(result?.envPath, path.join(root, '.env'));
 
     const env = readEnvMap(path.join(root, '.env'));
-    assert.equal(env.get('PRAXIS_FLOW_APP_IMAGE'), 'praxis-flow/app:1.4.2');
-    assert.equal(env.get('PRAXIS_FLOW_SANDBOX_IMAGE'), 'praxis-flow/sandbox:1.4.2');
+    assert.equal(env.get('WARTEZIMMER_APP_IMAGE'), 'wartezimmer/app:1.4.2');
+    assert.equal(env.get('WARTEZIMMER_SANDBOX_IMAGE'), 'wartezimmer/sandbox:1.4.2');
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -283,7 +283,7 @@ test('prepare pins verified bytes without mutating live installation files and a
     const activated = activatePreparedPfinstall(root, prepared.operation.id);
     assert.equal(activated.releaseVersion, '1.4.2');
     assert.equal(
-      readEnvMap(path.join(root, '.env')).get('PRAXIS_FLOW_APP_IMAGE'),
+      readEnvMap(path.join(root, '.env')).get('WARTEZIMMER_APP_IMAGE'),
       manifest.images.app,
     );
     assert.equal(readInstallOperation(root)?.phase, 'installing');
@@ -306,7 +306,7 @@ test('prepare rejects image-only archives before docker load', async () => {
   let dockerLoadCalled = false;
   try {
     fs.writeFileSync(path.join(source, 'legacy-images.tar'), 'old images');
-    const archivePath = path.join(root, 'praxis-flow-1.4.2.pfinstall');
+    const archivePath = path.join(root, 'wartezimmer-1.4.2.pfinstall');
     const packed = spawnSync('tar', ['-czf', archivePath, '-C', source, 'legacy-images.tar'], {
       encoding: 'utf8',
     });
@@ -366,7 +366,7 @@ test('prepare rejects unsafe tar entry types before extract', async () => {
       const targetPath = path.join(bundleRoot, 'templates', '.env.example');
       if (entryType === 'symlink') {
         fs.unlinkSync(targetPath);
-        fs.symlinkSync('/tmp/praxis-flow-outside', targetPath);
+        fs.symlinkSync('/tmp/wartezimmer-outside', targetPath);
       } else if (entryType === 'hardlink') {
         const hardlinkSource = path.join(bundleRoot, 'hardlink-source');
         fs.writeFileSync(hardlinkSource, 'linked');
@@ -502,7 +502,7 @@ test('embedded metadata and payload failures stop before compose validation or D
     ],
     [
       'changed image',
-      (source) => fs.appendFileSync(path.join(source, 'images/praxis-flow-images.tar'), 'corrupt'),
+      (source) => fs.appendFileSync(path.join(source, 'images/wartezimmer-images.tar'), 'corrupt'),
       'PFINSTALL_CONTENT_MISMATCH',
     ],
     [

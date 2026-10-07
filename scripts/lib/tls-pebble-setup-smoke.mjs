@@ -15,17 +15,17 @@ import tls from 'node:tls';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const PROXY_IMAGE = 'praxis-flow-proxy:2.11.4-acmedns';
+const PROXY_IMAGE = 'wartezimmer-proxy:2.11.4-acmedns';
 
 export const TLS_PEBBLE_SETUP_SMOKE = {
   managed: {
-    project: 'praxis-flow-tls-managed',
+    project: 'wartezimmer-tls-managed',
     runtimeName: 'tls-managed',
     setupPort: 19192,
     apply: false,
   },
   cutover: {
-    project: 'praxis-flow-tls-cutover',
+    project: 'wartezimmer-tls-cutover',
     runtimeName: 'tls-cutover',
     setupPort: 19193,
     apply: true,
@@ -54,9 +54,9 @@ const COMPOSE_FILES = [
 ];
 const CLASHING_CONTAINERS = [
   // The lab support compose still uses fixed names and therefore needs explicit cleanup.
-  'praxis-flow-tls-lab-pebble',
-  'praxis-flow-tls-lab-acme-dns',
-  'praxis-flow-tls-lab-coredns',
+  'wartezimmer-tls-lab-pebble',
+  'wartezimmer-tls-lab-acme-dns',
+  'wartezimmer-tls-lab-coredns',
 ];
 
 function printHelp() {
@@ -399,7 +399,7 @@ function writeRuntimeEnv(lanIp, ownDomain) {
     'PROXY_HTTPS_PORT=443',
     'APP_BIND_ADDRESS=127.0.0.1',
     'TRUST_PROXY_HEADERS=false',
-    `PRAXIS_FLOW_PROXY_IMAGE=${PROXY_IMAGE}`,
+    `WARTEZIMMER_PROXY_IMAGE=${PROXY_IMAGE}`,
     `PROXY_CADDY_DATA_HOST_PATH=${path.join(tlsRoot, 'caddy-data')}`,
     `PROXY_CADDY_CONFIG_HOST_PATH=${path.join(tlsRoot, 'caddy-config')}`,
     `PROXY_CADDYFILE_HOST_PATH=${caddyfile}`,
@@ -424,7 +424,7 @@ function httpsGet(url, { ca, servername }) {
         ca,
         servername,
         rejectUnauthorized: true,
-        headers: { 'User-Agent': 'praxis-flow-tls-pebble-smoke/1.0' },
+        headers: { 'User-Agent': 'wartezimmer-tls-pebble-smoke/1.0' },
       },
       (response) => {
         const chunks = [];
@@ -458,7 +458,7 @@ async function fetchPebbleRoot() {
 }
 
 function ensureAppImages() {
-  if (imageExists('praxis-flow/app:local') && imageExists('praxis-flow/sandbox:local')) {
+  if (imageExists('wartezimmer/app:local') && imageExists('wartezimmer/sandbox:local')) {
     return;
   }
   console.log('Building app and sandbox images from the repository …');
@@ -469,14 +469,14 @@ function ensureAppImages() {
 }
 
 function startSetup() {
-  return spawn('npm', ['run', '-w', '@praxis-flow/setup', 'serve'], {
+  return spawn('npm', ['run', '-w', '@wartezimmer/setup', 'serve'], {
     cwd: root,
     env: {
       ...process.env,
       SETUP_HOST_PORT: String(SETUP_PORT),
-      PRAXIS_FLOW_HOME: RUNTIME,
-      PRAXIS_FLOW_TEMPLATE_ROOT: root,
-      PRAXIS_FLOW_COMPOSE_PROFILE: 'dev',
+      WARTEZIMMER_HOME: RUNTIME,
+      WARTEZIMMER_TEMPLATE_ROOT: root,
+      WARTEZIMMER_COMPOSE_PROFILE: 'dev',
       COMPOSE_PROJECT_NAME: PROJECT,
       ...labVolumeEnv(),
     },
@@ -561,7 +561,7 @@ async function assertHttpRedirectsToHttps(lanIp) {
         hostname: lanIp,
         port: 80,
         path: '/',
-        headers: { Host: STAFF_HOSTNAME, 'User-Agent': 'praxis-flow-tls-pebble-smoke/1.0' },
+        headers: { Host: STAFF_HOSTNAME, 'User-Agent': 'wartezimmer-tls-pebble-smoke/1.0' },
         timeout: 8000,
       },
       (response) => {
@@ -625,7 +625,7 @@ async function assertHttpsH2AndSse(ca, lanIp) {
     });
     const request = session.request({
       ':method': 'GET',
-      ':path': '/__praxis-flow/setup/tls-sse',
+      ':path': '/__wartezimmer/setup/tls-sse',
     });
     let body = '';
     request.setEncoding('utf8');

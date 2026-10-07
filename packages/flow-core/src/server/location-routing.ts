@@ -1,4 +1,4 @@
-import type { Queue } from '@praxis-flow/flow-core';
+import type { Queue } from '@wartezimmer/flow-core';
 
 /**
  * Queue-/Surface-Logik beim Ortswechsel.

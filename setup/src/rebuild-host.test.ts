@@ -6,7 +6,7 @@ import test from 'node:test';
 import { execFileSync } from 'node:child_process';
 import { rebuildHost, type RebuildHooks } from './rebuild-host.js';
 import { testSetupContext } from './test-setup-context.js';
-import { DEFAULT_PORTAL_PROXY_CONTRACT } from '@praxis-flow/server-shared';
+import { DEFAULT_PORTAL_PROXY_CONTRACT } from '@wartezimmer/server-shared';
 
 function fixture(t: test.TestContext, proxy = false) {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-rebuild-test-'));
@@ -239,7 +239,7 @@ test('TLS preparation regenerates from installed contract and preserves TLS file
   const env = fs.readFileSync(path.join(f.home, '.env'));
   f.stopped();
   await rebuildHost(f.ctx, f.hooks);
-  assert.match(fs.readFileSync(caddy, 'utf8'), /PRAXIS-FLOW-GENERATED/);
+  assert.match(fs.readFileSync(caddy, 'utf8'), /WARTEZIMMER-GENERATED/);
   assert.ok(fs.readFileSync(path.join(f.home, '.env')).equals(env));
   assert.equal(fs.readFileSync(path.join(root, 'operator-token'), 'utf8'), 'keep-token');
 });

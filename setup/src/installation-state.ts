@@ -10,7 +10,7 @@ import type {
   InstallationReason,
   InstallationState,
   InstallOperationSummary,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 
 export const installationStartFailureMessages = {
   'app-image-missing': 'Das benötigte lokale App-Image fehlt.',

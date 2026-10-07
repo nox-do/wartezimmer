@@ -1,6 +1,6 @@
 import { assertRegistrationNumberAllowed } from '../queue/registration-number-limit.js';
 import type { DatabaseSync } from 'node:sqlite';
-import type { Runtime } from '@praxis-flow/flow-core/server';
+import type { Runtime } from '@wartezimmer/flow-core/server';
 import { domainError } from '../errors/domain-error.js';
 import type { OpsSettings } from '../db/db-types.js';
 import { getVisitHostState, upsertVisitHostState } from '../db/visit-host-state.js';

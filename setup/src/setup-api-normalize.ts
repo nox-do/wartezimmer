@@ -11,16 +11,16 @@ import type {
   TlsCustomCertificateInput,
   TlsPrepareInput,
   TlsRenewInput,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import {
   SETUP_DEFAULT_GATEWAY_INTERFACE,
   SETUP_DEFAULT_GATEWAY_IP,
   parseGatewayManagementIpFromBridgeUrl,
   validateGatewayManagementIp,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import { DEFAULT_PROXY_HTTP_PORT } from './network-bindings.js';
 
-import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
+import { ManagerApiError } from '@wartezimmer/server-shared/setup-api';
 
 export class SetupApiValidationError extends ManagerApiError {
   constructor(message: string, code = 'validation_failed') {

@@ -1,5 +1,5 @@
 import { pbkdf2Sync, randomBytes, timingSafeEqual } from 'node:crypto';
-import { DEFAULT_ROOM_PANEL_PIN_HASH, DEFAULT_STAFF_PIN_HASH } from '@praxis-flow/server-shared';
+import { DEFAULT_ROOM_PANEL_PIN_HASH, DEFAULT_STAFF_PIN_HASH } from '@wartezimmer/server-shared';
 import type {
   StaffPinHashConfig,
   StaffRole,
@@ -10,7 +10,7 @@ export {
   DEFAULT_ROOM_PANEL_PIN_HASH,
   DEFAULT_STAFF_PIN,
   DEFAULT_STAFF_PIN_HASH,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 
 export const DEFAULT_STAFF_PIN_HASH_MFA = DEFAULT_STAFF_PIN_HASH;
 export const DEFAULT_STAFF_PIN_HASH_OPS = DEFAULT_STAFF_PIN_HASH;

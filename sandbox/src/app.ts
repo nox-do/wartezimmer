@@ -9,7 +9,7 @@ import { registerRuntimeRoutes } from './routes/runtime-routes.js';
 import { registerScannerRoutes } from './routes/scanner-routes.js';
 import { createScannerService } from './scanner-service.js';
 import { getSandboxConfig, type SandboxConfig } from './sandbox-config.js';
-import { buildFastifyLoggerOptions } from '@praxis-flow/server-shared/logger';
+import { buildFastifyLoggerOptions } from '@wartezimmer/server-shared/logger';
 
 export function buildSandboxApp(config: SandboxConfig = getSandboxConfig()): FastifyInstance {
   const app = Fastify({ ...buildFastifyLoggerOptions() });

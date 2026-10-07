@@ -4,7 +4,7 @@ import { pipeline } from 'node:stream/promises';
 import type { Readable } from 'node:stream';
 import { randomUUID } from 'node:crypto';
 import type { CoreDatabase, DocumentExportInfo } from '../db/database.js';
-import { createModuleLogger } from '@praxis-flow/server-shared/logger';
+import { createModuleLogger } from '@wartezimmer/server-shared/logger';
 import { getSandboxClient } from '../sandbox/sandbox-client.js';
 import { purgeDocumentArtifacts } from './sandbox-document-cleanup.js';
 import { DomainError, domainError } from '../errors/domain-error.js';

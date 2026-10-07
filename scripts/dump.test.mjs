@@ -144,7 +144,7 @@ test('review dump places decision context before each selected file', () => {
 
   const result = writeDump(root, 'review', '2026-09-22');
   const output = fs.readFileSync(result.outputPath, 'utf8');
-  assert.match(output, /^# Praxis Flow focused remediation review/m);
+  assert.match(output, /^# Wartezimmer focused remediation review/m);
   assert.match(
     output,
     /#\/app\/src\/shared\/documents\/filesystem-export\.ts\n# REVIEW-NOTE: F-01:/,

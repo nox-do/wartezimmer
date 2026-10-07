@@ -14,7 +14,7 @@ export function architectureTag(ref, platform) {
 }
 
 export function releaseArchiveName(version, platform) {
-  return `praxis-flow-${version}-${platform.replace('/', '-')}.pfinstall`;
+  return `wartezimmer-${version}-${platform.replace('/', '-')}.pfinstall`;
 }
 
 export function assertReleasePlatform(actual, expected, ref) {

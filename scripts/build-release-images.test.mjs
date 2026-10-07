@@ -60,9 +60,9 @@ if(args[0]==='save') process.stdout.write('fake docker payload for '+platform);
         );
         const archive = path.join(
           output,
-          'praxis-flow-test',
+          'wartezimmer-test',
           `linux-${arch}`,
-          `praxis-flow-test-linux-${arch}.pfinstall`,
+          `wartezimmer-test-linux-${arch}.pfinstall`,
         );
         const manifest = spawnSync('tar', ['-xOf', archive, './manifest.json'], {
           encoding: 'utf8',
@@ -75,7 +75,7 @@ if(args[0]==='save') process.stdout.write('fake docker payload for '+platform);
       }
       const updatePackage = path.join(
         output,
-        'praxis-flow-test',
+        'wartezimmer-test',
         'linux-amd64',
         'existing.pfupdate',
       );

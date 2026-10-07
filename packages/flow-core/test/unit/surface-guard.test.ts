@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assertSurfaceRemovable, surfaceReferences } from '@praxis-flow/flow-core';
+import { assertSurfaceRemovable, surfaceReferences } from '@wartezimmer/flow-core';
 
 const catalog = {
   surfaceDisplayRules: [

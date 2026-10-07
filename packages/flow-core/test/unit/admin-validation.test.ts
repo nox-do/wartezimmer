@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { openDb, createRuntime } from '@praxis-flow/flow-core/server';
+import { openDb, createRuntime } from '@wartezimmer/flow-core/server';
 import {
   surfaceDisplayRulesOverlap,
   terminalScopesOverlap,
@@ -8,7 +8,7 @@ import {
   validateJourneyTemplateDraft,
   validateRoutingRuleDraft,
   validateSurfaceDisplayRules,
-} from '@praxis-flow/flow-core';
+} from '@wartezimmer/flow-core';
 
 function baseCatalog() {
   const { runtime } = { runtime: createRuntime(openDb({ path: ':memory:' })) };

@@ -7,7 +7,7 @@ import {
   buildPfbackupArchive,
   serializePfbackupArchive,
   validatePfbackupArchive,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import {
   buildFullSettingsSnapshot,
   enrichManagerStateForStackBackup,
@@ -45,7 +45,7 @@ test('findLatestPfbackupPath skips invalid archives and returns newest valid bac
   fs.mkdirSync(backupsDir, { recursive: true });
   try {
     fs.writeFileSync(
-      path.join(backupsDir, 'praxis-flow-backup-2026-06-25T10-00-00-000Z.pfbackup'),
+      path.join(backupsDir, 'wartezimmer-backup-2026-06-25T10-00-00-000Z.pfbackup'),
       '{not-json',
     );
     const validArchive = buildPfbackupArchive({
@@ -53,12 +53,12 @@ test('findLatestPfbackupPath skips invalid archives and returns newest valid bac
       managerState: { release: null },
     });
     fs.writeFileSync(
-      path.join(backupsDir, 'praxis-flow-backup-2026-06-24T10-00-00-000Z.pfbackup'),
+      path.join(backupsDir, 'wartezimmer-backup-2026-06-24T10-00-00-000Z.pfbackup'),
       serializePfbackupArchive(validArchive),
     );
     assert.equal(
       findLatestPfbackupPath(dir),
-      path.join(backupsDir, 'praxis-flow-backup-2026-06-24T10-00-00-000Z.pfbackup'),
+      path.join(backupsDir, 'wartezimmer-backup-2026-06-24T10-00-00-000Z.pfbackup'),
     );
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -69,7 +69,7 @@ test('getPfbackupInfo reports latest valid backup path', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-pfbackup-info-'));
   const backupsDir = path.join(dir, 'backups');
   fs.mkdirSync(backupsDir, { recursive: true });
-  const backupPath = path.join(backupsDir, 'praxis-flow-backup-2026-06-25T10-00-00-000Z.pfbackup');
+  const backupPath = path.join(backupsDir, 'wartezimmer-backup-2026-06-25T10-00-00-000Z.pfbackup');
   try {
     fs.writeFileSync(path.join(dir, '.env'), 'BUSINESS_TZ=Europe/Berlin\n');
     const archive = buildPfbackupArchive({
@@ -91,14 +91,14 @@ test('buildFullSettingsSnapshot merges full host env including image tags', () =
   try {
     fs.writeFileSync(
       envPath,
-      'BUSINESS_TZ=Europe/Berlin\nPRAXIS_FLOW_APP_IMAGE=app:1\nPRAXIS_FLOW_SANDBOX_IMAGE=sandbox:1\nPRAXIS_FLOW_GATEWAY_IMAGE=gateway:1\n',
+      'BUSINESS_TZ=Europe/Berlin\nWARTEZIMMER_APP_IMAGE=app:1\nWARTEZIMMER_SANDBOX_IMAGE=sandbox:1\nWARTEZIMMER_GATEWAY_IMAGE=gateway:1\n',
     );
     const merged = buildFullSettingsSnapshot(sampleDbSnapshot, envPath);
     assert.deepEqual(merged.env, {
       BUSINESS_TZ: 'Europe/Berlin',
-      PRAXIS_FLOW_APP_IMAGE: 'app:1',
-      PRAXIS_FLOW_SANDBOX_IMAGE: 'sandbox:1',
-      PRAXIS_FLOW_GATEWAY_IMAGE: 'gateway:1',
+      WARTEZIMMER_APP_IMAGE: 'app:1',
+      WARTEZIMMER_SANDBOX_IMAGE: 'sandbox:1',
+      WARTEZIMMER_GATEWAY_IMAGE: 'gateway:1',
     });
     assert.equal('env' in sampleDbSnapshot, false);
   } finally {
@@ -111,14 +111,14 @@ test('enrichManagerStateForStackBackup copies gateway image from env when missin
     {
       release: {
         releaseVersion: '1.0.0',
-        appImage: 'praxis-flow/app:1.0.0',
-        sandboxImage: 'praxis-flow/sandbox:1.0.0',
+        appImage: 'wartezimmer/app:1.0.0',
+        sandboxImage: 'wartezimmer/sandbox:1.0.0',
         archiveSha256: null,
       },
     },
-    { PRAXIS_FLOW_GATEWAY_IMAGE: 'praxis-flow/gateway:1.0.0' },
+    { WARTEZIMMER_GATEWAY_IMAGE: 'wartezimmer/gateway:1.0.0' },
   );
-  assert.equal(enriched.release?.gatewayImage, 'praxis-flow/gateway:1.0.0');
+  assert.equal(enriched.release?.gatewayImage, 'wartezimmer/gateway:1.0.0');
 });
 
 test('validatePfbackupContent accepts built archive', () => {
@@ -134,7 +134,7 @@ test('buildTlsArchiveBase64 returns embedded bytes without a sibling when tls is
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-tls-sidecar-write-'));
   const backupsDir = path.join(dir, 'backups');
   fs.mkdirSync(backupsDir, { recursive: true });
-  const backupPath = path.join(backupsDir, 'praxis-flow-backup-2026-07-12T10-15-30-123Z.pfbackup');
+  const backupPath = path.join(backupsDir, 'wartezimmer-backup-2026-07-12T10-15-30-123Z.pfbackup');
   try {
     fs.writeFileSync(
       backupPath,
@@ -177,7 +177,7 @@ test('buildTlsArchiveBase64 returns embedded bytes without a sibling when tls is
 
 test('buildTlsArchiveBase64 skips when tls is off', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-tls-sidecar-off-'));
-  const backupPath = path.join(dir, 'praxis-flow-backup-2026-07-12T10-15-30-123Z.pfbackup');
+  const backupPath = path.join(dir, 'wartezimmer-backup-2026-07-12T10-15-30-123Z.pfbackup');
   try {
     fs.writeFileSync(backupPath, '{}');
     fs.writeFileSync(path.join(dir, '.env'), 'TLS_STATE=off\n');

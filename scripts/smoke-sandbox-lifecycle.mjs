@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const name = `pf-sandbox-check-${randomUUID().slice(0, 8)}`;
 const volume = `${name}-signatures`;
-const image = process.env.SANDBOX_TEST_IMAGE || 'praxis-flow/sandbox:6.1.1';
+const image = process.env.SANDBOX_TEST_IMAGE || 'wartezimmer/sandbox:6.1.1';
 const docker = (...args) =>
   execFileSync('docker', args, {
     encoding: 'utf8',
@@ -54,7 +54,7 @@ try {
     '--log-opt',
     'max-file=2',
     '--tmpfs',
-    '/var/lib/praxis-flow/sandbox-intake:size=256m,mode=0700',
+    '/var/lib/wartezimmer/sandbox-intake:size=256m,mode=0700',
     '--tmpfs',
     '/tmp:size=64m,mode=1777',
     '--tmpfs',

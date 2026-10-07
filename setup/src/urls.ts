@@ -1,7 +1,7 @@
-import type { DeviceUrls, GatewayPlan } from '@praxis-flow/server-shared';
-import { deriveGatewayBridgeBindFromUrl } from '@praxis-flow/server-shared';
+import type { DeviceUrls, GatewayPlan } from '@wartezimmer/server-shared';
+import { deriveGatewayBridgeBindFromUrl } from '@wartezimmer/server-shared';
 
-export type { DeviceUrls, GatewayPlan } from '@praxis-flow/server-shared';
+export type { DeviceUrls, GatewayPlan } from '@wartezimmer/server-shared';
 
 export const DEFAULT_APP_PORT = 8080;
 

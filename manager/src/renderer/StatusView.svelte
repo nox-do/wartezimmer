@@ -1,6 +1,6 @@
 <script lang="ts">
   import HealthHeader from './HealthHeader.svelte';
-  import { hasBlockingMaintenanceOperation } from '@praxis-flow/server-shared/manager-status-projection';
+  import { hasBlockingMaintenanceOperation } from '@wartezimmer/server-shared/manager-status-projection';
   import type { HostStatus } from '../shared/host-status.js';
   import {
     runtimeSnapshot as observedSnapshot,
@@ -9,7 +9,7 @@
   import { managerShell } from './manager-shell-state.svelte.js';
   import { tabDisabled } from './manager-main-nav.js';
   import { managerStatusViewModel } from './manager-status-view-model.js';
-  import { evaluateHostLifecycleAction } from '@praxis-flow/server-shared/host-lifecycle-policy';
+  import { evaluateHostLifecycleAction } from '@wartezimmer/server-shared/host-lifecycle-policy';
   import { sandboxSignatureAgeNotice } from './sandbox-scanner-ui.js';
   import {
     isSetupEntryStatus,

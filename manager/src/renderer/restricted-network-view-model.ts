@@ -4,7 +4,7 @@ import type {
   RestrictedNetworkInspectResult,
   RestrictedNetworkStatus,
 } from '../shared/host-status.js';
-import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
+import { ManagerApiError } from '@wartezimmer/server-shared/setup-api';
 
 export function restrictedDnsStatusText(dns: RestrictedNetworkDnsObservation): string {
   switch (dns.state) {

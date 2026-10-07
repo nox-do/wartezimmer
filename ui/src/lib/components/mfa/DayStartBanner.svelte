@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { formatTicketCode } from '@praxis-flow/domain';
+  import { formatTicketCode } from '@wartezimmer/domain';
   import { locale, t, tf } from '$lib/i18n/i18nStore.svelte';
   import { dayStartGreeting, formatBusinessDayLong } from '$lib/i18n/format-business-day';
   import type { BusinessDayVisitStats } from '$lib/mfa/practice-ops-api';

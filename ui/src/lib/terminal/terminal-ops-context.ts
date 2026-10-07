@@ -1,4 +1,4 @@
-import type { TerminalPatientLocale } from '@praxis-flow/domain';
+import type { TerminalPatientLocale } from '@wartezimmer/domain';
 
 export type TerminalOpsSnapshot = {
   loading: boolean;

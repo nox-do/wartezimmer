@@ -1,5 +1,5 @@
 # Container logs: stdout → json-file driver with rotation (see docs/operations/runtime.md).
-name: praxis-flow
+name: wartezimmer
 
 x-docker-logging: &docker-logging
   driver: json-file
@@ -10,7 +10,7 @@ x-docker-logging: &docker-logging
 services:
   app:
     logging: *docker-logging
-    image: praxis-flow/app:local
+    image: wartezimmer/app:local
     build:
       context: .
       dockerfile: app/Dockerfile
@@ -29,7 +29,7 @@ services:
       MAINTENANCE_HOST: 0.0.0.0
       MAINTENANCE_PORT: 8082
       # Local-dev fallback; delivery requires a generated per-installation secret.
-      MAINTENANCE_TOKEN: ${MAINTENANCE_TOKEN:-praxis-flow-local-dev-maintenance-token}
+      MAINTENANCE_TOKEN: ${MAINTENANCE_TOKEN:-wartezimmer-local-dev-maintenance-token}
       EXPORT_BASE_PATH: ${EXPORT_BASE_PATH:-/exports}
       AUTH_ENABLED: ${AUTH_ENABLED:-true}
       AUTH_KEY_CAPTIVE: ${AUTH_KEY_CAPTIVE:?AUTH_KEY_CAPTIVE is required}
@@ -37,7 +37,7 @@ services:
       STAFF_SESSION_IDLE_TTL_MS: ${STAFF_SESSION_IDLE_TTL_MS:-7200000}
       SANDBOX_INTERNAL_TOKEN: ${SANDBOX_INTERNAL_TOKEN:?SANDBOX_INTERNAL_TOKEN is required}
       SANDBOX_BASE_URL: ${SANDBOX_BASE_URL:-http://sandbox:8081}
-      SANDBOX_DOCS_BASE_PATH: ${SANDBOX_DOCS_BASE_PATH:-/var/lib/praxis-flow/docs}
+      SANDBOX_DOCS_BASE_PATH: ${SANDBOX_DOCS_BASE_PATH:-/var/lib/wartezimmer/docs}
       CONTACT_LOOKUP_BASE_PATH: ${CONTACT_LOOKUP_BASE_PATH:-/imports}
       TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-false}
       PRACTICE_DISPLAY_NAME: ${PRACTICE_DISPLAY_NAME:-}
@@ -53,9 +53,9 @@ services:
       # LAN boundary: publish maintenance only on host loopback (container listens 0.0.0.0:8082).
       - '127.0.0.1:8082:8082'
     volumes:
-      - app_data:/var/lib/praxis-flow/app
-      - ${EXPORTS_HOST_PATH:-~/praxis-flow-exports}:/exports
-      - ${IMPORTS_HOST_PATH:-~/praxis-flow-imports}:/imports
+      - app_data:/var/lib/wartezimmer/app
+      - ${EXPORTS_HOST_PATH:-~/wartezimmer-exports}:/exports
+      - ${IMPORTS_HOST_PATH:-~/wartezimmer-imports}:/imports
     depends_on:
       sandbox:
         condition: service_healthy
@@ -67,7 +67,7 @@ services:
 
   sandbox:
     logging: *docker-logging
-    image: praxis-flow/sandbox:local
+    image: wartezimmer/sandbox:local
     build:
       context: .
       dockerfile: sandbox/Dockerfile
@@ -92,7 +92,7 @@ services:
     read_only: true
     security_opt: ['no-new-privileges:true']
     tmpfs:
-      - /var/lib/praxis-flow/sandbox-intake:size=${SANDBOX_INTAKE_TMPFS_SIZE:-256m},mode=0700
+      - /var/lib/wartezimmer/sandbox-intake:size=${SANDBOX_INTAKE_TMPFS_SIZE:-256m},mode=0700
       - /tmp:size=64m,mode=1777
       - /var/log/clamav:size=8m,mode=1777
     healthcheck:

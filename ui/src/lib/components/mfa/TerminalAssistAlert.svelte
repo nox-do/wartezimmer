@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
   import { Users } from '@lucide/svelte';
-  import { formatTicketCode } from '@praxis-flow/domain';
+  import { formatTicketCode } from '@wartezimmer/domain';
   import MfaActionButton from '$lib/components/mfa/MfaActionButton.svelte';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
   import { playAssistanceChime, unlockAssistanceChime } from '$lib/mfa/assistance-chime';

@@ -4,13 +4,13 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
-import { validateCatalogIntegrity } from '@praxis-flow/flow-core';
+import { validateCatalogIntegrity } from '@wartezimmer/flow-core';
 import {
   createRuntime,
   ensureVisitSupersedeColumns,
   loadCatalog,
   openDb,
-} from '@praxis-flow/flow-core/server';
+} from '@wartezimmer/flow-core/server';
 import { seedIfEmpty } from '../../src/server/seed.js';
 
 const schemaPath = join(dirname(fileURLToPath(import.meta.url)), '../../db/schema.sql');

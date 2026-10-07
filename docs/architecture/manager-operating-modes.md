@@ -78,7 +78,7 @@ auf die gesunde frische Installation zurückrollen.
 
 Eine `stopped`-Installation wird nicht durch einen Status-Poll gestartet. Der
 mutierende Start-Endpunkt prüft zuerst das lokale App-Image und das erwartete
-Compose-App-Volume mit erfolgreichen Docker-Bestandsabfragen und danach `praxis-flow.db` in einem netzwerklosen,
+Compose-App-Volume mit erfolgreichen Docker-Bestandsabfragen und danach `wartezimmer.db` in einem netzwerklosen,
 read-only Utility-Container. Erst anschließend startet er Compose und verlangt
 gesunde App/Sandbox sowie erfolgreiche Maintenance-Authentifizierung. Fehlt das
 Image, Volume oder Datenbank, wird `needs-reinstall` zurückgegeben. Compose-Start-,

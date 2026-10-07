@@ -1,8 +1,8 @@
 import type { DatabaseSync } from 'node:sqlite';
-import type { Runtime } from '@praxis-flow/flow-core/server';
-import { runInTransaction } from '@praxis-flow/flow-core/server';
-import type { TransitionAction, VisitView, VisitStatus } from '@praxis-flow/flow-core';
-import { canTransition } from '@praxis-flow/flow-core';
+import type { Runtime } from '@wartezimmer/flow-core/server';
+import { runInTransaction } from '@wartezimmer/flow-core/server';
+import type { TransitionAction, VisitView, VisitStatus } from '@wartezimmer/flow-core';
+import { canTransition } from '@wartezimmer/flow-core';
 import type {
   AbsenceMode,
   OpsSettings,

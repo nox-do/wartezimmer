@@ -1,5 +1,5 @@
 import { httpFetch } from '$lib/api/http-fetch';
-import type { TerminalPatientLocale } from '@praxis-flow/domain';
+import type { TerminalPatientLocale } from '@wartezimmer/domain';
 
 export type PatientLocalesSnapshot = {
   terminalPatientLocales: TerminalPatientLocale[];

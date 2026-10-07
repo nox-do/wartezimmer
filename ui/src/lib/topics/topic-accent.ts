@@ -5,8 +5,8 @@ export {
   normalizeTopicAccentColor,
   textColorOnAccent,
   TOPIC_ACCENT_PRESETS,
-} from '@praxis-flow/domain';
-import { normalizeTopicAccentColor, textColorOnAccent } from '@praxis-flow/domain';
+} from '@wartezimmer/domain';
+import { normalizeTopicAccentColor, textColorOnAccent } from '@wartezimmer/domain';
 
 export function laneBadgeStyle(accentColor: string): string {
   const bg = normalizeTopicAccentColor(accentColor);

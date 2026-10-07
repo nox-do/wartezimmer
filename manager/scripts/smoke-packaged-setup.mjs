@@ -33,9 +33,9 @@ try {
             : '/usr/bin:/bin',
         NODE_PATH: '',
         ELECTRON_RUN_AS_NODE: '1',
-        PRAXIS_FLOW_HOME: home,
-        PRAXIS_FLOW_TEMPLATE_ROOT: path.join(isolated, 'templates'),
-        PRAXIS_FLOW_SETUP_TOKEN: token,
+        WARTEZIMMER_HOME: home,
+        WARTEZIMMER_TEMPLATE_ROOT: path.join(isolated, 'templates'),
+        WARTEZIMMER_SETUP_TOKEN: token,
         SETUP_HOST_PORT: '0',
       },
       windowsHide: true,
@@ -57,7 +57,7 @@ try {
       });
       child.stdout.on('data', (chunk) => {
         output += chunk;
-        const match = output.match(/PRAXIS_FLOW_SETUP_READY\s+(\{[^\n]+\})/);
+        const match = output.match(/WARTEZIMMER_SETUP_READY\s+(\{[^\n]+\})/);
         if (match) {
           clearTimeout(timer);
           resolve(JSON.parse(match[1]).port);

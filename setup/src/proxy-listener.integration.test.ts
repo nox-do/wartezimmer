@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import http from 'node:http';
 import test from 'node:test';
-import { DEFAULT_PORTAL_PROXY_CONTRACT, type TlsStatus } from '@praxis-flow/server-shared';
+import { DEFAULT_PORTAL_PROXY_CONTRACT, type TlsStatus } from '@wartezimmer/server-shared';
 import { generateTlsCaddyfile } from './proxy-tls.js';
 import { auditRestrictedListeners, requestRestrictedHttps } from './restricted-listener-probe.js';
 
@@ -63,7 +63,7 @@ test(
           new Map([['SETUP_RESTRICTED_ENABLED', 'true']]),
           contract,
         ).replaceAll('app:8080', '127.0.0.1:8080') +
-        '\n:8080 {\n header X-Praxis-Flow-Rejection portal-policy\n respond "upstream" 200\n}\n';
+        '\n:8080 {\n header X-Wartezimmer-Rejection portal-policy\n respond "upstream" 200\n}\n';
       fs.writeFileSync(path.join(root, 'Caddyfile'), config);
       docker(
         'run',

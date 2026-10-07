@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
+import { ManagerApiError } from '@wartezimmer/server-shared/setup-api';
 import { unwrapSetupApiResponse, type SetupApiCallResponse } from './ipc-channels.js';
 
 test('IPC DTO and preload unwrapping preserve the complete public error', async () => {

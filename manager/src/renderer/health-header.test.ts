@@ -21,14 +21,14 @@ function runtime(overrides: Partial<HostRuntimeHealth> = {}): HostRuntimeHealth 
       running: true,
       services: [
         {
-          name: 'praxis-flow-app',
+          name: 'wartezimmer-app',
           service: 'app',
           state: 'running',
           health: 'healthy',
           publishedPorts: [8080],
         },
         {
-          name: 'praxis-flow-sandbox',
+          name: 'wartezimmer-sandbox',
           service: 'sandbox',
           state: 'running',
           health: null,
@@ -47,7 +47,7 @@ function runtime(overrides: Partial<HostRuntimeHealth> = {}): HostRuntimeHealth 
 }
 
 const proxyContainer = {
-  name: 'praxis-flow-proxy',
+  name: 'wartezimmer-proxy',
   service: 'proxy',
   state: 'running',
   health: null as string | null,
@@ -61,14 +61,14 @@ test('collectHealthTiles omits proxy when proxyServer is null', () => {
         running: true,
         services: [
           {
-            name: 'praxis-flow-app',
+            name: 'wartezimmer-app',
             service: 'app',
             state: 'running',
             health: 'healthy',
             publishedPorts: [8080],
           },
           {
-            name: 'praxis-flow-proxy',
+            name: 'wartezimmer-proxy',
             service: 'proxy',
             state: 'running',
             health: null,
@@ -185,7 +185,7 @@ test('collectHealthTiles sandbox ampel uses Compose health, not ClamAV', () => {
         running: true,
         services: [
           {
-            name: 'praxis-flow-sandbox',
+            name: 'wartezimmer-sandbox',
             service: 'sandbox',
             state: 'running',
             health: 'healthy',

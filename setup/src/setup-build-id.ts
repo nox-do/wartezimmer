@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SETUP_BUILD_ID_ENV } from '@praxis-flow/server-shared';
+import { SETUP_BUILD_ID_ENV } from '@wartezimmer/server-shared';
 
 export function resolveSetupBuildId(moduleUrl = import.meta.url): string {
   const fromEnv = process.env[SETUP_BUILD_ID_ENV]?.trim();

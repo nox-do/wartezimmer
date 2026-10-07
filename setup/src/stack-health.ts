@@ -1,4 +1,4 @@
-import type { ComposeStatus } from '@praxis-flow/server-shared';
+import type { ComposeStatus } from '@wartezimmer/server-shared';
 import { resolveProductComposeServices, type ComposeRunOptions } from './docker.js';
 
 export type StackHealthResult = { ok: boolean; errors: string[] };

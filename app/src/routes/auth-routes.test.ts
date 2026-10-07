@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test, { afterEach, beforeEach } from 'node:test';
 import Fastify from 'fastify';
-import { DEFAULT_ROOM_PANELS_SETTINGS, normalizeRoomPanelsSettings } from '@praxis-flow/domain';
+import { DEFAULT_ROOM_PANELS_SETTINGS, normalizeRoomPanelsSettings } from '@wartezimmer/domain';
 import { registerClientAuth } from '../auth/client-auth.js';
 import {
   createStaffSessionManager,

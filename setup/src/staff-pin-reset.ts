@@ -1,7 +1,7 @@
-import { DEFAULT_STAFF_PIN_HASH } from '@praxis-flow/server-shared';
+import { DEFAULT_STAFF_PIN_HASH } from '@wartezimmer/server-shared';
 import { runDockerCommand } from './docker-cli.js';
 
-export const APP_DB_PATH = '/var/lib/praxis-flow/app/praxis-flow.db';
+export const APP_DB_PATH = '/var/lib/wartezimmer/app/wartezimmer.db';
 
 export function appDataVolumeName(composeProjectName: string): string {
   return `${composeProjectName}_app_data`;
@@ -15,7 +15,7 @@ if (!hash) {
   throw new Error('STAFF_PIN_HASH missing');
 }
 
-const dbPath = '/var/lib/praxis-flow/app/praxis-flow.db';
+const dbPath = '/var/lib/wartezimmer/app/wartezimmer.db';
 const db = new DatabaseSync(dbPath);
 const requiredColumns = new Set([
   'id',
@@ -65,7 +65,7 @@ export async function resetStaffPinsInAppDatabase(
     'run',
     '--rm',
     '-v',
-    `${volume}:/var/lib/praxis-flow/app`,
+    `${volume}:/var/lib/wartezimmer/app`,
     'node:22-alpine',
     'test',
     '-f',
@@ -85,7 +85,7 @@ export async function resetStaffPinsInAppDatabase(
     '-e',
     `STAFF_PIN_HASH=${DEFAULT_STAFF_PIN_HASH}`,
     '-v',
-    `${volume}:/var/lib/praxis-flow/app`,
+    `${volume}:/var/lib/wartezimmer/app`,
     'node:22-alpine',
     'node',
     '--input-type=module',

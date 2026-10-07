@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
 import { DEFAULT_TERMINAL_TOPIC_DEFINITIONS } from '../checkin-topic-settings.js';
-import { normalizeRoomPanelsSettings } from '@praxis-flow/domain';
+import { normalizeRoomPanelsSettings } from '@wartezimmer/domain';
 import { DomainError } from '../errors/domain-error.js';
 import { QUEUE_ROOM_MISMATCH } from '../queue/queue-room-scope.js';
 import { ensureFlowCoreSchema } from './flow-core-schema.js';

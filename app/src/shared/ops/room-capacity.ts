@@ -13,7 +13,7 @@ import {
   resolveRoomMaxOccupancy,
   roomHasCapacity as domainRoomHasCapacity,
   type RoomOccupantWithId,
-} from '@praxis-flow/domain';
+} from '@wartezimmer/domain';
 
 export {
   ROOM_AT_CAPACITY,

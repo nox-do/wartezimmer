@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { InstallOperationSummary } from '@praxis-flow/server-shared';
+import type { InstallOperationSummary } from '@wartezimmer/server-shared';
 import { durableWrite } from './restricted-operation.js';
 
 export type InstallMode = 'fresh' | 'replace';

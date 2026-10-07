@@ -21,11 +21,11 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const COMPOSE_FILE = 'docker-compose.tls-lab.yml';
-const PROJECT = 'praxis-flow-tls-lab-smoke';
+const PROJECT = 'wartezimmer-tls-lab-smoke';
 const LAB_CONTAINERS = [
-  'praxis-flow-tls-lab-pebble',
-  'praxis-flow-tls-lab-acme-dns',
-  'praxis-flow-tls-lab-coredns',
+  'wartezimmer-tls-lab-pebble',
+  'wartezimmer-tls-lab-acme-dns',
+  'wartezimmer-tls-lab-coredns',
 ];
 const MINICA = path.join(root, 'lab', 'tls', 'pebble.minica.pem');
 const ZONE_TEMPLATE = path.join(root, 'lab', 'coredns', 'lan.tls.lab.db');
@@ -48,7 +48,7 @@ Starts or reuses the TLS lab stack, checks directory / register / challenge CNAM
   --cleanup    docker compose down for the smoke project and exit
   --help       show this help
 
-If praxis-flow-tls-lab-* containers are already running (manual compose), the smoke
+If wartezimmer-tls-lab-* containers are already running (manual compose), the smoke
 reuses them and does not start a second stack.`);
 }
 
@@ -146,7 +146,7 @@ function detectExistingLab() {
     'inspect',
     '-f',
     '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}',
-    'praxis-flow-tls-lab-coredns',
+    'wartezimmer-tls-lab-coredns',
   ])
     .trim()
     .split(/\s+/)[0];
@@ -190,7 +190,7 @@ function fetchPebbleDirectory() {
         ca,
         servername: 'localhost',
         rejectUnauthorized: true,
-        headers: { 'User-Agent': 'praxis-flow-tls-lab-smoke/1.0' },
+        headers: { 'User-Agent': 'wartezimmer-tls-lab-smoke/1.0' },
       },
       (response) => {
         const chunks = [];

@@ -52,7 +52,7 @@ gewählt werden. Es gibt keine Unterstützung für Backup v1 oder separate TLS-D
 
 ## Automatische Sicherungen
 
-Discovery liest ausschließlich reguläre `praxis-flow-backup-*.pfbackup` unter
+Discovery liest ausschließlich reguläre `wartezimmer-backup-*.pfbackup` unter
 `installHome/backups/`; Symlinks und Verzeichnisse werden ignoriert. Nutzbare
 Format-2-Dateien erscheinen nach Sicherungszeit, neueste zuerst. Defekte neuere
 Dateien verdecken ältere gültige Sicherungen nicht.

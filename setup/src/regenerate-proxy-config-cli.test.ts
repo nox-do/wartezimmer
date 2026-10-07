@@ -27,7 +27,7 @@ function fixture(): { home: string; caddyfilePath: string; envPath: string } {
     ].join('\n'),
   );
   const caddyfilePath = path.join(tlsRoot, 'Caddyfile');
-  fs.writeFileSync(caddyfilePath, '# PRAXIS-FLOW-GENERATED LAN-TLS v2\n\n# staff only\n');
+  fs.writeFileSync(caddyfilePath, '# WARTEZIMMER-GENERATED LAN-TLS v2\n\n# staff only\n');
   return { home, caddyfilePath, envPath };
 }
 
@@ -39,7 +39,7 @@ test('regenerates only the generated Caddyfile and keeps a backup', () => {
     assert.doesNotMatch(fs.readFileSync(current.caddyfilePath, 'utf8'), /:444 \{/);
     assert.equal(
       fs.readFileSync(result.backupPath!, 'utf8'),
-      '# PRAXIS-FLOW-GENERATED LAN-TLS v2\n\n# staff only\n',
+      '# WARTEZIMMER-GENERATED LAN-TLS v2\n\n# staff only\n',
     );
     assert.deepEqual(fs.readFileSync(current.envPath), envBefore);
   } finally {

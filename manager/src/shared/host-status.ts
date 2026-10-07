@@ -1,6 +1,6 @@
 /** Re-exports Setup Host API DTOs from shared package + Manager-only IPC types. */
 
-import type { TlsLocalCheck, TlsStatus } from '@praxis-flow/server-shared/setup-api';
+import type { TlsLocalCheck, TlsStatus } from '@wartezimmer/server-shared/setup-api';
 
 export type {
   ApplySetupInput,
@@ -82,7 +82,7 @@ export type {
   StorageFoldersInput,
   StorageFoldersResult,
   SandboxScannerStatus,
-} from '@praxis-flow/server-shared/setup-api';
+} from '@wartezimmer/server-shared/setup-api';
 
 /** Electron IPC: save `.pfbackup` via native save dialog. */
 export type SavePfbackupResult = {
@@ -119,4 +119,4 @@ export type {
   InstallRecoveryPreview,
   InstallFinishInput,
   InstallFinishResult,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';

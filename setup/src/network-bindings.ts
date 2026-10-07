@@ -4,13 +4,13 @@ import type {
   ComposeServiceStatus,
   ComposeStatus,
   NetworkBindingCheck,
-} from '@praxis-flow/server-shared';
-import { assessGatewayBridgeBind } from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
+import { assessGatewayBridgeBind } from '@wartezimmer/server-shared';
 import { canRunGatewayCompose } from './docker.js';
 import { listNetworkInterfaces, type NetworkInterfaceInfo } from './network.js';
 import { DEFAULT_APP_PORT } from './urls.js';
 
-export type { NetworkBindingCheck } from '@praxis-flow/server-shared';
+export type { NetworkBindingCheck } from '@wartezimmer/server-shared';
 
 export const DEFAULT_GATEWAY_BRIDGE_PORT = 9100;
 export const DEFAULT_PROXY_HTTP_PORT = 80;

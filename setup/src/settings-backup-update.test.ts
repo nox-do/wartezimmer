@@ -8,8 +8,8 @@ import { DatabaseSync } from 'node:sqlite';
 import {
   buildPfbackupArchive,
   serializePfbackupArchive,
-  PRAXIS_FLOW_PROXY_IMAGE_REF,
-} from '@praxis-flow/server-shared';
+  WARTEZIMMER_PROXY_IMAGE_REF,
+} from '@wartezimmer/server-shared';
 import { APP_DB_BASENAME, createLocalAppDataAccess } from './app-data-volume.js';
 import { readEnvMap } from './env-file.js';
 import { readManagerState } from './manager-state.js';
@@ -29,9 +29,9 @@ const sampleSettings = {
   messagingProviderConfigs: [],
   env: {
     BUSINESS_TZ: 'Europe/Berlin',
-    PRAXIS_FLOW_APP_IMAGE: 'praxis-flow/app:2026.07.1',
-    PRAXIS_FLOW_SANDBOX_IMAGE: 'praxis-flow/sandbox:2026.07.1',
-    PRAXIS_FLOW_GATEWAY_IMAGE: 'praxis-flow/gateway:2026.07.1',
+    WARTEZIMMER_APP_IMAGE: 'wartezimmer/app:2026.07.1',
+    WARTEZIMMER_SANDBOX_IMAGE: 'wartezimmer/sandbox:2026.07.1',
+    WARTEZIMMER_GATEWAY_IMAGE: 'wartezimmer/gateway:2026.07.1',
   },
 };
 
@@ -51,9 +51,9 @@ function seedInstallHome(dir: string): { envPath: string; appDataDir: string; ba
     [
       'BUSINESS_TZ=Europe/Berlin',
       'SETUP_LAN_APP_IP=192.168.1.10',
-      'PRAXIS_FLOW_APP_IMAGE=praxis-flow/app:2026.07.1',
-      'PRAXIS_FLOW_SANDBOX_IMAGE=praxis-flow/sandbox:2026.07.1',
-      'PRAXIS_FLOW_GATEWAY_IMAGE=praxis-flow/gateway:2026.07.1',
+      'WARTEZIMMER_APP_IMAGE=wartezimmer/app:2026.07.1',
+      'WARTEZIMMER_SANDBOX_IMAGE=wartezimmer/sandbox:2026.07.1',
+      'WARTEZIMMER_GATEWAY_IMAGE=wartezimmer/gateway:2026.07.1',
       '',
     ].join('\n'),
   );
@@ -63,9 +63,9 @@ function seedInstallHome(dir: string): { envPath: string; appDataDir: string; ba
       {
         release: {
           releaseVersion: '2026.07.1',
-          appImage: 'praxis-flow/app:2026.07.1',
-          sandboxImage: 'praxis-flow/sandbox:2026.07.1',
-          gatewayImage: 'praxis-flow/gateway:2026.07.1',
+          appImage: 'wartezimmer/app:2026.07.1',
+          sandboxImage: 'wartezimmer/sandbox:2026.07.1',
+          gatewayImage: 'wartezimmer/gateway:2026.07.1',
           archiveSha256: null,
         },
       },
@@ -94,9 +94,9 @@ function seedInstallHome(dir: string): { envPath: string; appDataDir: string; ba
         managerState: {
           release: {
             releaseVersion: '2026.07.1',
-            appImage: 'praxis-flow/app:2026.07.1',
-            sandboxImage: 'praxis-flow/sandbox:2026.07.1',
-            gatewayImage: 'praxis-flow/gateway:2026.07.1',
+            appImage: 'wartezimmer/app:2026.07.1',
+            sandboxImage: 'wartezimmer/sandbox:2026.07.1',
+            gatewayImage: 'wartezimmer/gateway:2026.07.1',
             archiveSha256: null,
           },
         },
@@ -191,20 +191,20 @@ test('applyPfupdate succeeds and writes new image tags', async () => {
     }
 
     const env = readEnvMap(envPath);
-    assert.equal(env.get('PRAXIS_FLOW_APP_IMAGE'), 'praxis-flow/app:2026.08.0');
-    assert.equal(env.get('PRAXIS_FLOW_SANDBOX_IMAGE'), 'praxis-flow/sandbox:2026.08.0');
+    assert.equal(env.get('WARTEZIMMER_APP_IMAGE'), 'wartezimmer/app:2026.08.0');
+    assert.equal(env.get('WARTEZIMMER_SANDBOX_IMAGE'), 'wartezimmer/sandbox:2026.08.0');
     // Product packages omit gateway; existing lab image ref is preserved.
-    assert.equal(env.get('PRAXIS_FLOW_GATEWAY_IMAGE'), 'praxis-flow/gateway:2026.07.1');
+    assert.equal(env.get('WARTEZIMMER_GATEWAY_IMAGE'), 'wartezimmer/gateway:2026.07.1');
     assert.equal((env.get('MAINTENANCE_TOKEN')?.length ?? 0) >= 32, true);
     assert.match(
       fs.readFileSync(path.join(dir, '.env.example'), 'utf8'),
-      /PRAXIS_FLOW_APP_IMAGE=praxis-flow\/app:2026\.08\.0/,
+      /WARTEZIMMER_APP_IMAGE=wartezimmer\/app:2026\.08\.0/,
     );
 
     const manager = readManagerState(dir);
     assert.equal(manager.release?.releaseVersion, '2026.08.0');
-    assert.equal(manager.release?.appImage, 'praxis-flow/app:2026.08.0');
-    assert.equal(manager.release?.gatewayImage, 'praxis-flow/gateway:2026.07.1');
+    assert.equal(manager.release?.appImage, 'wartezimmer/app:2026.08.0');
+    assert.equal(manager.release?.gatewayImage, 'wartezimmer/gateway:2026.07.1');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -228,7 +228,7 @@ test('applyPfupdate with proxy sets PROXY_IMAGE and seeds Caddyfile without over
     assert.equal(result.ok, true);
 
     const env = readEnvMap(envPath);
-    assert.equal(env.get('PRAXIS_FLOW_PROXY_IMAGE'), PRAXIS_FLOW_PROXY_IMAGE_REF);
+    assert.equal(env.get('WARTEZIMMER_PROXY_IMAGE'), WARTEZIMMER_PROXY_IMAGE_REF);
     assert.equal(fs.readFileSync(customCaddy, 'utf8'), '# custom caddyfile\n');
     assert.equal(fs.existsSync(path.join(dir, 'docker-compose.proxy.delivery.yml')), true);
   } finally {
@@ -293,7 +293,7 @@ test('applyPfupdate rolls back when import fails', async () => {
     }
 
     const env = readEnvMap(envPath);
-    assert.equal(env.get('PRAXIS_FLOW_APP_IMAGE'), 'praxis-flow/app:2026.07.1');
+    assert.equal(env.get('WARTEZIMMER_APP_IMAGE'), 'wartezimmer/app:2026.07.1');
     const manager = readManagerState(dir);
     assert.equal(manager.release?.releaseVersion, '2026.07.1');
     assert.equal(fs.readFileSync(envExamplePath, 'utf8'), 'OLD_TEMPLATE=byte-identical\n');
@@ -395,7 +395,7 @@ test('applyPfupdate rolls back when a cutover dependency throws', async () => {
       assert.equal(result.rollbackSucceeded, true);
       assert.match(result.errors.join(' '), /start exploded/);
     }
-    assert.equal(readEnvMap(envPath).get('PRAXIS_FLOW_APP_IMAGE'), 'praxis-flow/app:2026.07.1');
+    assert.equal(readEnvMap(envPath).get('WARTEZIMMER_APP_IMAGE'), 'wartezimmer/app:2026.07.1');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -555,7 +555,7 @@ test('applyPfupdate rejects a missing local Staff address before stopping the st
 
 for (const failure of [null, 'validation', 'audit'] as const)
   test(`TLS update installs target portal policy and restores it on ${failure ?? 'success'}`, async () => {
-    const { DEFAULT_PORTAL_PROXY_CONTRACT } = await import('@praxis-flow/server-shared');
+    const { DEFAULT_PORTAL_PROXY_CONTRACT } = await import('@wartezimmer/server-shared');
     const { readInstalledPortalContract, writeGeneratedTlsCaddyfile } =
       await import('./proxy-tls.js');
     const { readTlsStatus } = await import('./host-tls.js');
@@ -570,7 +570,7 @@ for (const failure of [null, 'validation', 'audit'] as const)
       fs.mkdirSync(tlsDir, { recursive: true });
       fs.writeFileSync(
         path.join(tlsDir, 'Caddyfile'),
-        '# PRAXIS-FLOW-GENERATED LAN-TLS v5\nold policy\n',
+        '# WARTEZIMMER-GENERATED LAN-TLS v5\nold policy\n',
       );
       const target = structuredClone(DEFAULT_PORTAL_PROXY_CONTRACT);
       const former = target.api.find((route) => route.path.endsWith('/config'))!;
@@ -658,7 +658,7 @@ for (const failure of [null, 'validation', 'audit'] as const)
       if (failure) {
         assert.equal(
           fs.readFileSync(path.join(tlsDir, 'Caddyfile'), 'utf8'),
-          '# PRAXIS-FLOW-GENERATED LAN-TLS v5\nold policy\n',
+          '# WARTEZIMMER-GENERATED LAN-TLS v5\nold policy\n',
         );
         assert.equal(fs.existsSync(path.join(tlsDir, 'portal-contract.json')), false);
         assert.equal(readEnvMap(envPath).get('SETUP_RESTRICTED_ENABLED'), 'true');

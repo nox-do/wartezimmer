@@ -1,4 +1,4 @@
-import type { RoomPanelPlacement } from '@praxis-flow/domain';
+import type { RoomPanelPlacement } from '@wartezimmer/domain';
 import type { RoomPanelRoom } from './room-panel-api';
 
 export function roomPanelLoginKey(room: Pick<RoomPanelRoom, 'roomId' | 'placement'>): string {

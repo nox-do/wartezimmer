@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 test('packaged manager resources contain an importable setup server', () => {
-  const result = spawnSync('npm', ['run', '-w', '@praxis-flow/manager', 'prepare:packaged'], {
+  const result = spawnSync('npm', ['run', '-w', '@wartezimmer/manager', 'prepare:packaged'], {
     cwd: repoRoot,
     encoding: 'utf8',
   });

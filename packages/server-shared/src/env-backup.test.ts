@@ -24,7 +24,7 @@ test('buildEnvBackupPath appends encoded timestamp to env path', () => {
 
 test('formatEnvBackupLabel shows locale date instead of full path', () => {
   const label = formatEnvBackupLabel(
-    '/Users/ddeuter/dev/playground/praxis_flow/.env.backup-2026-06-24T21-02-11-191Z',
+    '/Users/ddeuter/dev/playground/wartezimmer/.env.backup-2026-06-24T21-02-11-191Z',
   );
   assert.match(label, /24\.06\.2026/);
   assert.match(label, /\d{1,2}:\d{2}/);

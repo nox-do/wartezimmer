@@ -15,7 +15,7 @@
   import { fetchOpsSettings, listEnabledRooms, patchOpsSettings } from '$lib/queue/ops-settings-api';
   import { t } from '$lib/i18n/i18nStore.svelte';
   import { toastStore } from '$lib/stores/toastStore';
-  import { WAITING_ROOM_LOCATION_ID } from '@praxis-flow/domain';
+  import { WAITING_ROOM_LOCATION_ID } from '@wartezimmer/domain';
 
   let loading = $state(true);
   let saving = $state(false);

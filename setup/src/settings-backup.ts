@@ -13,7 +13,7 @@ import {
   validatePfbackupArchive,
   type ManagerState,
   type PfbackupArchiveValidationResult,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import { LOCAL_MAINTENANCE_APP_BASE_URL } from './urls.js';
 import { readEnvMap } from './env-file.js';
 import { readManagerStateForBackup } from './manager-state.js';
@@ -56,7 +56,7 @@ export function findLatestPfbackupPath(installHome: string): string | null {
 
   const backups = fs
     .readdirSync(dir)
-    .filter((name) => name.startsWith('praxis-flow-backup-') && name.endsWith('.pfbackup'))
+    .filter((name) => name.startsWith('wartezimmer-backup-') && name.endsWith('.pfbackup'))
     .map((name) => path.join(dir, name))
     .filter((fullPath) => fs.statSync(fullPath).isFile())
     .sort((left, right) => {
@@ -101,7 +101,7 @@ export function enrichManagerStateForStackBackup(
     return managerState;
   }
 
-  const gatewayFromEnv = env.PRAXIS_FLOW_GATEWAY_IMAGE?.trim();
+  const gatewayFromEnv = env.WARTEZIMMER_GATEWAY_IMAGE?.trim();
   if (!gatewayFromEnv || managerState.release.gatewayImage) {
     return managerState;
   }

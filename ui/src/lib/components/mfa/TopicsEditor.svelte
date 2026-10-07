@@ -11,7 +11,7 @@
     MFA_ASSIST_TOPIC_ID,
     WAITING_ROOM_LABEL,
     WAITING_ROOM_LOCATION_ID,
-  } from '@praxis-flow/domain';
+  } from '@wartezimmer/domain';
   import type { JourneyTemplateSetting } from '$lib/ops/openapi-types';
   import type { RoutingCapabilities } from '$lib/mfa/practice-ops-api';
   import type { PracticeRoom, PracticeTopicSetting } from '$lib/queue/ops-settings-api';

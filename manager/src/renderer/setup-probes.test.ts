@@ -30,9 +30,9 @@ test('buildSetupProbeInput prefers canonical / deviceUrls over raw LAN IP', () =
   assert.deepEqual(
     buildSetupProbeInput({
       network: { configuredLanIp: '192.168.1.10', currentLanCandidates: [], lanIpStale: false },
-      configuredCanonicalBaseUrl: 'http://praxis-flow.local:8080',
+      configuredCanonicalBaseUrl: 'http://wartezimmer.local:8080',
       deviceUrls: {
-        appBaseUrl: 'http://praxis-flow.local:8080',
+        appBaseUrl: 'http://wartezimmer.local:8080',
         terminal: '',
         mfa: '',
         tv: '',
@@ -43,7 +43,7 @@ test('buildSetupProbeInput prefers canonical / deviceUrls over raw LAN IP', () =
     }),
     {
       localAppBaseUrl: 'http://127.0.0.1:8080',
-      lanAppBaseUrl: 'http://praxis-flow.local:8080',
+      lanAppBaseUrl: 'http://wartezimmer.local:8080',
     },
   );
   assert.deepEqual(

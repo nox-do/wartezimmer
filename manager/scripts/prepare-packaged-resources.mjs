@@ -27,8 +27,8 @@ function assertExists(targetPath, label) {
 function rewriteSetupImportsForPackagedVendor() {
   const distDir = path.join(setupOutput, 'dist');
   const specifiers = [
-    ["from '@praxis-flow/server-shared/setup-api'", "from '../vendor/server-shared/setup-api.js'"],
-    ["from '@praxis-flow/server-shared'", "from '../vendor/server-shared/index.js'"],
+    ["from '@wartezimmer/server-shared/setup-api'", "from '../vendor/server-shared/setup-api.js'"],
+    ["from '@wartezimmer/server-shared'", "from '../vendor/server-shared/index.js'"],
   ];
   for (const fileName of fs.readdirSync(distDir)) {
     if (!fileName.endsWith('.js')) {
@@ -40,8 +40,8 @@ function rewriteSetupImportsForPackagedVendor() {
       source = source.replaceAll(from, to);
     }
     fs.writeFileSync(filePath, source);
-    if (source.includes('@praxis-flow/server-shared')) {
-      throw new Error(`Packaged setup still imports @praxis-flow/server-shared: ${fileName}`);
+    if (source.includes('@wartezimmer/server-shared')) {
+      throw new Error(`Packaged setup still imports @wartezimmer/server-shared: ${fileName}`);
     }
   }
 }
@@ -58,8 +58,8 @@ function smokeTestPackagedSetupImport() {
         '--input-type=module',
         '-e',
         `import { pathToFileURL } from 'node:url';
-         const entry = process.env.PRAXIS_FLOW_SMOKE_ENTRY;
-         if (!entry) throw new Error('PRAXIS_FLOW_SMOKE_ENTRY missing');
+         const entry = process.env.WARTEZIMMER_SMOKE_ENTRY;
+         if (!entry) throw new Error('WARTEZIMMER_SMOKE_ENTRY missing');
          const mod = await import(pathToFileURL(entry).href);
          if (typeof mod.createSetupRequestHandler !== 'function') {
            throw new Error('createSetupRequestHandler missing after packaged import');
@@ -71,7 +71,7 @@ function smokeTestPackagedSetupImport() {
         env: {
           ...process.env,
           NODE_PATH: '',
-          PRAXIS_FLOW_SMOKE_ENTRY: serverEntry,
+          WARTEZIMMER_SMOKE_ENTRY: serverEntry,
         },
         encoding: 'utf8',
       },

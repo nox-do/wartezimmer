@@ -16,12 +16,12 @@ test('resolveComposeProjectName uses COMPOSE_PROJECT_NAME when set', () => {
   }
 });
 
-test('resolveComposeProjectName derives pf-* slug from install home basename', () => {
+test('resolveComposeProjectName derives wz-* slug from install home basename', () => {
   const previous = process.env.COMPOSE_PROJECT_NAME;
   delete process.env.COMPOSE_PROJECT_NAME;
   try {
-    assert.equal(resolveComposeProjectName('/tmp/pf-dev-001'), 'pf-pf-dev-001');
-    assert.equal(resolveComposeProjectName('/var/lib/PraxisFlow'), 'praxis-flow');
+    assert.equal(resolveComposeProjectName('/tmp/pf-dev-001'), 'wz-pf-dev-001');
+    assert.equal(resolveComposeProjectName('/var/lib/Wartezimmer'), 'wartezimmer');
   } finally {
     if (previous === undefined) {
       delete process.env.COMPOSE_PROJECT_NAME;

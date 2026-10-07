@@ -1,7 +1,7 @@
 /** Browser-safe backup filename helpers (no Node crypto). */
 
 export const PFBACKUP_FILE_EXTENSION = 'pfbackup';
-export const PFBACKUP_BASENAME_PREFIX = 'praxis-flow-backup-';
+export const PFBACKUP_BASENAME_PREFIX = 'wartezimmer-backup-';
 
 const PFBACKUP_TIMESTAMP_TOKEN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/;
 

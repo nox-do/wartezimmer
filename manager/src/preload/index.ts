@@ -70,7 +70,7 @@ import {
 import {
   SETUP_RESTRICTED_NETWORK_ROUTES,
   SETUP_TLS_ROUTES,
-} from '@praxis-flow/server-shared/setup-api';
+} from '@wartezimmer/server-shared/setup-api';
 
 const managerVersion = managerPackage.version;
 

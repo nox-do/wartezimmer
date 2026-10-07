@@ -1,6 +1,6 @@
 <script lang="ts">
   import FormField from '$lib/components/forms/FormField.svelte';
-  import { formatTicketCode } from '@praxis-flow/domain';
+  import { formatTicketCode } from '@wartezimmer/domain';
   import { Pause } from '@lucide/svelte';
   import Modal from '$lib/components/Modal.svelte';
   import Button from '$lib/components/forms/Button.svelte';

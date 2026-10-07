@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import type { BrowserWindow, OpenDialogOptions } from 'electron';
 import { dialog } from 'electron';
-import { SETUP_TLS_ROUTES } from '@praxis-flow/server-shared/setup-api';
+import { SETUP_TLS_ROUTES } from '@wartezimmer/server-shared/setup-api';
 import type { TlsActionResult, TlsPemSetupResult } from '../shared/host-status.js';
 import { callSetupApi } from './setup-api.js';
 

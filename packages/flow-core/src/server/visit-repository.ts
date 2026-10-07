@@ -1,6 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
-import type { Catalog, Visit, VisitEvent, VisitPatch, VisitView } from '@praxis-flow/flow-core';
-import { journeyStepLabel, ACTIVE_VISIT_STATUSES } from '@praxis-flow/flow-core';
+import type { Catalog, Visit, VisitEvent, VisitPatch, VisitView } from '@wartezimmer/flow-core';
+import { journeyStepLabel, ACTIVE_VISIT_STATUSES } from '@wartezimmer/flow-core';
 import type { CatalogRepository } from './catalog-repository.js';
 
 type SqlRow = Record<string, unknown>;

@@ -19,7 +19,7 @@ services:
 
   proxy:
     logging: *docker-logging
-    image: ${PRAXIS_FLOW_PROXY_IMAGE:-caddy:2.11.4}
+    image: ${WARTEZIMMER_PROXY_IMAGE:-caddy:2.11.4}
     # Caddy is supplied by a verified Wartezimmer release; customer systems never pull it implicitly.
     pull_policy: never
     restart: unless-stopped
@@ -40,7 +40,7 @@ services:
       test:
         - CMD-SHELL
         - |
-          wget -qO- --no-check-certificate "https://127.0.0.1:443/__praxis-flow/health" >/dev/null 2>&1 || wget -qO- "http://127.0.0.1:80/" >/dev/null 2>&1
+          wget -qO- --no-check-certificate "https://127.0.0.1:443/__wartezimmer/health" >/dev/null 2>&1 || wget -qO- "http://127.0.0.1:80/" >/dev/null 2>&1
       interval: 10s
       timeout: 3s
       retries: 5

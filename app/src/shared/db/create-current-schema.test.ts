@@ -107,7 +107,7 @@ test('legacy database path: runTransitionSchemaEnsures without bumping user_vers
 
 test('CoreDatabase ensures additive columns for an existing current-generation database', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pf-current-schema-'));
-  const dbPath = join(dir, 'praxis-flow.db');
+  const dbPath = join(dir, 'wartezimmer.db');
   const previousNodeEnv = process.env.NODE_ENV;
   const previousContactLookupBase = process.env.CONTACT_LOOKUP_BASE_PATH;
   process.env.NODE_ENV = 'test';

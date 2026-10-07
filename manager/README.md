@@ -15,8 +15,8 @@ Die Dev-Scripts setzen `ELECTRON_RUN_AS_NODE` leer (`cross-env`, Windows/macOS/L
 Isolierte Install-Iteration (empfohlen für Wizard-Tests):
 
 ```bash
-export PRAXIS_FLOW_HOME=/tmp/pf-dev-001
-export PRAXIS_FLOW_COMPOSE_PROFILE=dev
+export WARTEZIMMER_HOME=/tmp/pf-dev-001
+export WARTEZIMMER_COMPOSE_PROFILE=dev
 npm run setup:reset -- --yes
 npm run dev:manager
 ```
@@ -43,7 +43,7 @@ Adresse. Während der TLS-Vorbereitung und nach dem Cutover bleibt die TLS-Ident
 
 ## Architektur
 
-- **Main:** startet `@praxis-flow/setup serve` als eigenen Child-Prozess (ephemerer Loopback-Port, Override via `SETUP_HOST_PORT`); Health-Handshake (`protocolVersion`, Build-ID, Install-Home) plus einmaliges Start-Token. Alle Setup-API-Calls über IPC-Proxy (`setup-api.ts`, Allowlist `/api/setup/host/*`, nur `127.0.0.1`)
+- **Main:** startet `@wartezimmer/setup serve` als eigenen Child-Prozess (ephemerer Loopback-Port, Override via `SETUP_HOST_PORT`); Health-Handshake (`protocolVersion`, Build-ID, Install-Home) plus einmaliges Start-Token. Alle Setup-API-Calls über IPC-Proxy (`setup-api.ts`, Allowlist `/api/setup/host/*`, nur `127.0.0.1`)
 - **Preload:** CJS, `sandbox: true` — nur IPC, **kein `fetch`**
 - **Renderer (Svelte 5):** Shell mit Health-Header + Tabs (Status / Netzwerk / Wartung / Assistent). Koordination über `manager-shell-state` (Sessions, Loading) und `createManagerAppController()` → `mount(App)` → `start()`. Browser-Handoff per `shell.openExternal`.
 
@@ -170,7 +170,7 @@ Der Build erzeugt `manager/dist/WartezimmerManager-<version>-<arch>.dmg`.
 Dieser erste Phase-4a-Build ist bewusst unsigned/notarisiert **nicht**; er ist für interne Tests.
 Beim Packaging werden der kompilierte Setup-Server und die Delivery-Templates in die App-Ressourcen gelegt.
 Im gepackten Modus startet der Manager die Setup-API aus diesen Ressourcen und nutzt standardmäßig
-`~/Library/Application Support/PraxisFlow` als Install-Home.
+`~/Library/Application Support/Wartezimmer` als Install-Home.
 
 ## Dev-Hinweise
 
@@ -178,16 +178,16 @@ Im gepackten Modus startet der Manager die Setup-API aus diesen Ressourcen und n
 einem temporären Install-Home und prüft den vollständigen Weg von Renderer über Preload
 und IPC bis zur Setup-API. Die Testinstanz beendet sich anschließend automatisch.
 
-**Zweite Manager-Instanz:** Produktiv eine Instanz. Im Dev-Modus gilt die Sperre **pro Install-Home** — parallele `PRAXIS_FLOW_HOME=…` bleiben möglich, zweimal dieselbe Home nicht.
+**Zweite Manager-Instanz:** Produktiv eine Instanz. Im Dev-Modus gilt die Sperre **pro Install-Home** — parallele `WARTEZIMMER_HOME=…` bleiben möglich, zweimal dieselbe Home nicht.
 
 **Fremde Setup-API:** Der Manager übernimmt **nicht** still einen Prozess auf Port 9190. Produktiv startet er immer einen eigenen Child. Expliziter Dev-Attach:
 
 ```bash
 npm run setup:serve   # Terminal 1, Default :9190
-PRAXIS_FLOW_SETUP_ATTACH=1 npm run dev:manager
+WARTEZIMMER_SETUP_ATTACH=1 npm run dev:manager
 ```
 
-Attach prüft denselben Handshake (Protokoll, Build-ID, Install-Home). Passt die Identität nicht, startet der Manager **nicht** auf der fremden API. Token: `setup:serve` ohne `PRAXIS_FLOW_SETUP_TOKEN` bleibt per curl nutzbar; ein Manager-Child verlangt das Start-Token.
+Attach prüft denselben Handshake (Protokoll, Build-ID, Install-Home). Passt die Identität nicht, startet der Manager **nicht** auf der fremden API. Token: `setup:serve` ohne `WARTEZIMMER_SETUP_TOKEN` bleibt per curl nutzbar; ein Manager-Child verlangt das Start-Token.
 
 **`Failed to fetch` / Setup-API nicht erreichbar:** Status-HTTP läuft über den **Main Process** (IPC), nicht per `fetch` im Preload — Sandbox blockiert localhost dort. Wenn der Fehler bleibt: Terminal mit `[setup]`-Logs prüfen, ggf. `npm run setup:serve` separat testen (`curl http://127.0.0.1:9190/api/setup/health`).
 
@@ -198,8 +198,8 @@ Attach prüft denselben Handshake (Protokoll, Build-ID, Install-Home). Passt die
 ## Typecheck
 
 ```bash
-npm run -w @praxis-flow/manager typecheck
-npm run -w @praxis-flow/setup test
+npm run -w @wartezimmer/manager typecheck
+npm run -w @wartezimmer/setup test
 ```
 
 LAN-TLS (Produkt): [`docs/operations/tls.md`](../docs/operations/tls.md).
@@ -211,8 +211,8 @@ Ziel: Windows 11, lokaler Docker Desktop mit WSL2/Linux-Containern und Compose
 ab 2.24.4. Keine ARM64-Zusage. Der benutzerbezogene Manager braucht kein
 separates Node/npm und fordert keine Administratorrechte an.
 
-Neue Daten liegen unter `%LOCALAPPDATA%\PraxisFlow`, außerhalb von Programm
-und ASAR; ein vorhandenes `%ProgramData%\PraxisFlow` bleibt erhalten.
+Neue Daten liegen unter `%LOCALAPPDATA%\Wartezimmer`, außerhalb von Programm
+und ASAR.
 Das Betriebskonto bleibt über Installation, Docker-Betrieb und Updates gleich.
 Deinstallation darf Praxisdaten nicht entfernen. Windows-Pfadgrenzen,
 Signierung, Audit und Nachweise: [Delivery §8](../docs/operations/delivery.md#8-windows-vorbereitung-2026-09-30-noch-keine-plattformfreigabe).
@@ -245,7 +245,7 @@ Nach dem Build werden sowohl die Setup.exe als auch der daraus extrahierte
 Deinstaller geprüft. Fehler lassen den Build scheitern. Nur nach erfolgreicher
 Prüfung entsteht zusätzlich eine `.exe.sha256`-Datei für den Transfervergleich.
 Bei einem Builder-Versionswechsel muss der Workaround neu bewertet werden.
-`npm run -w @praxis-flow/manager test:packaging` prüft Rekonstruktion und negative
+`npm run -w @wartezimmer/manager test:packaging` prüft Rekonstruktion und negative
 CRC-/Grenzfälle. Die echte Windows-Installations-/Deinstallationsabnahme bleibt
 trotz bestandener Dateiprüfung erforderlich.
 
@@ -263,13 +263,14 @@ Manager-Verzeichnis ausführen (Python mit Pillow; in Codex über
 `load_workspace_dependencies` verfügbar). Die erzeugten Icons sind eingecheckt;
 der reguläre Build braucht Python nicht.
 
-Die bisherige App-ID `de.praxisflow.manager`, die npm-Paketnamen und die
-Installations-/Datenpfade bleiben für die Kompatibilität mit bestehenden
-Installationen erhalten. Die technische Umbenennung des Stacks folgt separat.
+Die App-ID lautet `de.wartezimmer.manager`, die npm-Pakete heißen
+`@wartezimmer/*`. Installations- und Datenpfade verwenden `Wartezimmer`
+beziehungsweise `wartezimmer`; es gibt keine Übernahme alter Installationen.
 
 Die internen Electron-Namen heißen `WartezimmerManagerApi`,
 `window.wartezimmerManager` und `window.wartezimmerManagerBridge`; die
 IPC-Kanäle verwenden `wartezimmer:*`. Main, Preload und Renderer werden
 gemeinsam ausgeliefert. Der GUI-Starttest nutzt `WARTEZIMMER_MANAGER_SMOKE`.
-Die von Setup und Proxy geteilten `PRAXIS_FLOW_*`-Variablen, HTTP-Header und
-Archivformate werden zusammen mit dem Stack migriert.
+Setup und Proxy verwenden `WARTEZIMMER_*`-Variablen und den HTTP-Header
+`X-Wartezimmer-Rejection`. Die Archivformate heißen `.pfinstall`, `.pfupdate`
+und `.pfbackup`.

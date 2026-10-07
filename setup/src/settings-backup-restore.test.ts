@@ -14,7 +14,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { buildPfbackupArchive, serializePfbackupArchive } from '@praxis-flow/server-shared';
+import { buildPfbackupArchive, serializePfbackupArchive } from '@wartezimmer/server-shared';
 import { APP_DB_RELATED_FILES, createLocalAppDataAccess } from './app-data-volume.js';
 import { readEnvMap, writeEnvRecordAtomically } from './env-file.js';
 import { readManagerState } from './manager-state.js';
@@ -135,18 +135,18 @@ const sampleSettings = {
     CANONICAL_BASE_URL: 'http://192.168.1.50:8080',
     IMPORTS_HOST_PATH: '/data/imports',
     EXPORTS_HOST_PATH: '/data/exports',
-    PRAXIS_FLOW_APP_IMAGE: 'praxis-flow/app:backup',
-    PRAXIS_FLOW_SANDBOX_IMAGE: 'praxis-flow/sandbox:backup',
-    PRAXIS_FLOW_GATEWAY_IMAGE: 'praxis-flow/gateway:backup',
+    WARTEZIMMER_APP_IMAGE: 'wartezimmer/app:backup',
+    WARTEZIMMER_SANDBOX_IMAGE: 'wartezimmer/sandbox:backup',
+    WARTEZIMMER_GATEWAY_IMAGE: 'wartezimmer/gateway:backup',
   },
 };
 
 const backupManagerState = {
   release: {
     releaseVersion: '2026.06.1',
-    appImage: 'praxis-flow/app:backup',
-    sandboxImage: 'praxis-flow/sandbox:backup',
-    gatewayImage: 'praxis-flow/gateway:backup',
+    appImage: 'wartezimmer/app:backup',
+    sandboxImage: 'wartezimmer/sandbox:backup',
+    gatewayImage: 'wartezimmer/gateway:backup',
     archiveSha256: null,
   },
 };
@@ -154,9 +154,9 @@ const backupManagerState = {
 const currentManagerState = {
   release: {
     releaseVersion: '2026.07.1',
-    appImage: 'praxis-flow/app:current',
-    sandboxImage: 'praxis-flow/sandbox:current',
-    gatewayImage: 'praxis-flow/gateway:current',
+    appImage: 'wartezimmer/app:current',
+    sandboxImage: 'wartezimmer/sandbox:current',
+    gatewayImage: 'wartezimmer/gateway:current',
     archiveSha256: 'abc',
   },
 };
@@ -185,9 +185,9 @@ function seedInstallHome(dir: string): { envPath: string; appDataDir: string } {
       'CANONICAL_BASE_URL=http://192.168.1.10:8080',
       'IMPORTS_HOST_PATH=/old/imports',
       'EXPORTS_HOST_PATH=/old/exports',
-      'PRAXIS_FLOW_APP_IMAGE=praxis-flow/app:current',
-      'PRAXIS_FLOW_SANDBOX_IMAGE=praxis-flow/sandbox:current',
-      'PRAXIS_FLOW_GATEWAY_IMAGE=praxis-flow/gateway:current',
+      'WARTEZIMMER_APP_IMAGE=wartezimmer/app:current',
+      'WARTEZIMMER_SANDBOX_IMAGE=wartezimmer/sandbox:current',
+      'WARTEZIMMER_GATEWAY_IMAGE=wartezimmer/gateway:current',
       '',
     ].join('\n'),
   );
@@ -236,13 +236,13 @@ function workingRestoreDeps(
 
 test('mergeConfigRestoreEnv keeps current stack image tags', () => {
   const merged = mergeConfigRestoreEnv(sampleSettings.env, {
-    PRAXIS_FLOW_APP_IMAGE: 'praxis-flow/app:current',
-    PRAXIS_FLOW_SANDBOX_IMAGE: 'praxis-flow/sandbox:current',
-    PRAXIS_FLOW_GATEWAY_IMAGE: 'praxis-flow/gateway:current',
-    PRAXIS_FLOW_PROXY_IMAGE: 'caddy:2.11.4',
+    WARTEZIMMER_APP_IMAGE: 'wartezimmer/app:current',
+    WARTEZIMMER_SANDBOX_IMAGE: 'wartezimmer/sandbox:current',
+    WARTEZIMMER_GATEWAY_IMAGE: 'wartezimmer/gateway:current',
+    WARTEZIMMER_PROXY_IMAGE: 'caddy:2.11.4',
   });
-  assert.equal(merged.PRAXIS_FLOW_APP_IMAGE, 'praxis-flow/app:current');
-  assert.equal(merged.PRAXIS_FLOW_PROXY_IMAGE, 'caddy:2.11.4');
+  assert.equal(merged.WARTEZIMMER_APP_IMAGE, 'wartezimmer/app:current');
+  assert.equal(merged.WARTEZIMMER_PROXY_IMAGE, 'caddy:2.11.4');
   assert.equal(merged.IMPORTS_HOST_PATH, '/data/imports');
 });
 
@@ -309,7 +309,7 @@ test('restore rejects an incomplete backup proxy contract instead of normalizing
 
 test('mergeConfigRestoreManagerState keeps current release images', () => {
   const merged = mergeConfigRestoreManagerState(backupManagerState, currentManagerState);
-  assert.equal(merged.release?.appImage, 'praxis-flow/app:current');
+  assert.equal(merged.release?.appImage, 'wartezimmer/app:current');
   assert.equal(merged.release?.releaseVersion, '2026.07.1');
 });
 
@@ -368,9 +368,9 @@ test('restorePfbackup succeeds and preserves current image tags in .env', async 
     assert.equal(result.ok, true);
     const env = readEnvMap(envPath);
     assert.equal(env.get('IMPORTS_HOST_PATH'), '/data/imports');
-    assert.equal(env.get('PRAXIS_FLOW_APP_IMAGE'), 'praxis-flow/app:current');
+    assert.equal(env.get('WARTEZIMMER_APP_IMAGE'), 'wartezimmer/app:current');
     const manager = readManagerState(dir);
-    assert.equal(manager.release?.appImage, 'praxis-flow/app:current');
+    assert.equal(manager.release?.appImage, 'wartezimmer/app:current');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -506,7 +506,7 @@ test('restorePfbackup rolls back after import failure', async () => {
       assert.equal(result.rollbackSucceeded, true);
     }
     assert.equal(readEnvMap(envPath).get('IMPORTS_HOST_PATH'), '/old/imports');
-    assert.equal(fs.existsSync(path.join(appDataDir, 'praxis-flow.db')), true);
+    assert.equal(fs.existsSync(path.join(appDataDir, 'wartezimmer.db')), true);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -686,20 +686,20 @@ test('restore env write keeps current-only keys while applying backup values and
       [
         'IMPORTS_HOST_PATH=/old/imports',
         'NEW_FEATURE_FLAG=1',
-        'PRAXIS_FLOW_APP_IMAGE=praxis-flow/app:current',
+        'WARTEZIMMER_APP_IMAGE=wartezimmer/app:current',
         '',
       ].join('\n'),
     );
     const merged = mergeConfigRestoreEnv(sampleSettings.env, {
       IMPORTS_HOST_PATH: '/old/imports',
       NEW_FEATURE_FLAG: '1',
-      PRAXIS_FLOW_APP_IMAGE: 'praxis-flow/app:current',
+      WARTEZIMMER_APP_IMAGE: 'wartezimmer/app:current',
     });
     writeEnvRecordAtomically(envPath, merged);
     const env = readEnvMap(envPath);
     assert.equal(env.get('IMPORTS_HOST_PATH'), '/data/imports');
     assert.equal(env.get('NEW_FEATURE_FLAG'), '1');
-    assert.equal(env.get('PRAXIS_FLOW_APP_IMAGE'), 'praxis-flow/app:current');
+    assert.equal(env.get('WARTEZIMMER_APP_IMAGE'), 'wartezimmer/app:current');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -1151,7 +1151,7 @@ test('restorePfbackup rejects a non-local target Staff address before stopping t
 
 for (const failure of [null, 'listener', 'bindings'] as const)
   test(`restricted restore audits the installed release contract: ${failure ?? 'success'}`, async () => {
-    const { DEFAULT_PORTAL_PROXY_CONTRACT } = await import('@praxis-flow/server-shared');
+    const { DEFAULT_PORTAL_PROXY_CONTRACT } = await import('@wartezimmer/server-shared');
     const { runtimeAuditEnv, runtimeAuditCompose, runtimeAuditInterfaces } =
       await import('./runtime-postcondition-test-fixtures.js');
     const source = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-restore-audit-src-'));
@@ -1213,7 +1213,7 @@ for (const failure of [null, 'listener', 'bindings'] as const)
         assert.equal(result.rollbackSucceeded, true, JSON.stringify(result));
         assert.equal(readEnvMap(envPath).has('SETUP_RESTRICTED_ENABLED'), false);
       } else {
-        assert.equal(readEnvMap(envPath).get('PRAXIS_FLOW_APP_IMAGE'), 'praxis-flow/app:current');
+        assert.equal(readEnvMap(envPath).get('WARTEZIMMER_APP_IMAGE'), 'wartezimmer/app:current');
         assert.match(fs.readFileSync(path.join(tlsDir, 'Caddyfile'), 'utf8'), /installed-release/);
       }
     } finally {
@@ -1228,14 +1228,14 @@ test('restore keeps target installation secrets and never imports missing intern
     MAINTENANCE_TOKEN: 'old',
     SANDBOX_INTERNAL_TOKEN: 'old',
     OPENNDS_FAS_KEY: 'old',
-    PRAXIS_FLOW_APP_IMAGE: 'old',
+    WARTEZIMMER_APP_IMAGE: 'old',
     PROVIDER_KEY: 'practice-key',
   };
   const current = {
     AUTH_KEY_CAPTIVE: 'new',
     MAINTENANCE_TOKEN: 'new',
     SANDBOX_INTERNAL_TOKEN: 'new',
-    PRAXIS_FLOW_APP_IMAGE: 'new',
+    WARTEZIMMER_APP_IMAGE: 'new',
   };
   const merged = mergeConfigRestoreEnv(backup, current);
   for (const key of Object.keys(current)) assert.equal(merged[key], 'new');
@@ -1315,7 +1315,7 @@ function recoveryFixture(t: test.TestContext) {
     id: '2026-09-29-restore-test',
     createdAt: new Date().toISOString(),
     phase: 'prepared',
-    utilityImage: 'praxis-flow/app:current',
+    utilityImage: 'wartezimmer/app:current',
     installationId: null,
   };
   return { home, appDataDir, envPath, ctx, deps, operation };
@@ -1384,8 +1384,8 @@ test('failed immediate rollback survives a second interruption; runtime audit de
   });
   assert.equal(failed.ok, false);
   assert.equal(
-    fs.readFileSync(path.join(dir, 'app-data/praxis-flow.db'), 'utf8'),
-    'seed-praxis-flow.db',
+    fs.readFileSync(path.join(dir, 'app-data/wartezimmer.db'), 'utf8'),
+    'seed-wartezimmer.db',
   );
   // Persisted rolling-back is also sufficient if the process never reached its catch block.
   writeRestoreOperation(f.home, { ...f.operation, id: active.id, phase: 'rolling-back' });

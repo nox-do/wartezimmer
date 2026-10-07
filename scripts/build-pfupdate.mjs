@@ -5,11 +5,11 @@
  * Usage:
  *   npm run release:pfupdate
  *   npm run release:pfupdate -- --version 2026.08.0
- *   PRAXIS_FLOW_RELEASE_VERSION=2026.08.0 npm run release:pfupdate
+ *   WARTEZIMMER_RELEASE_VERSION=2026.08.0 npm run release:pfupdate
  *   npm run release:pfupdate:current -- --version 2026.08.0   # pack only, skip build
  *
  * Output:
- *   dist/releases/praxis-flow-<version>/linux-<arch>/praxis-flow-update-<version>-linux-<arch>.pfupdate
+ *   dist/releases/wartezimmer-<version>/linux-<arch>/wartezimmer-update-<version>-linux-<arch>.pfupdate
  */
 
 import { releasePlatforms, architectureTag, assertReleasePlatform } from './release-platforms.mjs';
@@ -43,7 +43,7 @@ function printHelp() {
 Liefert eine Datei je Architektur für: Manager → Wartung → Software-Update → Update-Paket wählen.
 
 Options:
-  --version <tag>              Release tag (default: package.json version or PRAXIS_FLOW_RELEASE_VERSION)
+  --version <tag>              Release tag (default: package.json version or WARTEZIMMER_RELEASE_VERSION)
   --output <dir>               Output directory (default: dist/releases)
   --minimum-manager-version    Minimum Manager semver (default: manager/package.json version)
   --platform <arch>            amd64, arm64 or all (default: all)
@@ -53,7 +53,7 @@ Options:
 Package layout (extracted):
   manifest.json
   SHA256SUMS.txt
-  images/praxis-flow-images.tar     ← docker save (app + sandbox + custom Caddy)
+  images/wartezimmer-images.tar     ← docker save (app + sandbox + custom Caddy)
   templates/docker-compose.delivery.yml
   templates/docker-compose.proxy.delivery.yml
   templates/docker-compose.proxy-tls.delivery.yml
@@ -64,14 +64,14 @@ Package layout (extracted):
   licenses/caddy/LICENSE.txt
 
 Images tagged as:
-  praxis-flow/app:<version>
-  praxis-flow/sandbox:<version>
-  praxis-flow-proxy:2.11.4-acmedns  ← offline reverse proxy with ACME-DNS (not auto-started)
+  wartezimmer/app:<version>
+  wartezimmer/sandbox:<version>
+  wartezimmer-proxy:2.11.4-acmedns  ← offline reverse proxy with ACME-DNS (not auto-started)
 `);
 }
 
 function parseArgs(argv) {
-  let version = process.env.PRAXIS_FLOW_RELEASE_VERSION?.trim() || null;
+  let version = process.env.WARTEZIMMER_RELEASE_VERSION?.trim() || null;
   let noBuild = false;
   let platformSelection;
   let outputRoot = path.join(root, 'dist', 'releases');
@@ -168,8 +168,8 @@ function assertImageExists(imageRef) {
 }
 
 function buildReleaseImages(version, platform) {
-  const appImage = `praxis-flow/app:${version}`;
-  const sandboxImage = `praxis-flow/sandbox:${version}`;
+  const appImage = `wartezimmer/app:${version}`;
+  const sandboxImage = `wartezimmer/sandbox:${version}`;
 
   console.log(`Building ${appImage} …`);
   run('docker', appDockerBuildArgs(version, platform));
@@ -231,10 +231,10 @@ function buildDeliveryEnvExample(version, appImage, sandboxImage, proxyImage) {
   const sourcePath = path.join(root, '.env.example');
   const lines = fs.readFileSync(sourcePath, 'utf8').split(/\r?\n/);
   const imageLines = new Set([
-    'PRAXIS_FLOW_APP_IMAGE',
-    'PRAXIS_FLOW_SANDBOX_IMAGE',
-    'PRAXIS_FLOW_GATEWAY_IMAGE',
-    'PRAXIS_FLOW_PROXY_IMAGE',
+    'WARTEZIMMER_APP_IMAGE',
+    'WARTEZIMMER_SANDBOX_IMAGE',
+    'WARTEZIMMER_GATEWAY_IMAGE',
+    'WARTEZIMMER_PROXY_IMAGE',
   ]);
 
   const out = [];
@@ -250,9 +250,9 @@ function buildDeliveryEnvExample(version, appImage, sandboxImage, proxyImage) {
 
   out.push('');
   out.push('# Delivery image tags (written by .pfupdate install)');
-  out.push(`PRAXIS_FLOW_APP_IMAGE=${appImage}`);
-  out.push(`PRAXIS_FLOW_SANDBOX_IMAGE=${sandboxImage}`);
-  out.push(`PRAXIS_FLOW_PROXY_IMAGE=${proxyImage}`);
+  out.push(`WARTEZIMMER_APP_IMAGE=${appImage}`);
+  out.push(`WARTEZIMMER_SANDBOX_IMAGE=${sandboxImage}`);
+  out.push(`WARTEZIMMER_PROXY_IMAGE=${proxyImage}`);
 
   return `${out.join('\n').replace(/\n+$/, '')}\n`;
 }
@@ -313,8 +313,8 @@ async function validateBuiltPackage(archivePath) {
 const { version, noBuild, outputRoot, minimumManagerVersion, platforms } = parseArgs(
   process.argv.slice(2),
 );
-const appImage = `praxis-flow/app:${version}`;
-const sandboxImage = `praxis-flow/sandbox:${version}`;
+const appImage = `wartezimmer/app:${version}`;
+const sandboxImage = `wartezimmer/sandbox:${version}`;
 assertDockerReady();
 const api = runCapture('docker', ['version', '--format', '{{.Server.APIVersion}}']);
 const [apiMajor, apiMinor] = api.split('.').map(Number);
@@ -324,11 +324,11 @@ if (!(apiMajor > 1 || (apiMajor === 1 && apiMinor >= 49))) {
   );
 }
 const pfupdate = await loadPfupdateValidation();
-const proxyImage = pfupdate.PRAXIS_FLOW_PROXY_IMAGE_REF;
+const proxyImage = pfupdate.WARTEZIMMER_PROXY_IMAGE_REF;
 for (const platform of platforms) {
   const architecture = platform.replace('/', '-');
-  const releaseDir = path.join(outputRoot, `praxis-flow-${version}`, architecture);
-  const archiveFileName = `praxis-flow-update-${version}-${architecture}.pfupdate`;
+  const releaseDir = path.join(outputRoot, `wartezimmer-${version}`, architecture);
+  const archiveFileName = `wartezimmer-update-${version}-${architecture}.pfupdate`;
   const archivePath = path.join(releaseDir, archiveFileName);
 
   if (noBuild) {
@@ -345,8 +345,8 @@ for (const platform of platforms) {
 
   const proxyImageDigest = prepareDeliveryProxyImage({
     imageRef: proxyImage,
-    baseImageRef: pfupdate.PRAXIS_FLOW_PROXY_BASE_IMAGE_REF,
-    registryDigest: pfupdate.PRAXIS_FLOW_PROXY_IMAGE_REGISTRY_DIGEST,
+    baseImageRef: pfupdate.WARTEZIMMER_PROXY_BASE_IMAGE_REF,
+    registryDigest: pfupdate.WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST,
     skipBuild: noBuild,
     platform,
     run,
@@ -370,7 +370,7 @@ for (const platform of platforms) {
   try {
     fs.mkdirSync(releaseDir, { recursive: true });
 
-    const imagesTarPath = path.join(stagingRoot, 'images', 'praxis-flow-images.tar');
+    const imagesTarPath = path.join(stagingRoot, 'images', 'wartezimmer-images.tar');
     const imagesToSave = [appImage, sandboxImage, proxyImage];
     console.log(`Saving images to ${imagesTarPath} …`);
     await dockerSaveTar(imagesTarPath, imagesToSave, platform);
@@ -426,7 +426,7 @@ for (const platform of platforms) {
         appImage,
         '--input-type=module',
         '-e',
-        "import { DEFAULT_PORTAL_PROXY_CONTRACT } from '@praxis-flow/server-shared'; process.stdout.write(JSON.stringify(DEFAULT_PORTAL_PROXY_CONTRACT));",
+        "import { DEFAULT_PORTAL_PROXY_CONTRACT } from '@wartezimmer/server-shared'; process.stdout.write(JSON.stringify(DEFAULT_PORTAL_PROXY_CONTRACT));",
       ]),
     );
     portalModule.parsePortalProxyContract(imageContract);

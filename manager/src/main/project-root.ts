@@ -16,7 +16,7 @@ function walkProjectRoot(startDir: string): string | null {
     if (fs.existsSync(pkgPath)) {
       const raw = fs.readFileSync(pkgPath, 'utf8');
       try {
-        if (packageNameFromJson(raw) === 'praxis_flow') {
+        if (packageNameFromJson(raw) === 'wartezimmer') {
           return current;
         }
       } catch {

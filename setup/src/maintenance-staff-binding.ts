@@ -1,4 +1,4 @@
-import type { ComposeStatus } from '@praxis-flow/server-shared';
+import type { ComposeStatus } from '@wartezimmer/server-shared';
 import { validateStaffBindingEnv } from './docker.js';
 import { createRuntimePostcondition, runtimeBindingError } from './runtime-postcondition.js';
 import type { NetworkInterfaceInfo } from './network.js';

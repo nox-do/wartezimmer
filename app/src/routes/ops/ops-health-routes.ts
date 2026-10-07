@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { CoreDatabase } from '../../shared/db/database.js';
 import { opsSchemas } from '../../api/generated/ops.fastify-schemas.js';
-import { SILENT_ROUTE_LOG } from '@praxis-flow/server-shared/logger';
+import { SILENT_ROUTE_LOG } from '@wartezimmer/server-shared/logger';
 import { resolveStackVersion } from '../../shared/stack-version.js';
 
 export function registerOpsHealthRoutes(app: FastifyInstance, db: CoreDatabase): void {

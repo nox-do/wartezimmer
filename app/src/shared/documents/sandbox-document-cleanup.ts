@@ -1,4 +1,4 @@
-import { createModuleLogger } from '@praxis-flow/server-shared/logger';
+import { createModuleLogger } from '@wartezimmer/server-shared/logger';
 import { domainError } from '../errors/domain-error.js';
 import { getSandboxClient } from '../sandbox/sandbox-client.js';
 

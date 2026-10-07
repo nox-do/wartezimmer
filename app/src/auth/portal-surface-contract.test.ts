@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { PORTAL_INTERNAL_ROUTES, PORTAL_SURFACE_ROUTES } from '@praxis-flow/server-shared';
+import { PORTAL_INTERNAL_ROUTES, PORTAL_SURFACE_ROUTES } from '@wartezimmer/server-shared';
 import { ROUTE_ACCESS_RULES } from './route-access-rules.js';
 
 const routeKey = (route: { method: string; path: string }) => `${route.method} ${route.path}`;

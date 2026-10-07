@@ -3,7 +3,7 @@ import {
   listEnabledRoomPanelPlacements,
   roomPanelConfigForPlacement,
   roomPanelRequiresPin,
-} from '@praxis-flow/domain';
+} from '@wartezimmer/domain';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type {
   ChangePinBody,

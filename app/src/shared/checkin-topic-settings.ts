@@ -20,7 +20,7 @@ import {
   resolveDefaultCallRoomId,
   WAITING_ROOM_LABEL,
   WAITING_ROOM_LOCATION_ID,
-} from '@praxis-flow/domain';
+} from '@wartezimmer/domain';
 
 export type TopicSetting = OpsSettings['topics'][number];
 /** `defaultRoomId` wird im Simple-Routing-Sync zu `RoutingRule.initialTargetLocationId`. */

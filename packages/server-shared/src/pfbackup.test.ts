@@ -31,8 +31,8 @@ test('buildPfbackupArchive roundtrip validates successfully', () => {
     managerState: {
       release: {
         releaseVersion: '0.2.0',
-        appImage: 'praxis-flow/app:0.2.0',
-        sandboxImage: 'praxis-flow/sandbox:0.2.0',
+        appImage: 'wartezimmer/app:0.2.0',
+        sandboxImage: 'wartezimmer/sandbox:0.2.0',
         archiveSha256: null,
       },
     },
@@ -58,7 +58,7 @@ test('validatePfbackupArchive accepts explicit release null', () => {
 
 test('validateManagerStateForBackup rejects incomplete image references', () => {
   const result = validateManagerStateForBackup({
-    release: { releaseVersion: '0.2.0', appImage: 'praxis-flow/app:0.2.0' },
+    release: { releaseVersion: '0.2.0', appImage: 'wartezimmer/app:0.2.0' },
   });
   assert.equal(result.ok, false);
   assert.match(result.errors.join(' '), /sandboxImage/);
@@ -82,22 +82,22 @@ test('validatePfbackupArchive rejects tampered checksum', () => {
 test('envRecordForSettingsExport includes full stack env including image tags', () => {
   const env = envRecordForSettingsExport({
     BUSINESS_TZ: 'Europe/Berlin',
-    PRAXIS_FLOW_APP_IMAGE: 'app:1',
-    PRAXIS_FLOW_SANDBOX_IMAGE: 'sandbox:1',
-    PRAXIS_FLOW_GATEWAY_IMAGE: 'gateway:1',
+    WARTEZIMMER_APP_IMAGE: 'app:1',
+    WARTEZIMMER_SANDBOX_IMAGE: 'sandbox:1',
+    WARTEZIMMER_GATEWAY_IMAGE: 'gateway:1',
     EMPTY: '',
   });
   assert.deepEqual(env, {
     BUSINESS_TZ: 'Europe/Berlin',
-    PRAXIS_FLOW_APP_IMAGE: 'app:1',
-    PRAXIS_FLOW_SANDBOX_IMAGE: 'sandbox:1',
-    PRAXIS_FLOW_GATEWAY_IMAGE: 'gateway:1',
+    WARTEZIMMER_APP_IMAGE: 'app:1',
+    WARTEZIMMER_SANDBOX_IMAGE: 'sandbox:1',
+    WARTEZIMMER_GATEWAY_IMAGE: 'gateway:1',
   });
 });
 
 test('pfbackup filename helpers parse timestamps', () => {
   const name = buildPfbackupFilename(new Date('2026-07-12T10:15:30.123Z'));
-  assert.match(name, /^praxis-flow-backup-/);
+  assert.match(name, /^wartezimmer-backup-/);
   assert.ok(name.endsWith('.pfbackup'));
   const parsed = parsePfbackupTimestampFromPath(`/tmp/backups/${name}`);
   assert.ok(parsed);
@@ -114,8 +114,8 @@ test('validateManagerStateForBackup rejects missing release field', () => {
 test('validateManagerStateForBackup rejects invalid archiveSha256', () => {
   const result = validateManagerStateForBackup({
     release: {
-      appImage: 'praxis-flow/app:1',
-      sandboxImage: 'praxis-flow/sandbox:1',
+      appImage: 'wartezimmer/app:1',
+      sandboxImage: 'wartezimmer/sandbox:1',
       archiveSha256: 'not-a-hash',
     },
   });

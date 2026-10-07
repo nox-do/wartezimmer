@@ -12,7 +12,7 @@
   import type { PracticeRoom, PracticeTopicSetting } from '$lib/queue/ops-settings-api';
   import { slugifyTopicId } from '$lib/queue/ops-settings-api';
   import { isReservedLaneCode } from '$lib/queue/topic-settings-form';
-  import { isValidLaneCode, WAITING_ROOM_LABEL, WAITING_ROOM_LOCATION_ID } from '@praxis-flow/domain';
+  import { isValidLaneCode, WAITING_ROOM_LABEL, WAITING_ROOM_LOCATION_ID } from '@wartezimmer/domain';
   import { validateTopicTimeWindow } from '$lib/queue/time-of-day';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
   import type { TopicIconId } from '$lib/topics/topic-icon-catalog';

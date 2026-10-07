@@ -1,1 +1,1 @@
-export type { HostRuntimeHealth } from '@praxis-flow/server-shared/setup-api';
+export type { HostRuntimeHealth } from '@wartezimmer/server-shared/setup-api';

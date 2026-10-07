@@ -1,6 +1,6 @@
 import { publicFetch } from '$lib/api/public-fetch';
 import type { PracticeProfile } from '$lib/practice/practice-profile-client';
-import type { TerminalPatientLocale } from '@praxis-flow/domain';
+import type { TerminalPatientLocale } from '@wartezimmer/domain';
 
 export type PortalConfig = {
   terminalPatientLocales: TerminalPatientLocale[];

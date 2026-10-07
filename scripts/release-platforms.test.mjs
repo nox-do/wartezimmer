@@ -15,7 +15,7 @@ test('both platforms are default; explicit selection and artifact names are unam
     assert.deepEqual(releasePlatforms(`linux/${arch}`), [`linux/${arch}`]);
     assert.equal(
       releaseArchiveName('6.1.0', `linux/${arch}`),
-      `praxis-flow-6.1.0-linux-${arch}.pfinstall`,
+      `wartezimmer-6.1.0-linux-${arch}.pfinstall`,
     );
     const args = appDockerBuildArgs('6.1.0', `linux/${arch}`);
     assert.deepEqual(args.slice(0, 5), [

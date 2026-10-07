@@ -6,7 +6,7 @@ import {
   TERMINAL_PHONE_PREFIX,
   TERMINAL_PHONE_SUFFIX_MAX,
   TERMINAL_PHONE_SUFFIX_MIN,
-} from '@praxis-flow/domain';
+} from '@wartezimmer/domain';
 
 export const PHONE_PREFIX = TERMINAL_PHONE_PREFIX;
 export const PHONE_SUFFIX_MIN = TERMINAL_PHONE_SUFFIX_MIN;

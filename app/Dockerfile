@@ -52,9 +52,9 @@ RUN npm run generate:api
 RUN npm run build:domain
 RUN npm run build:server-shared
 RUN npm run build:flow-core
-RUN npm exec -w @praxis-flow/ui -- svelte-kit sync
-RUN npm run -w @praxis-flow/ui build
-RUN npm run -w @praxis-flow/app build
+RUN npm exec -w @wartezimmer/ui -- svelte-kit sync
+RUN npm run -w @wartezimmer/ui build
+RUN npm run -w @wartezimmer/app build
 RUN node scripts/copy-ui-static.mjs
 RUN node scripts/strip-production-artifacts.mjs \
   packages/domain \
@@ -67,8 +67,8 @@ FROM node:22-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
-ARG PRAXIS_FLOW_STACK_VERSION=
-ENV PRAXIS_FLOW_STACK_VERSION=${PRAXIS_FLOW_STACK_VERSION}
+ARG WARTEZIMMER_STACK_VERSION=
+ENV WARTEZIMMER_STACK_VERSION=${WARTEZIMMER_STACK_VERSION}
 
 RUN rm -rf /usr/local/lib/node_modules/npm \
   && rm -f /usr/local/bin/npm /usr/local/bin/npx

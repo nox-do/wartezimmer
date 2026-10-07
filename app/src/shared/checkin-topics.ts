@@ -4,4 +4,4 @@ export {
   MAX_TOPIC_ID_LENGTH,
   slugifyTopicId,
   TOPIC_ID_PATTERN,
-} from '@praxis-flow/domain';
+} from '@wartezimmer/domain';

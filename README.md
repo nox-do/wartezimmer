@@ -13,7 +13,7 @@ Produktfähig lokal ausgeliefert: versionierte Images, Manager, `.pfupdate`, opt
 - **Node.js 22+** und npm (Workspaces-Monorepo)
 - **Docker Desktop** mit Compose v2 (empfohlener Dev-Weg)
 - Port **8080** frei auf dem Host
-- Optional: Ordner `~/praxis-flow-imports` und `~/praxis-flow-exports` (Compose-Defaults; siehe `.env.example`)
+- Optional: Ordner `~/wartezimmer-imports` und `~/wartezimmer-exports` (Compose-Defaults; siehe `.env.example`)
 
 ## Schnellstart (Docker)
 
@@ -32,7 +32,7 @@ npm run docker:down
 docker compose logs -f app
 ```
 
-Images lokal: `praxis-flow/app:local`, `praxis-flow/sandbox:local`. Betrieb und Updates: [`docs/operations/runtime.md`](docs/operations/runtime.md).
+Images lokal: `wartezimmer/app:local`, `wartezimmer/sandbox:local`. Betrieb und Updates: [`docs/operations/runtime.md`](docs/operations/runtime.md).
 
 ## Entwicklung ohne Docker
 
@@ -46,7 +46,7 @@ npm run dev:ui                  # SvelteKit-Devserver mit Proxy auf :8080
 Dokument-Preview, Form2PDF und Malware-Scan: Stack mit `npm run docker:up` (mindestens `app` + `sandbox`). Selten nativ: `npm run dev:sandbox` (nur Sandbox; App/API weiter separat).
 
 Erstinstallation & Manager: [`docs/operations/delivery.md`](docs/operations/delivery.md) · [`manager/README.md`](manager/README.md).
-CLI: `npm run setup` · Test-Install: `PRAXIS_FLOW_HOME=/tmp/pf-dev-001 npm run setup` · Reset: `npm run setup:reset`
+CLI: `npm run setup` · Test-Install: `WARTEZIMMER_HOME=/tmp/pf-dev-001 npm run setup` · Reset: `npm run setup:reset`
 
 ## Alltagsbefehle
 

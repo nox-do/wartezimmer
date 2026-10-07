@@ -24,7 +24,7 @@ import {
   type RoomPanelPlacement,
   type RoomPanelPlacementConfig,
   type RoomPanelsSettings,
-} from '@praxis-flow/domain';
+} from '@wartezimmer/domain';
 import {
   mergePracticeProfile,
   parsePracticeProfileJson,

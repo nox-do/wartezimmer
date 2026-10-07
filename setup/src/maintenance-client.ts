@@ -2,7 +2,7 @@ import {
   MAINTENANCE_API_INFO_PATH,
   parseMaintenanceApiInfo,
   type MaintenanceApiInfo,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import { maintenanceRequestHeaders } from './maintenance-auth.js';
 import { LOCAL_MAINTENANCE_APP_BASE_URL } from './urls.js';
 

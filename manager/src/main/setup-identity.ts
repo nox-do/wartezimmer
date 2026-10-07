@@ -9,7 +9,7 @@ import {
   SETUP_BUILD_ID_ENV,
   SETUP_READY_LOG_PREFIX,
   type SetupHealthIdentity,
-} from '@praxis-flow/server-shared/setup-api';
+} from '@wartezimmer/server-shared/setup-api';
 import { findProjectRoot } from './project-root.js';
 
 export function isAttachExistingSetupEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
@@ -53,25 +53,22 @@ export function parseSetupReadyLine(line: string): number | null {
 
 export function defaultOsInstallHome(): string {
   if (process.platform === 'win32') {
-    const legacy = path.join(process.env.ProgramData?.trim() || 'C:\\ProgramData', 'PraxisFlow');
-    // Never silently abandon an existing Windows installation.
-    if (fs.existsSync(legacy)) return legacy;
     return path.join(
       process.env.LOCALAPPDATA?.trim() || path.join(os.homedir(), 'AppData', 'Local'),
-      'PraxisFlow',
+      'Wartezimmer',
     );
   }
   if (process.platform === 'darwin') {
-    return path.join(os.homedir(), 'Library', 'Application Support', 'PraxisFlow');
+    return path.join(os.homedir(), 'Library', 'Application Support', 'Wartezimmer');
   }
-  return path.join(os.homedir(), '.local', 'share', 'PraxisFlow');
+  return path.join(os.homedir(), '.local', 'share', 'Wartezimmer');
 }
 
 export function expectedSetupInstallHome(isPackaged: boolean, moduleDir: string): string {
-  const fromEnv = process.env.PRAXIS_FLOW_HOME?.trim();
+  const fromEnv = process.env.WARTEZIMMER_HOME?.trim();
   if (fromEnv) {
     if (process.platform === 'win32' && !/^[a-z]:[\\/]/i.test(fromEnv))
-      throw new Error('PRAXIS_FLOW_HOME benötigt einen absoluten lokalen Windows-Laufwerkspfad.');
+      throw new Error('WARTEZIMMER_HOME benötigt einen absoluten lokalen Windows-Laufwerkspfad.');
     return path.resolve(fromEnv);
   }
   if (isPackaged) {

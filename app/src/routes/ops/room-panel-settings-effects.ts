@@ -1,4 +1,4 @@
-import { ROOM_PANEL_PLACEMENTS, roomPanelsOrDefault } from '@praxis-flow/domain';
+import { ROOM_PANEL_PLACEMENTS, roomPanelsOrDefault } from '@wartezimmer/domain';
 import type { RoomPanelPlacement } from '../../shared/db/db-types.js';
 import type { OpsSettings } from '../../shared/db/db-types.js';
 

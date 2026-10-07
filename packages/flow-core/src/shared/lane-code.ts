@@ -3,7 +3,7 @@ import {
   isValidLaneCode,
   MFA_ASSIST_LANE_CODE,
   normalizeLaneCode,
-} from '@praxis-flow/domain';
+} from '@wartezimmer/domain';
 import { MFA_ASSIST_TOPIC_ID } from './check-in-path.js';
 
 export { isReservedLaneCode, isValidLaneCode, MFA_ASSIST_LANE_CODE, normalizeLaneCode };

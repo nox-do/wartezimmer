@@ -1,5 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
-import { createRuntime, type Runtime } from '@praxis-flow/flow-core/server';
+import { createRuntime, type Runtime } from '@wartezimmer/flow-core/server';
 import { getBusinessDay } from '../db/database-time.js';
 import type { OpsSettings } from '../db/db-types.js';
 import { PF_FLOW_LOC_WAITING, PF_FLOW_QUEUE_GENERAL } from './catalog-ids.js';

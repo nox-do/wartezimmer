@@ -82,8 +82,8 @@ test('GET /api/v1/ops/heartbeat response matches OpenAPI schema', async () => {
 });
 
 test('GET /api/v1/ops/health includes stackVersion from env', async () => {
-  const previous = process.env.PRAXIS_FLOW_STACK_VERSION;
-  process.env.PRAXIS_FLOW_STACK_VERSION = '2.1.0';
+  const previous = process.env.WARTEZIMMER_STACK_VERSION;
+  process.env.WARTEZIMMER_STACK_VERSION = '2.1.0';
   try {
     const app = Fastify({ logger: false });
     registerOpsHealthRoutes(app, fakeOpsDb());
@@ -95,9 +95,9 @@ test('GET /api/v1/ops/health includes stackVersion from env', async () => {
     await app.close();
   } finally {
     if (previous === undefined) {
-      delete process.env.PRAXIS_FLOW_STACK_VERSION;
+      delete process.env.WARTEZIMMER_STACK_VERSION;
     } else {
-      process.env.PRAXIS_FLOW_STACK_VERSION = previous;
+      process.env.WARTEZIMMER_STACK_VERSION = previous;
     }
   }
 });

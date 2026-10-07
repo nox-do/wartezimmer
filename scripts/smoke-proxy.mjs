@@ -11,7 +11,7 @@
  *   npm run smoke:proxy -- --cleanup # remove leftover smoke containers/network
  *
  * Env:
- *   PRAXIS_FLOW_PROXY_IMAGE  image ref (default caddy:2.11.4)
+ *   WARTEZIMMER_PROXY_IMAGE  image ref (default caddy:2.11.4)
  *   PROXY_SMOKE_PORT         host port for proxy (default 18080)
  *   PROXY_SMOKE_KEEP=1       same as --keep
  */
@@ -27,7 +27,7 @@ const NETWORK = 'pf-proxy-smoke-net';
 const UPSTREAM_NAME = 'pf-proxy-smoke-app';
 const PROXY_NAME = 'pf-proxy-smoke-proxy';
 const UPSTREAM_CADDYFILE_NAME = 'Caddyfile.upstream';
-const MARKER = 'praxis-flow-proxy-smoke-ok';
+const MARKER = 'wartezimmer-proxy-smoke-ok';
 
 function printHelp() {
   console.log(`Usage: node scripts/smoke-proxy.mjs [--keep|--cleanup|--help]
@@ -38,7 +38,7 @@ Smoke-tests stock Caddy + proxy/Caddyfile without the full stack.
   --cleanup    remove leftover smoke containers/network and exit
   --help       show this help
 
-Env: PRAXIS_FLOW_PROXY_IMAGE, PROXY_SMOKE_PORT, PROXY_SMOKE_KEEP=1`);
+Env: WARTEZIMMER_PROXY_IMAGE, PROXY_SMOKE_PORT, PROXY_SMOKE_KEEP=1`);
 }
 
 function parseArgs(argv) {
@@ -87,7 +87,7 @@ function assertDockerReady() {
 }
 
 function resolveProxyImage() {
-  const fromEnv = process.env.PRAXIS_FLOW_PROXY_IMAGE?.trim();
+  const fromEnv = process.env.WARTEZIMMER_PROXY_IMAGE?.trim();
   return fromEnv || DEFAULT_PROXY_IMAGE;
 }
 

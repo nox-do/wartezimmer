@@ -18,7 +18,7 @@ import { registerDefaultErrorHandler } from './http/default-error-handler.js';
 import { registerOpenApiDocs } from './openapi/register-openapi-docs.js';
 import { PATIENT_UPLOAD_MAX_BYTES } from './shared/documents/patient-upload-limits.js';
 import { resyncRecallWindowExpiryScheduler } from './shared/queue/recall-window-expiry-scheduler.js';
-import { buildFastifyLoggerOptions } from '@praxis-flow/server-shared/logger';
+import { buildFastifyLoggerOptions } from '@wartezimmer/server-shared/logger';
 import { toStaffPinHashConfig } from './shared/db/database-auth-settings.js';
 import { registerSecurityHeaders } from './http/security-headers.js';
 import { trustProxyHeaders } from './http/trusted-proxy.js';

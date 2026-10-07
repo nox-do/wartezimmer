@@ -42,7 +42,7 @@ test('factory reset stops before deleting host files when compose teardown fails
     fs.writeFileSync(path.join(home, '.env'), 'KEEP=true\n');
     await assert.rejects(
       factoryResetInstallation(
-        { home, mode: 'install', composeProjectName: 'praxis-flow', templateRoot: home },
+        { home, mode: 'install', composeProjectName: 'wartezimmer', templateRoot: home },
         home,
         { composeDown: async () => ({ ok: false, log: 'busy' }) },
       ),
@@ -60,20 +60,20 @@ test('factory reset removes only residual volumes owned by the expected compose 
   try {
     fs.writeFileSync(path.join(home, '.env'), 'OLD=true\n');
     await factoryResetInstallation(
-      { home, mode: 'install', composeProjectName: 'praxis-flow', templateRoot: home },
+      { home, mode: 'install', composeProjectName: 'wartezimmer', templateRoot: home },
       home,
       {
         composeDown: async () => ({ ok: true, log: '' }),
         inspectVolume: async (name) => ({
           exists: name.endsWith('_app_data'),
-          project: 'praxis-flow',
+          project: 'wartezimmer',
         }),
         removeVolume: async (name) => {
           removed.push(name);
         },
       },
     );
-    assert.deepEqual(removed, ['praxis-flow_app_data']);
+    assert.deepEqual(removed, ['wartezimmer_app_data']);
     assert.equal(fs.existsSync(path.join(home, '.env')), false);
   } finally {
     fs.rmSync(home, { recursive: true, force: true });
@@ -86,7 +86,7 @@ test('factory reset refuses a same-named volume without matching compose ownersh
     fs.writeFileSync(path.join(home, '.env'), 'KEEP=true\n');
     await assert.rejects(
       factoryResetInstallation(
-        { home, mode: 'install', composeProjectName: 'praxis-flow', templateRoot: home },
+        { home, mode: 'install', composeProjectName: 'wartezimmer', templateRoot: home },
         home,
         {
           composeDown: async () => ({ ok: true, log: '' }),

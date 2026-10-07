@@ -26,7 +26,7 @@ import {
   type RoomPanelPlacementConfig,
   type RoomPanelsSettings,
   type RoomPanelTextPreset,
-} from '@praxis-flow/domain';
+} from '@wartezimmer/domain';
 
 export type {
   MfaPatchOpsSettingsBody as PatchOpsSettingsBody,

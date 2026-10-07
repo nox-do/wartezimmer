@@ -2,7 +2,7 @@ import type { BrowserWindow, OpenDialogOptions, SaveDialogOptions } from 'electr
 import { dialog } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
-import { PFBACKUP_FILE_EXTENSION, PFBACKUP_BASENAME_PREFIX } from '@praxis-flow/server-shared';
+import { PFBACKUP_FILE_EXTENSION, PFBACKUP_BASENAME_PREFIX } from '@wartezimmer/server-shared';
 import type { SavePfbackupResult } from '../shared/host-status.js';
 
 function assertAllowedPfbackupPath(backupPath: string): string {

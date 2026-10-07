@@ -2,7 +2,7 @@ import {
   ManagerApiError,
   type ManagerErrorCategory,
   type SetupApiErrorResponse,
-} from '@praxis-flow/server-shared/setup-api';
+} from '@wartezimmer/server-shared/setup-api';
 
 const statusByCategory: Record<ManagerErrorCategory, number> = {
   validation: 400,

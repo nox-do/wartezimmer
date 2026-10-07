@@ -3,7 +3,7 @@
   import { DoorOpen, LogIn, MapPin, PhoneOutgoing, User, UserCheck, UserX } from '@lucide/svelte';
   import Button from '$lib/components/forms/Button.svelte';
   import type { RoomPanelSnapshot } from '$lib/queue/openapi-types';
-  import { formatTicketCode } from '@praxis-flow/domain';
+  import { formatTicketCode } from '@wartezimmer/domain';
   import { tf, t } from '$lib/i18n/i18nStore.svelte';
   import { formatRoomPanelDisplayText } from '$lib/room-panel/room-panel-text';
   import {

@@ -20,11 +20,11 @@ Feste `container_name` und Host-Ports: nur **eine** Lab- bzw. App-Instanz gleich
 ## Custom image
 
 ```sh
-docker build -t praxis-flow-proxy:2.11.4-acmedns -f proxy/Dockerfile .
-docker run --rm praxis-flow-proxy:2.11.4-acmedns caddy list-modules | grep acmedns
+docker build -t wartezimmer-proxy:2.11.4-acmedns -f proxy/Dockerfile .
+docker run --rm wartezimmer-proxy:2.11.4-acmedns caddy list-modules | grep acmedns
 ```
 
-`PRAXIS_FLOW_PROXY_IMAGE=praxis-flow-proxy:2.11.4-acmedns` — the HTTP-only default
+`WARTEZIMMER_PROXY_IMAGE=wartezimmer-proxy:2.11.4-acmedns` — the HTTP-only default
 remains `caddy:2.11.4`.
 
 ## Dynamic LAN IP
@@ -53,7 +53,7 @@ Runtime zone files live under `.tmp/` and are deleted after the smoke. The track
 | `TLS_PEBBLE_ROOT_CA_PATH`                                | PEM for Setup local checks **only** when directory is `pebble`                             |
 | `TLS_OPERATOR_ZONE=lan.tls.lab`                          | Managed hostname `labhost.lan.tls.lab`                                                     |
 | `TLS_LAB_LAN_IP`                                         | Smoke-only LAN-IP override                                                                 |
-| `PRAXIS_FLOW_PROXY_IMAGE`                                | Custom Caddy tag                                                                           |
+| `WARTEZIMMER_PROXY_IMAGE`                                | Custom Caddy tag                                                                           |
 | `TLS_RUNTIME_FAKE`                                       | Must stay unset for this smoke                                                             |
 
 Credentials never go into `.env`. Unset `TLS_ACME_DNS_CREDENTIALS_SERVER_URL` keeps
@@ -90,7 +90,7 @@ npm run smoke:tls-managed
 ```
 
 Isolated runtime under `.tmp/tls-managed/`, Setup API on `127.0.0.1:19192`,
-compose project `praxis-flow-tls-managed`. Does **not** call `apply`. Optional:
+compose project `wartezimmer-tls-managed`. Does **not** call `apply`. Optional:
 `npm run smoke:tls-managed -- --keep` retains the containers and runtime files but
 stops the Setup process; `--cleanup` removes the retained stack and runtime.
 
@@ -109,7 +109,7 @@ npm run smoke:tls-cutover
 ```
 
 Isolated runtime under `.tmp/tls-cutover/`, Setup API on `127.0.0.1:19193`,
-compose project `praxis-flow-tls-cutover`. Same Pebble lab and fixed container
+compose project `wartezimmer-tls-cutover`. Same Pebble lab and fixed container
 names as B — do not run A/B/C together. Does **not** call Manager, Release, or
 Backup. Optional `--keep` / `--cleanup` like B.
 
@@ -162,7 +162,7 @@ already occupies the lab container names.
 | Certificate checks fail / unknown CA | Fetch current `/roots/0` after Pebble start into `TLS_PEBBLE_ROOT_CA_PATH`. Minica is not the issuing CA.                                                |
 | Pebble was restarted                 | Issuing CA is new. Re-fetch `/roots/0` into `TLS_PEBBLE_ROOT_CA_PATH` and obtain the certificate again. Product compose restart does not restart Pebble. |
 | Port 443 busy                        | Another proxy/Caddy; stop it. Local checks use `127.0.0.1:443` with SNI `labhost.lan.tls.lab`.                                                           |
-| `dns.providers.acmedns` missing      | Rebuild `praxis-flow-proxy:2.11.4-acmedns`.                                                                                                              |
+| `dns.providers.acmedns` missing      | Rebuild `wartezimmer-proxy:2.11.4-acmedns`.                                                                                                              |
 | Docker missing                       | The smoke **fails** (no silent skip). CI may omit the job only via an explicit gate.                                                                     |
 
 ## Pins

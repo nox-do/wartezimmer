@@ -1,6 +1,6 @@
-import type { PracticeProfile } from '@praxis-flow/domain';
+import type { PracticeProfile } from '@wartezimmer/domain';
 
-export type { PracticeProfile } from '@praxis-flow/domain';
+export type { PracticeProfile } from '@wartezimmer/domain';
 
 export const EMPTY_PRACTICE_PROFILE: PracticeProfile = {
   displayName: '',

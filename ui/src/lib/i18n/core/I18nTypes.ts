@@ -2,9 +2,9 @@ import {
   TERMINAL_PATIENT_LOCALES,
   isTerminalPatientLocale,
   type TerminalPatientLocale,
-} from '@praxis-flow/domain';
+} from '@wartezimmer/domain';
 
-/** UI locale — same codes as `TerminalPatientLocale` (canonical list in `@praxis-flow/domain`). */
+/** UI locale — same codes as `TerminalPatientLocale` (canonical list in `@wartezimmer/domain`). */
 export type AppLocale = TerminalPatientLocale;
 
 export type TerminalLocale = TerminalPatientLocale;

@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { ManagerApiError, type HostOperationStatus } from '@praxis-flow/server-shared/setup-api';
+import { ManagerApiError, type HostOperationStatus } from '@wartezimmer/server-shared/setup-api';
 import { syncParents } from './maintenance-files.js';
 import { durableWrite } from './restricted-operation.js';
 

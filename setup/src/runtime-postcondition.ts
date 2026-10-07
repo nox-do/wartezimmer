@@ -1,4 +1,4 @@
-import type { ComposeStatus, PortalProxyContract } from '@praxis-flow/server-shared';
+import type { ComposeStatus, PortalProxyContract } from '@wartezimmer/server-shared';
 import { readTlsStatus } from './host-tls.js';
 import { auditStaffPublishedBindings } from './network-bindings.js';
 import { auditRestrictedListeners } from './restricted-listener-probe.js';

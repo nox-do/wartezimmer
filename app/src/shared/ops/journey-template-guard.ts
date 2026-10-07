@@ -1,5 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
-import { TERMINAL_VISIT_STATUSES } from '@praxis-flow/flow-core';
+import { TERMINAL_VISIT_STATUSES } from '@wartezimmer/flow-core';
 import type { JourneySettings } from '../journey-settings.js';
 
 export function countOpenVisitsForJourneyTemplate(db: DatabaseSync, templateId: string): number {

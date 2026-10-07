@@ -1,5 +1,5 @@
 export function defaultUserFolderLabel(kind: 'imports' | 'exports'): string {
-  return kind === 'imports' ? '~/praxis-flow-imports' : '~/praxis-flow-exports';
+  return kind === 'imports' ? '~/wartezimmer-imports' : '~/wartezimmer-exports';
 }
 
 export function resolveUserFolderLabel(

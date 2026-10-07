@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
-import { runInTransaction } from '@praxis-flow/flow-core/server';
+import { runInTransaction } from '@wartezimmer/flow-core/server';
 
 test('runInTransaction nutzt innerhalb einer Host-Transaktion einen Savepoint', () => {
   const db = new DatabaseSync(':memory:');

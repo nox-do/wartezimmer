@@ -1,4 +1,4 @@
-import { MFA_ASSIST_LANE_CODE, MFA_ASSIST_TOPIC_ID } from '@praxis-flow/domain';
+import { MFA_ASSIST_LANE_CODE, MFA_ASSIST_TOPIC_ID } from '@wartezimmer/domain';
 import { t } from '$lib/i18n/i18nStore.svelte';
 import { defaultAccentForLane, normalizeTopicAccentColor } from '$lib/topics/topic-accent';
 import type { PracticeTopicSetting } from './ops-settings-api';

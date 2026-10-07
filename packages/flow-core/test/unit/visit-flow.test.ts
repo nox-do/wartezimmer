@@ -8,8 +8,8 @@ import {
   ACTIVE_VISIT_STATUSES,
   OPEN_VISIT_STATUSES,
   TERMINAL_VISIT_STATUSES,
-} from '@praxis-flow/flow-core';
-import type { Catalog, RoutingRule, Visit } from '@praxis-flow/flow-core';
+} from '@wartezimmer/flow-core';
+import type { Catalog, RoutingRule, Visit } from '@wartezimmer/flow-core';
 
 test('Visit-Status-Sets: disjunkt und kanonisch', () => {
   for (const status of ACTIVE_VISIT_STATUSES) {

@@ -9,8 +9,8 @@ function fixture(t: { after: (fn: () => void) => void }) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-manager-profile-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   return {
-    profileHome: path.join(root, 'PraxisFlow'),
-    installHome: path.join(root, 'PraxisFlow'),
+    profileHome: path.join(root, 'Wartezimmer'),
+    installHome: path.join(root, 'Wartezimmer'),
     isPackaged: true,
   };
 }

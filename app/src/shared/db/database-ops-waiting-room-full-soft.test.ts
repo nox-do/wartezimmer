@@ -8,7 +8,7 @@ import { CoreDatabase } from './database.js';
 
 test('updateOpsSettings leaves waiting_room_full untouched and omits it from settings', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pf-waiting-room-'));
-  const dbPath = join(dir, 'praxis-flow.db');
+  const dbPath = join(dir, 'wartezimmer.db');
   const previousNodeEnv = process.env.NODE_ENV;
   const previousContactLookupBase = process.env.CONTACT_LOOKUP_BASE_PATH;
   process.env.NODE_ENV = 'test';

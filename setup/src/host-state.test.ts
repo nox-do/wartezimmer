@@ -19,7 +19,7 @@ import {
 } from './host-state.js';
 import { writeManagerReleaseState } from './manager-state.js';
 import { SetupApiValidationError } from './setup-api-normalize.js';
-import { ManagerApiError } from '@praxis-flow/server-shared/setup-api';
+import { ManagerApiError } from '@wartezimmer/server-shared/setup-api';
 import {
   createPreparedInstallOperation,
   markInstallOperationInstalling,
@@ -118,7 +118,7 @@ test('replace commit requires explicit confirmation before Docker or host mutati
 test('confirmed installing operation may complete the first setup env', async () => {
   await withRoot(async (root) => {
     writeExample(root);
-    writeEnv(root, { PRAXIS_FLOW_APP_IMAGE: 'praxis-flow/app:1.2.3' });
+    writeEnv(root, { WARTEZIMMER_APP_IMAGE: 'wartezimmer/app:1.2.3' });
     const operation = createPreparedInstallOperation({
       home: root,
       mode: 'fresh',
@@ -303,22 +303,22 @@ test('buildSetupPlan keeps custom hostname in preview when LAN IP changes', () =
     },
     new Map([
       ['SETUP_LAN_APP_IP', '192.168.1.10'],
-      ['CANONICAL_BASE_URL', 'http://praxis-flow.local:8080'],
+      ['CANONICAL_BASE_URL', 'http://wartezimmer.local:8080'],
     ]),
   );
-  assert.equal(plan.deviceUrls.appBaseUrl, 'http://praxis-flow.local:8080');
+  assert.equal(plan.deviceUrls.appBaseUrl, 'http://wartezimmer.local:8080');
 });
 
 test('applySetupPlan materializes imported release images from manager state into env', async () => {
   await withRoot(async (root) => {
     writeExample(
       root,
-      '# PRAXIS_FLOW_APP_IMAGE=ghcr.io/example/app:v1\n# PRAXIS_FLOW_SANDBOX_IMAGE=ghcr.io/example/sandbox:v1',
+      '# WARTEZIMMER_APP_IMAGE=ghcr.io/example/app:v1\n# WARTEZIMMER_SANDBOX_IMAGE=ghcr.io/example/sandbox:v1',
     );
     writeManagerReleaseState(root, {
       releaseVersion: '1.4.2',
-      appImage: 'praxis-flow/app:1.4.2',
-      sandboxImage: 'praxis-flow/sandbox:1.4.2',
+      appImage: 'wartezimmer/app:1.4.2',
+      sandboxImage: 'wartezimmer/sandbox:1.4.2',
       archiveSha256: 'e'.repeat(64),
     });
 
@@ -335,8 +335,8 @@ test('applySetupPlan materializes imported release images from manager state int
     );
 
     const map = env(root);
-    assert.equal(map.get('PRAXIS_FLOW_APP_IMAGE'), 'praxis-flow/app:1.4.2');
-    assert.equal(map.get('PRAXIS_FLOW_SANDBOX_IMAGE'), 'praxis-flow/sandbox:1.4.2');
+    assert.equal(map.get('WARTEZIMMER_APP_IMAGE'), 'wartezimmer/app:1.4.2');
+    assert.equal(map.get('WARTEZIMMER_SANDBOX_IMAGE'), 'wartezimmer/sandbox:1.4.2');
     assert.equal(map.get('CANONICAL_BASE_URL'), 'http://192.168.1.10:8080');
   });
 });
@@ -571,7 +571,7 @@ test('saveHostNetwork keeps custom CANONICAL_BASE_URL hostname when LAN IP chang
     writeEnv(root, {
       PRACTICE_DISPLAY_NAME: 'Praxis Nord',
       SETUP_LAN_APP_IP: '192.168.1.10',
-      CANONICAL_BASE_URL: 'http://praxis-flow.local:8080',
+      CANONICAL_BASE_URL: 'http://wartezimmer.local:8080',
     });
 
     const result = await saveHostNetwork(ctx(root), {
@@ -579,8 +579,8 @@ test('saveHostNetwork keeps custom CANONICAL_BASE_URL hostname when LAN IP chang
       gateway: gwOff('192.168.1.20'),
     });
 
-    assert.equal(env(root).get('CANONICAL_BASE_URL'), 'http://praxis-flow.local:8080');
-    assert.equal(result.deviceUrls.appBaseUrl, 'http://praxis-flow.local:8080');
+    assert.equal(env(root).get('CANONICAL_BASE_URL'), 'http://wartezimmer.local:8080');
+    assert.equal(result.deviceUrls.appBaseUrl, 'http://wartezimmer.local:8080');
   });
 });
 
@@ -589,7 +589,7 @@ test('saveHostNetwork preserves a persisted HTTP hostname without an override', 
     writeEnv(root, {
       PRACTICE_DISPLAY_NAME: 'Praxis Nord',
       SETUP_LAN_APP_IP: '192.168.1.10',
-      CANONICAL_BASE_URL: 'http://praxis-flow.local:8080',
+      CANONICAL_BASE_URL: 'http://wartezimmer.local:8080',
     });
 
     const result = await saveHostNetwork(ctx(root), {
@@ -597,8 +597,8 @@ test('saveHostNetwork preserves a persisted HTTP hostname without an override', 
       gateway: gwOff('192.168.1.10'),
     });
 
-    assert.equal(env(root).get('CANONICAL_BASE_URL'), 'http://praxis-flow.local:8080');
-    assert.equal(result.deviceUrls.appBaseUrl, 'http://praxis-flow.local:8080');
+    assert.equal(env(root).get('CANONICAL_BASE_URL'), 'http://wartezimmer.local:8080');
+    assert.equal(result.deviceUrls.appBaseUrl, 'http://wartezimmer.local:8080');
   });
 });
 
@@ -783,7 +783,7 @@ test('saveHostNetwork restores :8080 on custom hostname when disabling proxy', a
     writeEnv(root, {
       PRACTICE_DISPLAY_NAME: 'Praxis Nord',
       SETUP_LAN_APP_IP: '192.168.1.50',
-      CANONICAL_BASE_URL: 'http://praxis-flow.local',
+      CANONICAL_BASE_URL: 'http://wartezimmer.local',
       ...proxyOn,
     });
 
@@ -793,7 +793,7 @@ test('saveHostNetwork restores :8080 on custom hostname when disabling proxy', a
       gateway: gwOff('192.168.1.50'),
     });
 
-    assert.equal(env(root).get('CANONICAL_BASE_URL'), 'http://praxis-flow.local:8080');
+    assert.equal(env(root).get('CANONICAL_BASE_URL'), 'http://wartezimmer.local:8080');
   });
 });
 
@@ -808,7 +808,7 @@ test('applySetupPlan without proxy wire preserves PROXY companion keys', async (
       SETUP_LAN_APP_IP: '192.168.1.10',
       CANONICAL_BASE_URL: 'http://192.168.1.10',
       ...proxyOn,
-      PRAXIS_FLOW_PROXY_IMAGE: 'caddy:2.11.4',
+      WARTEZIMMER_PROXY_IMAGE: 'caddy:2.11.4',
     });
 
     await applySetupPlan(ctx(root), {
@@ -823,7 +823,7 @@ test('applySetupPlan without proxy wire preserves PROXY companion keys', async (
     const map = env(root);
     assert.equal(map.get('PROXY_ENABLED'), 'true');
     assert.equal(map.get('APP_BIND_ADDRESS'), '127.0.0.1');
-    assert.equal(map.get('PRAXIS_FLOW_PROXY_IMAGE'), 'caddy:2.11.4');
+    assert.equal(map.get('WARTEZIMMER_PROXY_IMAGE'), 'caddy:2.11.4');
     assert.equal(map.get('CANONICAL_BASE_URL'), 'http://192.168.1.20');
   });
 });
@@ -928,7 +928,7 @@ test('applySetupPlan with proxy wire can flip PROXY_ENABLED despite template pre
       PROXY_ENABLED: 'false',
       PROXY_MODE: 'off',
       APP_BIND_ADDRESS: '0.0.0.0',
-      PRAXIS_FLOW_PROXY_IMAGE: 'caddy:2.11.4',
+      WARTEZIMMER_PROXY_IMAGE: 'caddy:2.11.4',
     });
 
     await applySetupPlan(
@@ -949,7 +949,7 @@ test('applySetupPlan with proxy wire can flip PROXY_ENABLED despite template pre
     assert.equal(map.get('PROXY_ENABLED'), 'true');
     assert.equal(map.get('PROXY_MODE'), 'http');
     assert.equal(map.get('APP_BIND_ADDRESS'), '127.0.0.1');
-    assert.equal(map.get('PRAXIS_FLOW_PROXY_IMAGE'), 'caddy:2.11.4');
+    assert.equal(map.get('WARTEZIMMER_PROXY_IMAGE'), 'caddy:2.11.4');
     assert.equal(map.get('CANONICAL_BASE_URL'), 'http://192.168.1.10');
   });
 });
@@ -1609,8 +1609,8 @@ for (const delivery of [false, true]) {
       writeEnv(root, {
         ...proxyOn,
         SETUP_LAN_APP_IP: '192.168.1.10',
-        PRAXIS_FLOW_APP_IMAGE: 'praxis-flow/app:0.4.0',
-        PRAXIS_FLOW_SANDBOX_IMAGE: 'praxis-flow/sandbox:0.4.0',
+        WARTEZIMMER_APP_IMAGE: 'wartezimmer/app:0.4.0',
+        WARTEZIMMER_SANDBOX_IMAGE: 'wartezimmer/sandbox:0.4.0',
       });
       const profiles: (boolean | undefined)[] = [];
       await saveHostNetwork(
@@ -1724,14 +1724,14 @@ for (const action of ['start', 'restart'] as const) {
       await withRoot(async (root) => {
         writeEnv(root, {
           SETUP_LAN_APP_IP: '192.168.1.10',
-          PRAXIS_FLOW_APP_IMAGE: 'praxis-flow/app:1.2.3',
+          WARTEZIMMER_APP_IMAGE: 'wartezimmer/app:1.2.3',
         });
         let checked = false;
         const result = await runComposeAction(ctx(root), action, undefined, {
           composePs: async () => ({ running: false, services: [] }),
           inspectExistingAppDatabase: async (project, image) => {
             assert.equal(project, 'pf-test');
-            assert.equal(image, 'praxis-flow/app:1.2.3');
+            assert.equal(image, 'wartezimmer/app:1.2.3');
             checked = true;
             return {
               ok: false,
@@ -1750,7 +1750,7 @@ for (const action of ['start', 'restart'] as const) {
     await withRoot(async (root) => {
       writeEnv(root, {
         SETUP_LAN_APP_IP: '192.168.1.10',
-        PRAXIS_FLOW_APP_IMAGE: 'praxis-flow/app:1.2.3',
+        WARTEZIMMER_APP_IMAGE: 'wartezimmer/app:1.2.3',
       });
       const calls: string[] = [];
       const result = await runComposeAction(ctx(root), action, undefined, {
@@ -1774,13 +1774,13 @@ for (const action of ['start', 'restart'] as const) {
 test('readComposeForHost preserves a safe structured Compose error', async (t) => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-observation-'));
   const cli = path.join(home, 'docker');
-  const previous = process.env.PRAXIS_FLOW_DOCKER_CLI;
+  const previous = process.env.WARTEZIMMER_DOCKER_CLI;
   t.after(() => {
-    if (previous === undefined) delete process.env.PRAXIS_FLOW_DOCKER_CLI;
-    else process.env.PRAXIS_FLOW_DOCKER_CLI = previous;
+    if (previous === undefined) delete process.env.WARTEZIMMER_DOCKER_CLI;
+    else process.env.WARTEZIMMER_DOCKER_CLI = previous;
     fs.rmSync(home, { recursive: true, force: true });
   });
-  process.env.PRAXIS_FLOW_DOCKER_CLI = cli;
+  process.env.WARTEZIMMER_DOCKER_CLI = cli;
   fs.writeFileSync(path.join(home, '.env'), 'SETUP_LAN_APP_IP=192.168.1.10\n');
   fs.writeFileSync(
     cli,

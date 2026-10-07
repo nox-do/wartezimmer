@@ -10,9 +10,9 @@ import {
   type PortalSurfaceRoute,
   type TlsMode,
   type TlsStatus,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 
-export const GENERATED_CADDYFILE_MARKER = '# PRAXIS-FLOW-GENERATED LAN-TLS v6';
+export const GENERATED_CADDYFILE_MARKER = '# WARTEZIMMER-GENERATED LAN-TLS v6';
 
 export const PROXY_TLS_HOST_PATH_ENV_KEYS = [
   'PROXY_HTTPS_PORT',
@@ -195,7 +195,7 @@ function portalRestrictedSite(
     ...portalApiCaddyMatcher(route, index),
     `\thandle @portalApi${index} {`,
     '\t\treverse_proxy app:8080 {',
-    '\t\t\theader_down -X-Praxis-Flow-Rejection',
+    '\t\t\theader_down -X-Wartezimmer-Rejection',
     '\t\t}',
     '\t}',
   ]);
@@ -225,17 +225,17 @@ function portalRestrictedSite(
     '\t\t}',
     '\t\thandle @portalUi {',
     '\t\t\treverse_proxy app:8080 {',
-    '\t\t\t\theader_down -X-Praxis-Flow-Rejection',
+    '\t\t\t\theader_down -X-Wartezimmer-Rejection',
     '\t\t\t}',
     '\t\t}',
     '\t\thandle @portalStatic {',
     '\t\t\treverse_proxy app:8080 {',
-    '\t\t\t\theader_down -X-Praxis-Flow-Rejection',
+    '\t\t\t\theader_down -X-Wartezimmer-Rejection',
     '\t\t\t}',
     '\t\t}',
     ...apiMatchers.map((line) => `\t${line}`),
     '\t\thandle {',
-    '\t\t\theader X-Praxis-Flow-Rejection portal-policy',
+    '\t\t\theader X-Wartezimmer-Rejection portal-policy',
     '\t\t\trespond 404',
     '\t\t}',
     '\t}',
@@ -279,14 +279,14 @@ export function generateTlsCaddyfile(
   ].join('\n');
   const siteAddress = managedWildcard ?? staffHostname;
   const applicationHandlers = [
-    '\t@setupTlsSse path /__praxis-flow/setup/tls-sse',
+    '\t@setupTlsSse path /__wartezimmer/setup/tls-sse',
     '\thandle @setupTlsSse {',
     '\t\theader Content-Type "text/event-stream; charset=utf-8"',
     '\t\trespond "event: tick\\ndata: ok\\n\\n" 200',
     '\t}',
     '\thandle {',
     '\t\treverse_proxy app:8080 {',
-    '\t\t\theader_down -X-Praxis-Flow-Rejection',
+    '\t\t\theader_down -X-Wartezimmer-Rejection',
     '\t\t}',
     '\t}',
   ];
@@ -319,7 +319,7 @@ export function generateTlsCaddyfile(
     '',
     'https://127.0.0.1 {',
     '\ttls internal',
-    '\trespond /__praxis-flow/health "ok" 200',
+    '\trespond /__wartezimmer/health "ok" 200',
     '}',
     '',
     `${siteAddress} {`,

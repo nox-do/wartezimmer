@@ -5,8 +5,8 @@ import {
   createRuntime,
   createCatalogRepository,
   createVisitRepository,
-} from '@praxis-flow/flow-core/server';
-import type { VisitPatch } from '@praxis-flow/flow-core';
+} from '@wartezimmer/flow-core/server';
+import type { VisitPatch } from '@wartezimmer/flow-core';
 
 function readVisitRow(db: ReturnType<typeof openDb>, id: string) {
   return db.prepare('SELECT * FROM visits WHERE id = ?').get(id) as Record<string, unknown>;

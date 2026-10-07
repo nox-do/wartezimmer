@@ -9,7 +9,7 @@ const passthrough = process.argv.slice(2);
 
 const result = spawnSync(
   'npm',
-  ['run', '-w', '@praxis-flow/setup', 'reset', '--', ...passthrough],
+  ['run', '-w', '@wartezimmer/setup', 'reset', '--', ...passthrough],
   {
     cwd: root,
     stdio: 'inherit',

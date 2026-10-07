@@ -22,8 +22,8 @@ test('install bootstrap creates missing templates without overwriting installed 
   const templateRoot = path.join(root, 'templates');
   fs.mkdirSync(installHome, { recursive: true });
   fs.mkdirSync(templateRoot, { recursive: true });
-  const previousProfile = process.env.PRAXIS_FLOW_COMPOSE_PROFILE;
-  process.env.PRAXIS_FLOW_COMPOSE_PROFILE = 'dev';
+  const previousProfile = process.env.WARTEZIMMER_COMPOSE_PROFILE;
+  process.env.WARTEZIMMER_COMPOSE_PROFILE = 'dev';
   try {
     for (const relativePath of [
       '.env.example',
@@ -51,8 +51,8 @@ test('install bootstrap creates missing templates without overwriting installed 
       'bundled:docker-compose.proxy-restricted.yml\n',
     );
   } finally {
-    if (previousProfile === undefined) delete process.env.PRAXIS_FLOW_COMPOSE_PROFILE;
-    else process.env.PRAXIS_FLOW_COMPOSE_PROFILE = previousProfile;
+    if (previousProfile === undefined) delete process.env.WARTEZIMMER_COMPOSE_PROFILE;
+    else process.env.WARTEZIMMER_COMPOSE_PROFILE = previousProfile;
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
@@ -129,10 +129,10 @@ test('resolving an install context does not rotate the running stack token', () 
   withInstall((home) => {
     const envPath = path.join(home, '.env');
     fs.writeFileSync(envPath, 'MAINTENANCE_TOKEN=change-me-maintenance-token\n');
-    const previousHome = process.env.PRAXIS_FLOW_HOME;
-    const previousTemplateRoot = process.env.PRAXIS_FLOW_TEMPLATE_ROOT;
-    process.env.PRAXIS_FLOW_HOME = home;
-    process.env.PRAXIS_FLOW_TEMPLATE_ROOT = path.resolve(
+    const previousHome = process.env.WARTEZIMMER_HOME;
+    const previousTemplateRoot = process.env.WARTEZIMMER_TEMPLATE_ROOT;
+    process.env.WARTEZIMMER_HOME = home;
+    process.env.WARTEZIMMER_TEMPLATE_ROOT = path.resolve(
       path.dirname(fileURLToPath(import.meta.url)),
       '../..',
     );
@@ -140,10 +140,10 @@ test('resolving an install context does not rotate the running stack token', () 
       assert.equal(resolveSetupContext().home, home);
       assert.equal(readEnvMap(envPath).get('MAINTENANCE_TOKEN'), 'change-me-maintenance-token');
     } finally {
-      if (previousHome === undefined) delete process.env.PRAXIS_FLOW_HOME;
-      else process.env.PRAXIS_FLOW_HOME = previousHome;
-      if (previousTemplateRoot === undefined) delete process.env.PRAXIS_FLOW_TEMPLATE_ROOT;
-      else process.env.PRAXIS_FLOW_TEMPLATE_ROOT = previousTemplateRoot;
+      if (previousHome === undefined) delete process.env.WARTEZIMMER_HOME;
+      else process.env.WARTEZIMMER_HOME = previousHome;
+      if (previousTemplateRoot === undefined) delete process.env.WARTEZIMMER_TEMPLATE_ROOT;
+      else process.env.WARTEZIMMER_TEMPLATE_ROOT = previousTemplateRoot;
     }
   });
 });

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import {
   DEFAULT_PORTAL_PROXY_CONTRACT,
   type PortalProxyContract,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 
 export type RestrictedHttpsProbeResult = {
   status: number | null;
@@ -68,7 +68,7 @@ export function requestRestrictedHttps(
           resolve({
             status: response.statusCode ?? null,
             error: null,
-            rejection: String(response.headers['x-praxis-flow-rejection'] ?? ''),
+            rejection: String(response.headers['x-wartezimmer-rejection'] ?? ''),
           }),
         );
       },

@@ -7,8 +7,8 @@ import {
   maxEscortPolicy,
   movementTerminalInstruction,
   resolveTerminalInstruction,
-} from '@praxis-flow/flow-core';
-import { resolveCheckInRouting } from '@praxis-flow/flow-core/server';
+} from '@wartezimmer/flow-core';
+import { resolveCheckInRouting } from '@wartezimmer/flow-core/server';
 
 test('applyEscortPolicyToMovementMode: required verhindert self_go', () => {
   assert.equal(applyEscortPolicyToMovementMode('required', 'self_go'), 'pickup');

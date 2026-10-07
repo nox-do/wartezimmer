@@ -10,7 +10,7 @@ import {
   validateTopicDraft,
   type JourneyTemplateDraft,
   type RoutingRuleDraft,
-} from '@praxis-flow/flow-core';
+} from '@wartezimmer/flow-core';
 import type { CatalogRepository } from './catalog-repository.js';
 import { runInTransaction } from './unit-of-work.js';
 

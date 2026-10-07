@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { projectManagerStatus } from '@praxis-flow/server-shared/manager-status-projection';
+import { projectManagerStatus } from '@wartezimmer/server-shared/manager-status-projection';
 import { managerStatusViewModel } from './manager-status-view-model.js';
 import { knownLifecycle, minimalHostStatus } from './test-fixtures/minimal-host-status.js';
 import type { RuntimeObservation } from './runtime-observation.js';

@@ -2,7 +2,7 @@ import {
   FRESHCLAM_LOG_PATH,
   resolveMaxSignatureAgeHours as resolveMaxSignatureAgeHoursFromRaw,
   type SandboxScannerStatus,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import { runDockerCommand } from './docker-cli.js';
 
 const FRESHCLAM_STATE_PATH = '/var/lib/clamav/freshclam-last-attempt.json';

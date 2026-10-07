@@ -3,7 +3,7 @@ import { resolveTicketLaneCodeFromSettings } from '../checkin-topic-settings.js'
 import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
-import { createModuleLogger } from '@praxis-flow/server-shared/logger';
+import { createModuleLogger } from '@wartezimmer/server-shared/logger';
 import {
   assertSupportedSchemaGeneration,
   createCurrentSchema,
@@ -1734,7 +1734,7 @@ let coreDbInstance: CoreDatabase | null = null;
 
 export function getCoreDatabase(): CoreDatabase {
   if (!coreDbInstance) {
-    const dbPath = process.env.DB_PATH ?? '/var/lib/praxis-flow/app/praxis-flow.db';
+    const dbPath = process.env.DB_PATH ?? '/var/lib/wartezimmer/app/wartezimmer.db';
     coreDbInstance = new CoreDatabase(dbPath);
   }
   return coreDbInstance;

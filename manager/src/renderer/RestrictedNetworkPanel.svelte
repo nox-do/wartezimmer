@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { HostLifecycle } from '@praxis-flow/server-shared/setup-api';
-  import { evaluateHostLifecycleAction } from '@praxis-flow/server-shared/host-lifecycle-policy';
+  import type { HostLifecycle } from '@wartezimmer/server-shared/setup-api';
+  import { evaluateHostLifecycleAction } from '@wartezimmer/server-shared/host-lifecycle-policy';
   import type { HostStatus, RestrictedNetworkInspectResult } from '../shared/host-status.js';
   import ConfirmDialog from './ConfirmDialog.svelte';
   import {

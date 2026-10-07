@@ -11,7 +11,7 @@ function openCoreDatabase(): { core: CoreDatabase; cleanup: () => void } {
   const previousContactLookupBase = process.env.CONTACT_LOOKUP_BASE_PATH;
   process.env.NODE_ENV = 'test';
   process.env.CONTACT_LOOKUP_BASE_PATH = join(dir, 'imports');
-  const core = new CoreDatabase(join(dir, 'praxis-flow.db'));
+  const core = new CoreDatabase(join(dir, 'wartezimmer.db'));
   return {
     core,
     cleanup: () => {

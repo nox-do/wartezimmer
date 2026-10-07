@@ -1,4 +1,4 @@
-import type { RoomPanelPlacement } from '@praxis-flow/domain';
+import type { RoomPanelPlacement } from '@wartezimmer/domain';
 import { buildApiUrl } from '$lib/api/build-api-url';
 
 export type RoomPanelRequestedSession = {

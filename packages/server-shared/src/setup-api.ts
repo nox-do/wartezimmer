@@ -83,11 +83,11 @@ export const SETUP_API_PROTOCOL_VERSION = 2;
 
 export const SETUP_API_HEALTH_PATH = '/api/setup/health';
 export const SETUP_MANAGER_TOKEN_HEADER = 'x-praxis-setup-token';
-export const SETUP_MANAGER_TOKEN_ENV = 'PRAXIS_FLOW_SETUP_TOKEN';
-export const SETUP_BUILD_ID_ENV = 'PRAXIS_FLOW_SETUP_BUILD_ID';
+export const SETUP_MANAGER_TOKEN_ENV = 'WARTEZIMMER_SETUP_TOKEN';
+export const SETUP_BUILD_ID_ENV = 'WARTEZIMMER_SETUP_BUILD_ID';
 /** Explicit Manager attach to an already running Setup-API (never implied). */
-export const SETUP_ATTACH_EXISTING_ENV = 'PRAXIS_FLOW_SETUP_ATTACH';
-export const SETUP_READY_LOG_PREFIX = 'PRAXIS_FLOW_SETUP_READY ';
+export const SETUP_ATTACH_EXISTING_ENV = 'WARTEZIMMER_SETUP_ATTACH';
+export const SETUP_READY_LOG_PREFIX = 'WARTEZIMMER_SETUP_READY ';
 
 export type SetupHealthIdentity = {
   ok: true;
@@ -116,7 +116,7 @@ export const SETUP_RESTRICTED_NETWORK_ROUTES = {
   remove: '/api/setup/host/restricted-network/remove',
 } as const;
 
-/** PoC operator zone (product later: lan.praxis-flow.de). */
+/** PoC operator zone (product later: lan.wartezimmer.de). */
 export const TLS_OPERATOR_ZONE_DEFAULT = 'lan.notaus.de';
 export const TLS_OPERATOR_MAIL = 'cert@notaus.de';
 

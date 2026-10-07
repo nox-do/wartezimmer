@@ -24,10 +24,10 @@ for (const fileName of ['docker-compose.proxy.yml', 'docker-compose.proxy.delive
     );
     assert.match(compose, /PROXY_MODE: \$\{PROXY_MODE:-http\}/);
     assert.match(compose, /http:\/\/127\.0\.0\.1:80\//);
-    assert.match(compose, /https:\/\/127\.0\.0\.1:443\/__praxis-flow\/health/);
+    assert.match(compose, /https:\/\/127\.0\.0\.1:443\/__wartezimmer\/health/);
     assert.match(
       compose,
-      /wget -qO- --no-check-certificate "https:\/\/127\.0\.0\.1:443\/__praxis-flow\/health" >\/dev\/null 2>&1 \|\| wget -qO- "http:\/\/127\.0\.0\.1:80\/"/,
+      /wget -qO- --no-check-certificate "https:\/\/127\.0\.0\.1:443\/__wartezimmer\/health" >\/dev\/null 2>&1 \|\| wget -qO- "http:\/\/127\.0\.0\.1:80\/"/,
     );
     assert.doesNotMatch(compose, /127\.0\.0\.1:\$\{PROXY_(?:HTTP|HTTPS)_PORT/);
     assert.match(

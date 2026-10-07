@@ -25,13 +25,13 @@
     isReservedRoomLabel,
     WAITING_ROOM_LOCATION_ID,
     updateRoomPanelPlacementConfig,
-  } from '@praxis-flow/domain';
+  } from '@wartezimmer/domain';
   import { roomPanelPresetOptionLabel } from '$lib/room-panel/room-panel-text';
   import { getDevicePresenceStatus } from '$lib/mfa/ops-stream-store.svelte';
   import { roomPanelDeviceId, type DevicePresenceStatus } from '$lib/ops/device-presence-api';
   import { normalizeMaxOccupancy } from '$lib/queue/room-capacity';
   import type { RoomQueueGuardContext } from '$lib/queue/room-removal-guard';
-  import { normalizeRoomPanelCustomText } from '@praxis-flow/domain';
+  import { normalizeRoomPanelCustomText } from '@wartezimmer/domain';
   import { t, tf } from '$lib/i18n/i18nStore.svelte';
 
   interface Props {

@@ -27,9 +27,9 @@ function createMockApi(overrides: Partial<WartezimmerManagerApi> = {}): Wartezim
         supportedSettingsFormatVersions: [1],
         targetSchemaVersion: 1,
         images: {
-          app: 'praxis-flow/app:2026.08.0',
-          sandbox: 'praxis-flow/sandbox:2026.08.0',
-          gateway: 'praxis-flow/gateway:2026.08.0',
+          app: 'wartezimmer/app:2026.08.0',
+          sandbox: 'wartezimmer/sandbox:2026.08.0',
+          gateway: 'wartezimmer/gateway:2026.08.0',
         },
       },
       compatibility: {
@@ -114,9 +114,9 @@ test('pfupdate summary shows versions and identifies local builds', () => {
       supportedSettingsFormatVersions: [1],
       targetSchemaVersion: 1,
       images: {
-        app: 'praxis-flow/app:2026.08.0',
-        sandbox: 'praxis-flow/sandbox:2026.08.0',
-        gateway: 'praxis-flow/gateway:2026.08.0',
+        app: 'wartezimmer/app:2026.08.0',
+        sandbox: 'wartezimmer/sandbox:2026.08.0',
+        gateway: 'wartezimmer/gateway:2026.08.0',
       },
     },
     compatibility: {
@@ -203,9 +203,9 @@ test('confirmApply ignores duplicate calls while busy or outside preview', async
           supportedSettingsFormatVersions: [1],
           targetSchemaVersion: 1,
           images: {
-            app: 'praxis-flow/app:2026.08.0',
-            sandbox: 'praxis-flow/sandbox:2026.08.0',
-            gateway: 'praxis-flow/gateway:2026.08.0',
+            app: 'wartezimmer/app:2026.08.0',
+            sandbox: 'wartezimmer/sandbox:2026.08.0',
+            gateway: 'wartezimmer/gateway:2026.08.0',
           },
         },
         compatibility: {

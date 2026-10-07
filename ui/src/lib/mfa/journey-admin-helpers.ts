@@ -6,7 +6,7 @@ import type {
   PracticeRoom,
 } from '$lib/ops/openapi-types';
 import { randomId } from '$lib/utils/random-id';
-import { WAITING_ROOM_LABEL, WAITING_ROOM_LOCATION_ID } from '@praxis-flow/domain';
+import { WAITING_ROOM_LABEL, WAITING_ROOM_LOCATION_ID } from '@wartezimmer/domain';
 
 /**
  * Journey admin helpers — defaults, normalize, and UX validation for Ops Settings.

@@ -5,12 +5,12 @@ import type {
   MovementMode,
   RoutingRule,
   VisitStatus,
-} from '@praxis-flow/flow-core';
+} from '@wartezimmer/flow-core';
 import {
   applyEscortPolicyToMovementMode,
   resolveTerminalInstruction,
   statusForMovementMode,
-} from '@praxis-flow/flow-core';
+} from '@wartezimmer/flow-core';
 
 export function resolveCheckInRouting(params: {
   selectedRule: RoutingRule;

@@ -7,7 +7,7 @@ import {
   tlsSidecarMatches,
   type PfbackupTlsInspectSummary,
   type TlsState,
-} from '@praxis-flow/server-shared';
+} from '@wartezimmer/server-shared';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -87,7 +87,7 @@ function validateSidecarTarEntries(entries: TarArchiveEntry[]): void {
 function writeTempSidecarArchive(bytes: Buffer): string {
   const tempPath = path.join(
     os.tmpdir(),
-    `praxis-flow-tls-sidecar-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}.tgz`,
+    `wartezimmer-tls-sidecar-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}.tgz`,
   );
   fs.writeFileSync(tempPath, bytes, { flag: 'wx', mode: 0o600 });
   return tempPath;

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-export { formatTicketCode } from '@praxis-flow/domain';
+export { formatTicketCode } from '@wartezimmer/domain';
 
 export function assert(condition, message) {
   if (!condition) {

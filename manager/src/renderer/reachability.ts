@@ -1,7 +1,7 @@
 import {
   deriveHttpDeviceAddress,
   persistedHttpHostname,
-} from '@praxis-flow/server-shared/device-address';
+} from '@wartezimmer/server-shared/device-address';
 import type { HostStatus } from '../shared/host-status.js';
 import type { LanIpFieldState } from './host-network-panels.js';
 import { resolvedLanIp } from './wizard-state.js';

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
-import { TERMINAL_DEVICE_ID, WAITING_ROOM_DEVICE_ID } from '@praxis-flow/domain';
+import { TERMINAL_DEVICE_ID, WAITING_ROOM_DEVICE_ID } from '@wartezimmer/domain';
 import { createCurrentSchema } from './create-current-schema.js';
 import { clearFlowCoreVisitRuntime } from '../flow-core/flow-core-schema.js';
 import { executeResetKernel } from './database-reset-kernel.js';
