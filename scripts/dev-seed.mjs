@@ -7,11 +7,11 @@ const repoRoot = fileURLToPath(new URL('../', import.meta.url));
 const args = process.argv.slice(2);
 if (args.includes('--help')) {
   console.log(
-    'npm run dev:seed -- [--patients 30] [--rooms 6]\nLokales Docker Compose: Demo-Belegung auffüllen. App wird kurz pausiert.',
+    'npm run dev:seed -- [--patients 19] [--rooms 5]\nLokales Docker Compose: Praxis-Belegung auf die Gesamtzahl aktiver Patienten auffüllen. App wird kurz pausiert.',
   );
 } else {
   try {
-    const options = { patients: 30, rooms: 6 };
+    const options = { patients: 19, rooms: 5 };
     for (let i = 0; i < args.length; i += 2) {
       const key = args[i].replace(/^--/, '');
       const max = key === 'patients' ? 200 : 20;

@@ -170,6 +170,62 @@ Details: [`../flows.md`](../flows.md) § Portal-Session-Lebensdauer.
 - Thema deaktiviert / außerhalb Zeitfenster → `409 TOPIC_DISABLED` / `TOPIC_CLOSED`
 - Nummernkreis: `laneCode` — [`domain.md`](domain.md)
 
+### Bekanntes Verhalten: Mehrfach-Check-in zum selben Thema
+
+Stand 2026-10-07: Ein Patient kann am Terminal oder im MFA-Desktop erneut für
+dasselbe Thema eingecheckt werden, obwohl bereits ein offener Visit besteht.
+Jeder erfolgreiche Check-in erzeugt einen weiteren Visit mit eigener Wartenummer.
+Die UI sperrt weitere Klicks während einer laufenden Anfrage, prüft aber keine
+bereits vorhandenen Anmeldungen. Ein serverseitiger Dublettenschutz fehlt.
+
+**Einstufung:** bekanntes Verhalten, kein Showstopper und kein Release-Gate.
+Eine Umsetzung ist für später vorgemerkt; die folgende Empfehlung beschreibt
+keinen bereits vorhandenen Schutz und keine verbindliche Implementierungszusage.
+Mehrere Anmeldungen für unterschiedliche Themen sollen weiterhin möglich sein.
+
+**Bestehende Guards und gemeinsamer Schreibpfad:**
+
+- `app/src/routes/checkin-routes.ts`: `POST /api/v1/checkins` für Terminal und MFA;
+  Prüfung von Anmeldeverfahren und Eingaben sowie Kontaktabgleich.
+- `app/src/shared/db/database-checkin-sessions.ts`: `assertCheckInAllowed()` für
+  Check-in-Sperre, Tageszustand, Praxiszeiten und Themenverfügbarkeit.
+- `app/src/shared/flow-core/flow-core-checkin.ts`: `createVisitCheckInInDb()` als
+  gemeinsamer Host-Adapter, einschließlich Prüfung des Nummernlimits.
+- `packages/flow-core/src/server/visit-service.ts`: Prüfung von
+  Check-in-Kombination, Surface, Thema und Routing vor Erstellung des Visits.
+
+**Empfehlung für später:** Den Dublettenguard in `createVisitCheckInInDb()` vor
+`runtime.checkIn()` ergänzen. `CoreDatabase.createTicket()` hält bereits eine
+SQLite-Schreibtransaktion mit `BEGIN IMMEDIATE`; Prüfung und Erstellung müssen
+in dieser Transaktion bleiben, damit gleichzeitige Terminal-/MFA-Anfragen keine
+Dubletten erzeugen. Für dieselbe zuverlässig erkannte Patientenidentität und
+denselben `topicId` einen bestehenden offenen Visit suchen. Als offen gelten
+`waiting`, `directed`, `called`, `arrived`, `in_progress` und `blocked`;
+vorübergehende Abwesenheit hebt den Schutz nicht auf. Nach `done`, `cancelled`
+oder `no_show` soll ein neuer Check-in wieder möglich sein. Diese Abgrenzung
+ist Teil der Empfehlung, noch kein implementierter Vertrag.
+
+Bei einem Treffer am Terminal keine neue Nummer vergeben und auf die bestehende
+Wartenummer hinweisen. Im MFA-Desktop einen Hinweis wie „Patient ist für dieses
+Thema bereits eingecheckt, Wartenummer XY“ und Zugriff auf den bestehenden Visit
+vorsehen. Ein möglicher API-Konflikt ist `409 CHECKIN_ALREADY_EXISTS` mit
+Visit-ID und Wartenummer; dieser Fehlercode ist noch nicht implementiert.
+Den Guard auch beim Themenwechsel (`supersedeVisitTopic()`) berücksichtigen,
+damit ein zweiter Visit nicht nachträglich auf dasselbe Thema wechseln kann.
+
+**Voraussetzung und Grenzen:** Jeder Check-in erzeugt derzeit eine neue interne
+`patientId`. `identityRef` wird als Anzeigename gespeichert; der CSV-Abgleich
+liefert einen Namen, keine eindeutige Kontakt-ID. Der MFA-Check-in überträgt
+ebenfalls nur diesen Anzeigenamen, nicht die vollständige ausgewählte
+Kontaktidentität. Für einen harten Schutz daher eine stabile Kontaktidentität
+getrennt vom editierbaren Anzeigenamen durchreichen und speichern. Gleiche
+Namen oder eine gemeinsame Telefonnummer allein dürfen nicht zur sicheren
+Gleichsetzung verschiedener Patienten führen. Freitextnamen eignen sich
+höchstens für einen Hinweis. Vollständig anonyme Patienten sind ohne ein
+zusätzliches Wiedererkennungsmerkmal nicht zuverlässig zuzuordnen; eine
+Anfrage-ID könnte zumindest die doppelte Übermittlung derselben Anmeldung
+abfangen.
+
 ## 7. Echtzeit (Kurz)
 
 SSE beobachten, REST mutieren — [`realtime.md`](realtime.md).

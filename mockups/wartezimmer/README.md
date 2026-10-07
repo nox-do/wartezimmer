@@ -2,7 +2,18 @@
 
 Die statische Website bleibt während der Vorbereitung in `mockups/wartezimmer/`.
 `index.html`, `styles.css` und `demo.js` enthalten die Website und das interaktive
-Beispiel. Der eingebettete Entwurfsrahmen wurde entfernt. Alle Schriften und
+Beispiel. `technik.html` beschreibt den Betrieb auf einem vorhandenen Praxisrechner,
+Mac- und Windows-Unterstützung, Installationsszenarien (intern, HTTPS und
+getrennter Portalzugang) sowie erste Systemvoraussetzungen. Technische
+Grundlage sind `docs/operations/delivery.md` und `docs/operations/runtime.md`;
+der erfolgreiche Windows-Test einschließlich Portalzugang wurde vom
+Projektverantwortlichen am 07.10.2026 bestätigt (die Betriebsdokumentation
+ist hierzu noch nicht nachgezogen). Konkrete Hardware-Mindestwerte werden
+nach Betriebsprüfungen ergänzt. Die
+verlinkten Docker-Anforderungen sind Voraussetzungen der Laufzeit, keine
+Leistungszusage für den gesamten Praxisbetrieb.
+
+Der eingebettete Entwurfsrahmen wurde entfernt. Alle Schriften und
 Symbole liegen lokal; die Website benötigt keine externen CDNs, Analysewerkzeuge
 oder dauerhafte Browserspeicherung. Die Beispiele verwenden fiktive Daten.
 
@@ -13,14 +24,51 @@ node scripts/build-pages.mjs --preview
 python3 -m http.server 8000 --directory dist/pages
 ```
 
-Die Vorschau enthält die noch offenen rechtlichen Angaben.
+Die öffentlichen Texte sind für das Live-Angebot formuliert. Offene rechtliche
+Angaben bleiben in markierten, teils ausgeblendeten Blöcken erhalten; der Build
+verhindert deren Veröffentlichung.
+
+## Navigation und Styles pflegen
+
+Alle fünf Seiten verwenden denselben Header mit Logo, Untertitel und den Zielen
+Ablauf, Funktionen, Downloads, Technik und Einführung. Die Technikseite markiert
+Technik mit `aria-current="page"`. Änderungen am gemeinsamen Header auf allen
+Seiten übernehmen. Links sind relativ und
+funktionieren auch unter einem GitHub-Pages-Projektpfad. Die Navigation bleibt
+auf kleinen Bildschirmen vollständig sichtbar und bricht in mehrere Zeilen um.
+
+`styles.css` enthält die gemeinsamen Grundlagen und Komponenten, anschließend
+responsive Regeln in ihrer bisherigen Kaskadenreihenfolge. `demo.js` steuert nur
+das Besuchsbeispiel, die Ausbaustufen und den Download-Expander. Abschnittslinks
+verwenden die native Browsernavigation; reduzierte Bewegung wird berücksichtigt.
+
+## Downloadbereich
+
+Der Bereich `#wz-downloads` liegt direkt unter dem Einstieg der Startseite.
+Die Downloadtabelle hat Spalten für Version, AMD64 und ARM64 und enthält einen gemeinsamen
+Link zur offiziellen Docker-Desktop-Downloadseite. Sieben Paketplätze sind
+vorbereitet: Mac-Manager für beide Architekturen (`.dmg`), Windows-x64-Manager
+(`.exe`) sowie Wartezimmer-Erstinstallationspakete (`.pfinstall`) für ARM64 und
+AMD64 sowie Updatepakete (`.pfupdate`) für beide Architekturen. Solange öffentliche Release-Adressen fehlen, bleiben die Schaltflächen
+deaktiviert und mit `data-publish-placeholder="download-url"` markiert. Die Texte
+sind bereits aus der Perspektive des Live-Angebots formuliert. Zum Bereitstellen die
+Schaltflächen durch echte Downloadlinks ersetzen, geprüfte Artefakt-URLs
+eintragen und die jeweilige Platzhalter-Markierung entfernen. Mac-Manager je Architektur mit dem passenden Build verlinken.
+Die Pakete werden mit dem Manager importiert; Updatepakete (`.pfupdate`)
+sind davon getrennt.
+
+Die Versionsspalte folgt den tatsächlich bereitgestellten Paketen: aktuell Mac-Manager
+6.1.1, Windows-Manager 6.1.2, Erstinstallation und Update 6.1.1. Bei jedem Release
+Versionen und Downloadziele gemeinsam aktualisieren. Docker Desktop verweist auf
+den Versionsstand beim Anbieter.
 
 ## Vor der Veröffentlichung ergänzen
 
-- `impressum.html`: tatsächlicher Betreiber, ladungsfähige Anschrift, Kontakt
-  und gegebenenfalls Rechtsform, Vertretungsberechtigte, Registerdaten, USt-ID
-  oder berufsrechtliche Angaben. Grundlage: [§ 5 DDG](https://www.gesetze-im-internet.de/ddg/__5.html).
-- `datenschutz.html`: dieselben Betreiberangaben sowie die Rechtsgrundlagen,
+- `impressum.html`: Betreiber, Anschrift und Telefonnummer wurden aus dem
+  BB-Pilot-Impressum übernommen. Die Kontakt-E-Mail `info@notaus.de` wurde vom
+  Projektverantwortlichen bestätigt. Gegebenenfalls zusätzlich geltende Register-, Steuer- oder Berufsangaben
+  vor Veröffentlichung prüfen. Grundlage: [§ 5 DDG](https://www.gesetze-im-internet.de/ddg/__5.html).
+- `datenschutz.html`: die Rechtsgrundlagen,
   Löschfristen und für das tatsächliche GitHub-Hosting geltenden Angaben zu
   Vertragspartner und möglichen Drittlandübermittlungen. GitHub speichert
   IP-Adressen bei Pages-Aufrufen zu Sicherheitszwecken, siehe
@@ -32,6 +80,47 @@ Die Vorschau enthält die noch offenen rechtlichen Angaben.
 `node scripts/build-pages.mjs` stoppt, solange diese Markierungen vorhanden sind.
 Es kopiert ausschließlich Website-Dateien nach `dist/pages/`; README, Anwendung,
 Konfiguration und Backups sind nicht Teil des veröffentlichten Artefakts.
+
+## Maschinenlesbare Informationen
+
+`llms.txt` beschreibt Wartezimmer, Zielgruppe, Module, Betrieb und den aktuellen
+Verfügbarkeit des Live-Angebots. Alle HTML-Seiten verweisen über `rel="describedby"` darauf.
+Die Datei enthält sachliche Produktinformationen und relative Seitenlinks.
+
+Die Inhaltsstruktur der `llms.txt` ist bewusst auf diesen Stack ausgerichtet:
+Zielgruppe und Nutzen → Besuchsabläufe/Journeys → sechs Ausbaustufen → PVS-Abgrenzung
+→ Installation und Plattformen → Komponenten → Betriebsvarianten → Daten und
+externe Dienste → Veröffentlichungsstand → öffentliche Seitenlinks.
+
+Bei Änderungen die Aussagen mit `docs/architecture/system.md`,
+`docs/architecture/routing.md`, `docs/architecture/documents.md`,
+`docs/operations/delivery.md`, `docs/operations/runtime.md` und
+`docs/operations/tls.md` abgleichen. Aktuelle bestätigte Projektentscheidungen
+haben Vorrang vor noch nicht nachgezogener Dokumentation, etwa beim Windows-Test.
+Die Datei beschreibt Fakten statt Empfehlungen an KI-Systeme. Sie enthält keine
+Behauptungen über automatische PVS-Integration, vollständige Offline-Fähigkeit,
+pauschale Datenschutzkonformität oder einen konkreten, noch nicht beschlossenen
+Lizenzbezeichner. Die Live-Texte setzen die vollständige Bereitstellung des
+Open-Source-Angebots voraus; diese wird vor Veröffentlichung geprüft.
+Vor Veröffentlichung die Download-/Quellcode-Verweise vervollständigen und
+die Lizenzentscheidung umsetzen. Keine internen Zugangsdaten, Hostpfade oder Verwaltungs-URLs aufnehmen.
+
+`robots.txt` erlaubt das Crawlen der öffentlichen Informationswebsite.
+Bei einer GitHub-Pages-Projektseite gilt eine `robots.txt` im Projektverzeichnis
+nicht als robots.txt der Host-Domain; deren Regeln müssen am Domain-Ursprung liegen.
+Die Datei ist keine Zugriffskontrolle.
+
+Sobald die öffentliche Website-Adresse feststeht, `PAGES_BASE_URL` mit dem
+vollständigen Basis-Pfad setzen, zum Beispiel `https://example.org/wartezimmer/`.
+Der Build erzeugt daraus `sitemap.xml` und ergänzt deren absolute Adresse in
+`robots.txt`. Im GitHub-Workflow wird die Repository-Variable `PAGES_BASE_URL`
+verwendet. Ohne Basis-Adresse bleibt die lokale Vorschau ohne Sitemap; es werden
+keine erfundenen Domains publiziert.
+
+Quelle der übernommenen Betreiberangaben:
+`/Users/ddeuter/dev/work/bb_pilot/src/routes/impressum/+page.svelte`
+(geprüft am 07.10.2026). Die BB-Pilot-Datenschutz- und Vertragsbedingungen gelten
+für eine andere Anwendung und wurden nicht als Wartezimmer-Bedingungen übernommen.
 
 ## GitHub einrichten
 
@@ -92,3 +181,26 @@ Quellcode-Zugang anbieten; die Website allein erledigt das nicht für die App.
 
 Die Lizenzempfehlung bezieht sich auf den eigenen Projektcode. Mitgelieferte
 Drittanbieter-Komponenten werden dadurch nicht um­lizenziert.
+
+## Produktbilder
+
+`images/` enthält lokal gespeicherte WebP-Ausschnitte der bereitgestellten
+Screenshots mit fiktiven Demo-Daten. Der Einstieg kombiniert einen Detailausschnitt
+der Warteliste und des Arztzimmers mit einem persönlichen Aufruf. Weiter unten
+stehen die vergrößerbare Praxisübersicht, die Terminal-Anmeldung und der
+Wartezimmer-TV. Die Aufnahmen zeigen unterschiedliche Momente; Nummern und
+Die Wartenummer bleibt unverändert. Das Ziel auf dem Bon im Einstieg ist
+als HTML umgesetzt und wechselt horizontal zwischen „Wartezimmer“, „Empfang“
+und „Infektion 1“. Bei reduzierter Bewegung bleibt „Wartezimmer“ stehen. Browserleisten, Praxisüberschriften
+und Zeitstempel werden in den jeweiligen Ausschnitten weggelassen.
+Der Pages-Build übernimmt `images/` als lokale Assets.
+
+## Orientierung: Produktkarussell
+
+Der Abschnitt „Orientierung. Bei jedem Schritt.“ zeigt fünf Themen: Anmeldung,
+Terminal-Hardware und Bondrucker, Wartezimmer-TV, Wege/Routing sowie Raum-Panels.
+Die Themenwahl, Pfeile und Tastatur (Links/Rechts, Home/End) wechseln die Karte;
+auf Touchgeräten unterstützt der Inhaltsbereich horizontales Wischen. Es gibt
+keinen automatischen Wechsel. Ohne JavaScript bleiben alle Karten untereinander
+lesbar. Hardware, Routing und Tür-Panel sind ausdrücklich schematische Beispiele,
+keine Hardware-Produktfotos oder Screenshots der Konfiguration.

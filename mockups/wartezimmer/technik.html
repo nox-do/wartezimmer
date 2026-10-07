@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>Technik & Systemvoraussetzungen – Wartezimmer</title>
+    <meta
+      name="description"
+      content="Wartezimmer auf einem vorhandenen Praxisrechner betreiben. Voraussetzungen für Mac, Windows und das Praxisnetz."
+    />
+    <link rel="describedby" href="./llms.txt" type="text/plain" />
+    <link rel="stylesheet" href="./styles.css?v=e594a326" />
+  </head>
+  <body>
+    <div id="wz-concept" lang="de" aria-label="Wartezimmer">
+      <header class="w-wrap w-nav">
+        <a
+          class="w-brand w-brand-lockup"
+          href="./index.html#wz-home"
+          aria-label="Wartezimmer – zur Startseite"
+        >
+          <span class="w-brandline"
+            ><span class="w-brandmark" aria-hidden="true"
+              ><span></span><span></span><span></span></span
+            ><span>Wartezimmer</span></span
+          >
+          <span class="w-brand-subtitle">Für Einzel- und Gemeinschaftspraxen</span>
+        </a>
+        <nav class="w-navlinks" aria-label="Seitennavigation">
+          <a href="./index.html#wz-ablauf">So funktioniert’s</a>
+          <a class="w-nav-optional" href="./index.html#wz-funktionen">Funktionen</a>
+          <a class="w-nav-optional" href="./index.html#wz-downloads">Downloads</a>
+          <a class="w-nav-optional" href="./technik.html" aria-current="page">Technik</a>
+          <a class="w-pill" href="./index.html#wz-einfuehrung"
+            >Einführung
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M7 7h10v10" />
+              <path d="M7 17 17 7" /></svg
+          ></a>
+        </nav>
+      </header>
+      <main>
+        <section class="w-wrap w-tech-hero" aria-labelledby="tech-heading">
+          <div>
+            <span class="w-kicker w-section-label">Technik &amp; Betrieb</span>
+            <h1 id="tech-heading">Passt in Ihre Praxis.<br /><em>Auch technisch.</em></h1>
+            <p class="w-tech-lead">
+              Wartezimmer ist darauf ausgelegt, auf einem bereits vorhandenen Rechner in Ihrer
+              Praxis zu laufen. Gemeinsam mit Ihrer Praxis-IT prüfen wir, welcher Rechner dafür
+              geeignet ist.
+            </p>
+            <a class="w-text-link" href="#installationsszenarien"
+              >Passendes Installationsszenario finden →</a
+            >
+          </div>
+          <aside class="w-tech-host" aria-label="Betrieb in der Praxis">
+            <span class="w-kicker">Der Ausgangspunkt</span>
+            <h2>Ihr vorhandener<br />Praxisrechner.</h2>
+            <p>Hier läuft Wartezimmer. Ihr Team greift über den Browser im Praxisnetz darauf zu.</p>
+            <div
+              class="w-tech-flow"
+              aria-label="Praxisrechner verbunden mit den Arbeitsplätzen im Praxisnetz"
+            >
+              <span>Praxisrechner</span><span aria-hidden="true">↓</span><span>Praxisnetz</span
+              ><span aria-hidden="true">↓</span><span>Arbeitsplätze &amp; Geräte</span>
+            </div>
+          </aside>
+        </section>
+
+        <section class="w-wrap w-section" aria-labelledby="platform-heading">
+          <div class="w-section-head">
+            <div>
+              <span class="w-kicker">Mac &amp; Windows</span>
+              <h2 id="platform-heading">Zu Hause auf Ihrem Rechner.</h2>
+            </div>
+          </div>
+          <div class="w-tech-platforms">
+            <article class="w-service">
+              <div class="w-service-tag">MACOS</div>
+              <h3>We love Mac.</h3>
+              <p>
+                Ein Mac passt gut in unser Konzept: Der lokale Manager begleitet Einrichtung und
+                Betrieb. Docker Desktop stellt die Laufzeit für Wartezimmer bereit.
+              </p>
+              <a
+                class="w-text-link"
+                href="https://docs.docker.com/desktop/setup/install/mac-install/"
+                >Docker-Voraussetzungen für Mac ↗</a
+              >
+            </article>
+            <article class="w-service">
+              <div class="w-service-tag">WINDOWS · X64</div>
+              <h3>Windows unterstützen wir auch.</h3>
+              <p>
+                Mit einem eigenen Windows-Installer für den Manager. Wartezimmer läuft über Docker
+                Desktop mit Linux-Containern auf dem Praxisrechner.
+              </p>
+              <p class="w-platform-compatibility">
+                Unterstützt werden Windows-Rechner mit Intel- oder AMD-Prozessor (x64). Windows on
+                ARM mit Qualcomm Snapdragon, etwa bei manchen Surface-Modellen, wird derzeit nicht
+                unterstützt. Die ARM64-Pakete für Mac mit Apple Silicon sind davon getrennt.
+              </p>
+              <a
+                class="w-text-link"
+                href="https://docs.docker.com/desktop/setup/install/windows-install/"
+                >Docker-Voraussetzungen für Windows ↗</a
+              >
+            </article>
+          </div>
+        </section>
+
+        <section
+          class="w-wrap w-section"
+          id="installationsszenarien"
+          aria-labelledby="scenarios-heading"
+        >
+          <div class="w-section-head">
+            <div>
+              <span class="w-kicker">Installationsszenarien</span>
+              <h2 id="scenarios-heading">Ihr Netz. Ihr passender Einstieg.</h2>
+            </div>
+            <p class="w-section-aside">
+              Intern anfangen, verschlüsselt arbeiten und den Patientenzugang gezielt ergänzen. Der
+              Manager begleitet die Einrichtung auf Mac und Windows.
+            </p>
+          </div>
+          <nav class="w-tech-scenario-links" aria-label="Installationsszenarien auswählen">
+            <a href="#betrieb-intern"
+              ><span>01</span><strong>Intern betreiben</strong
+              ><small>Praxisrechner &amp; lokale Geräte</small></a
+            >
+            <a href="#betrieb-https"
+              ><span>02</span><strong>HTTPS einrichten</strong
+              ><small>Verschlüsselter Browserzugriff</small></a
+            >
+            <a href="#betrieb-portal"
+              ><span>03</span><strong>Portal öffnen</strong
+              ><small>Getrennter Zugang für Patienten</small></a
+            >
+          </nav>
+
+          <article class="w-tech-scenario" id="betrieb-intern" aria-labelledby="internal-heading">
+            <header>
+              <span class="w-kicker">01 / Interner Betrieb</span>
+              <h3 id="internal-heading">Alles im Praxisnetz.</h3>
+            </header>
+            <div class="w-tech-scenario-body">
+              <div>
+                <p>
+                  Wartezimmer läuft auf dem Praxisrechner. Team-Arbeitsplätze, Wartezimmeranzeige,
+                  Terminal und Room Panels können direkt im selben Netz angebunden werden. Das
+                  Portal steht in diesem Szenario ausschließlich für die interne Nutzung bereit.
+                </p>
+                <p>
+                  Alternativ wird ein dediziertes Netz für Wartezimmer eingerichtet. Eine gezielte
+                  Freigabe kann den lesenden Zugriff auf Kontaktdateien aus dem PVS oder anderen
+                  Quellen ermöglichen. Ihre Praxis-IT legt die dafür notwendigen Verbindungen und
+                  Rechte fest.
+                </p>
+              </div>
+              <div class="w-tech-scenario-options">
+                <details open>
+                  <summary>1a · Mit dem mitgelieferten Proxy</summary>
+                  <p>
+                    Den Proxy im Installationsassistenten einschalten: Der Browserzugriff im LAN
+                    erfolgt dann über HTTP auf Port 80. Ohne Proxy verwendet die Anwendung Port
+                    8080.
+                  </p>
+                  <p>
+                    HTTP überträgt Daten unverschlüsselt. Browser kennzeichnen diese Verbindung
+                    entsprechend als unsicher; auch ein geschlossenes Netz schützt nicht vor
+                    Mitlesen oder Manipulation.
+                  </p>
+                </details>
+                <details open>
+                  <summary>1b · HTTP nur im dedizierten Netz</summary>
+                  <p>
+                    Für Betrieb ohne TLS empfehlen wir ausschließlich ein dediziertes, von der
+                    Praxis-IT abgesichertes Netz. Das gilt mit und ohne Proxy.
+                  </p>
+                  <p>
+                    Dieser eingeschränkte Einstieg ist für Tests und Evaluierung mit fiktiven Daten
+                    sowie einen anonymen Produktivbetrieb vorgesehen: Anmeldung ohne Namen und
+                    Kontaktabgleich, ohne personenbezogene Unterlagen oder Anamnese. Netztrennung
+                    reduziert das Risiko; die Übertragung bleibt unverschlüsselt.
+                  </p>
+                </details>
+              </div>
+            </div>
+          </article>
+
+          <article class="w-tech-scenario" id="betrieb-https" aria-labelledby="https-heading">
+            <header>
+              <span class="w-kicker">02 / HTTPS mit TLS</span>
+              <h3 id="https-heading">Verschlüsselt im lokalen Netz.</h3>
+            </header>
+            <div class="w-tech-scenario-body">
+              <div>
+                <p>
+                  HTTPS schützt die Verbindung zwischen Browser und Wartezimmer. Das ist unsere
+                  Empfehlung für den Praxisbetrieb mit personenbezogenen Daten – auch innerhalb
+                  eines geschlossenen Netzes.
+                </p>
+                <p>
+                  Der Installationsassistent richtet zunächst den lokalen Betrieb und den Proxy ein.
+                  Anschließend begleitet Sie der Netzwerkbereich des Managers durch Domainwahl,
+                  DNS-Prüfung, Zertifikatsausstellung über Let’s Encrypt und die Umstellung auf
+                  HTTPS.
+                </p>
+                <p>
+                  Sie können eine von Wartezimmer bereitgestellte Standard-Domain kostenfrei nutzen
+                  oder Ihre eigene Domain einbinden. Der Manager zeigt die nötigen DNS-Einträge an;
+                  deren Einrichtung wird mit dem Betreiber beziehungsweise Ihrer Praxis-IT
+                  abgestimmt.
+                </p>
+              </div>
+              <div class="w-tech-scenario-options">
+                <h4>Adressen früh planen.</h4>
+                <p>
+                  Das Zertifikat gilt für den Domainnamen. Ein DNS-Eintrag verweist auf die feste
+                  lokale IP-Adresse des Praxisrechners. Die Zertifikatsausstellung erfolgt über eine
+                  DNS-Prüfung; der Rechner bleibt im lokalen Netz.
+                </p>
+                <p>
+                  Für internes HTTPS genügt eine Netzwerkkarte. Wenn später Patienten auf das Portal
+                  zugreifen sollen, ist dies ein guter Zeitpunkt, die zweite Netzwerkkarte und das
+                  separate Patientennetz mit Ihrer Praxis-IT vorzusehen. So lassen sich spätere
+                  Änderungen an Adressen und Netzaufbau reduzieren.
+                </p>
+                <a
+                  class="w-text-link"
+                  href="https://letsencrypt.org/docs/challenge-types/#dns-01-challenge"
+                  >Zur DNS-Prüfung bei Let’s Encrypt ↗</a
+                >
+              </div>
+            </div>
+          </article>
+
+          <article class="w-tech-scenario" id="betrieb-portal" aria-labelledby="portal-heading">
+            <header>
+              <span class="w-kicker">03 / Patientenportal</span>
+              <h3 id="portal-heading">Den Patientenzugang gezielt öffnen.</h3>
+            </header>
+            <div class="w-tech-scenario-body">
+              <div>
+                <p>
+                  Das Portal kann intern genutzt werden, während der Zugang für Patienten
+                  geschlossen bleibt. Für den internen Einsatz gelten die Anforderungen des
+                  gewählten Betriebsmodus; für Unterlagen und Anamnese empfehlen wir HTTPS.
+                </p>
+                <p>
+                  Sollen Patienten selbst auf das Portal zugreifen, sind eine zweite Netzwerkkarte
+                  und eine von der Praxis-IT geplante sichere Netzinfrastruktur obligatorisch. Das
+                  Patientennetz erhält einen getrennten Zugang zum Portal.
+                </p>
+                <p>
+                  Der Manager begleitet die Freigabe über eine eigene Portaladresse mit HTTPS. Für
+                  diesen Zugang wird der verwaltete TLS-Modus mit Wildcard-Zertifikat genutzt – mit
+                  der bereitgestellten Standard-Domain oder einer eigenen Domain.
+                </p>
+              </div>
+              <div class="w-tech-scenario-options">
+                <h4>Software und Netz greifen ineinander.</h4>
+                <p>
+                  Wartezimmer bindet den Portalzugang gezielt an die dafür vorgesehene IP-Adresse
+                  und den HTTPS-Port 443. Der Proxy begrenzt diesen Zugang auf die Portaloberflächen
+                  und die dafür benötigten Schnittstellen.
+                </p>
+                <p>
+                  IP- und Port-Bindung ergänzen die Netztrennung. Firewall, Routing und die
+                  Sicherheit des gesamten Praxis- und Patientennetzes werden durch Ihre Praxis-IT
+                  geplant und umgesetzt. Eine zweite Netzwerkkarte allein schafft diese Trennung
+                  noch nicht.
+                </p>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section
+          class="w-wrap w-section"
+          id="voraussetzungen"
+          aria-labelledby="requirements-heading"
+        >
+          <div class="w-section-head">
+            <div>
+              <span class="w-kicker">Systemvoraussetzungen</span>
+              <h2 id="requirements-heading">Was der Rechner mitbringen sollte.</h2>
+            </div>
+            <p class="w-section-aside">
+              Die Anforderungen für Sie und Ihre Praxis-IT. Die konkrete Auslegung stimmen wir auf
+              Ihre Arbeitsplätze, Module und vorhandenen Programme ab.
+            </p>
+          </div>
+          <dl class="w-tech-requirements">
+            <div>
+              <dt><span aria-hidden="true">01</span>Betriebssystem &amp; Laufzeit</dt>
+              <dd>
+                Mac oder Windows x64 mit einer von Docker Desktop unterstützten
+                Betriebssystemversion. Docker Desktop muss eingerichtet und gestartet sein; der
+                Stack benötigt Docker Compose v2.
+              </dd>
+            </div>
+            <div>
+              <dt><span aria-hidden="true">02</span>Leistung &amp; Speicher</dt>
+              <dd>
+                Als Orientierung: 16 GB RAM und mindestens 10 GB freier Speicherplatz für die
+                Installation und Updates. Erfolgreich getestet auf einem Intel Core i7 mit 16 GB
+                RAM. Für den Betrieb selbst und Backups planen Sie zusätzlichen Platz ein.
+              </dd>
+            </div>
+            <div>
+              <dt><span aria-hidden="true">03</span>Verfügbarkeit im Alltag</dt>
+              <dd>
+                Der Rechner bleibt während der Nutzung eingeschaltet und erreichbar.
+                Energiesparmodus und der Start von Docker Desktop nach einem Neustart werden
+                entsprechend eingerichtet.
+              </dd>
+            </div>
+            <div>
+              <dt><span aria-hidden="true">04</span>Praxisnetz &amp; Browser</dt>
+              <dd>
+                Die Arbeitsplätze und eingebundenen Geräte erreichen den Rechner im Praxisnetz über
+                einen aktuellen Browser. Für feste Geräteadressen wird eine feste lokale IP-Adresse
+                oder DHCP-Reservierung eingerichtet.
+              </dd>
+            </div>
+            <div>
+              <dt><span aria-hidden="true">05</span>Einrichtung &amp; Datensicherung</dt>
+              <dd>
+                Ihre Praxis-IT stimmt Netzwerk, Zugriffsrechte und benötigte Ordnerfreigaben ab.
+                Datensicherung, Wiederherstellung und Updates werden in den bestehenden IT-Betrieb
+                eingeplant.
+              </dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="w-wrap w-section" aria-labelledby="stack-heading">
+          <div class="w-tech-note">
+            <div>
+              <span class="w-kicker w-section-label">Für die Praxis-IT</span>
+              <h2 id="stack-heading">Lokal installiert.<br />Im Browser genutzt.</h2>
+            </div>
+            <div>
+              <p>
+                Der Manager richtet den lokalen Stack aus einem versionierten Installationspaket
+                ein. Anwendung und Dokumentenprüfung laufen als Docker-Container. Die Verwaltung
+                bleibt auf dem Installationsrechner; die Praxisoberflächen sind im Praxisnetz
+                erreichbar.
+              </p>
+              <p>
+                Für die Planung: Die Anwendung nutzt Port 8080. Mit dem optionalen Web-Proxy kommen
+                Port 80 und bei HTTPS Port 443 hinzu. Import- und Exportordner werden gezielt für
+                Docker freigegeben.
+              </p>
+              <p>
+                Terminal, Room Panels und weitere Module ergänzen den Einstieg nach Bedarf. SMS,
+                WhatsApp und das Patientenportal benötigen zusätzlich eine abgestimmte Anbindung und
+                Erreichbarkeit.
+              </p>
+            </div>
+          </div>
+        </section>
+        <section class="w-wrap w-section w-tech-close" aria-labelledby="tech-close-heading">
+          <span class="w-kicker w-section-label">Der nächste Schritt</span>
+          <h2 id="tech-close-heading">Mit dem anfangen,<br />was schon da ist.</h2>
+          <p>
+            Wir schauen gemeinsam auf Ihren Rechner, Ihr Praxisnetz und Ihre Abläufe. Daraus
+            entsteht ein passender Einstieg.
+          </p>
+          <a class="w-button" href="./index.html#wz-einfuehrung">Zur Einführung →</a>
+        </section>
+      </main>
+      <footer class="w-wrap w-footer">
+        <div class="w-brand">
+          <span class="w-brandmark" aria-hidden="true"><span></span><span></span><span></span></span
+          ><span>Wartezimmer</span>
+        </div>
+        <p>Lokale Software für Anmeldung, Aufruf und Koordination.</p>
+        <nav class="w-footer-links" aria-label="Weitere Informationen">
+          <a href="./technik.html" aria-current="page">Technik</a
+          ><a href="./impressum.html">Impressum</a><a href="./datenschutz.html">Datenschutz</a
+          ><a href="./lizenzen.html">Lizenzen</a>
+        </nav>
+      </footer>
+    </div>
+  </body>
+</html>

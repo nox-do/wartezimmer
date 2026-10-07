@@ -1,0 +1,110 @@
+# Wartezimmer
+
+> Wartezimmer ist lokale Software für Anmeldung, Warteliste, Aufruf und die Koordination des gesamten Praxisbesuchs von Raum zu Raum. Sie richtet sich vor allem an Einzel- und Gemeinschaftspraxen, ergänzend an größere Ärztehäuser. Der technische Projektname ist Praxis Flow.
+
+**Ziel und Einsatz:** Eine gemeinsame Übersicht verbindet Empfang und
+Behandlungsräume. Patienten erhalten eine Wartenummer und Orientierung zum
+nächsten Schritt. Das Team koordiniert Wartende, Aufenthaltsort und nächste
+Stationen. Mehrstufige Besuchsabläufe (Journeys) können etwa Anmeldung, Labor und
+Behandlung verbinden. Reihenfolge und Aufruf bleiben durch das Praxisteam steuerbar.
+
+**Schrittweise Einführung:** Der Einstieg ist die intern geführte Warteliste am
+Team-Arbeitsplatz. Sechs Ausbaustufen werden auf der Website vorgestellt:
+
+1. Intern starten: manuelle Erfassung und Koordination ohne Terminal.
+2. Kontakte zuordnen: optionaler CSV-Kontaktabgleich aus dem PVS oder anderen Quellen.
+3. Anmeldung verteilen: Anmeldeterminal im Browser, optional mit Wartenummer-Ausdruck.
+4. Räume einbinden: Room Panels für die Koordination an den Behandlungsräumen.
+5. Gezielt zurückholen: Nachrichten per SMS oder WhatsApp über einen eingerichteten Anbieter.
+6. Unterlagen digital übergeben: Patientenportal für Uploads und Erstanamnese;
+   das Team prüft, übernimmt beziehungsweise exportiert oder verwirft Unterlagen.
+
+**Zusammenspiel mit dem PVS:** Wartezimmer organisiert den Besuchsablauf.
+Patientenverwaltung und medizinische Dokumentation bleiben im PVS. Kontaktdateien
+können per CSV gelesen und Unterlagen per Dateiexport übergeben werden. Weitere
+Schnittstellen werden nach Prüfung des jeweiligen Zielsystems abgestimmt.
+
+**Installation:** Der Stack ist darauf ausgelegt, auf einem bereits vorhandenen
+Praxisrechner zu laufen. Ein lokaler Manager begleitet Einrichtung, Betrieb und
+Updates. Docker Desktop betreibt die mitgelieferten Komponenten in einer
+vorbereiteten, abgegrenzten Umgebung und reduziert Berührungspunkte mit anderen
+Praxisprogrammen und Daten. Freigegebene Ordner, Netzwerk und Rechnerressourcen
+bleiben Berührungspunkte mit dem Host. Team-Arbeitsplätze, Terminal,
+Wartezimmeranzeige, Room Panels und Portal verwenden Browseroberflächen.
+
+**Plattformen und Pakete:** Mac wird unterstützt. Unter Windows werden Rechner mit Intel-/AMD-x64-
+Prozessoren unterstützt. Der Mac-Manager wird als .dmg und der Windows-x64-Manager als .exe
+bereitgestellt. Das separate Erstinstallationspaket .pfinstall enthält die
+Container-Images und Einrichtungskomponenten; es gibt ARM64-Pakete für Mac mit
+Apple Silicon sowie AMD64-Pakete für Intel/AMD x64. Updates verwenden .pfupdate.
+Windows on ARM mit Qualcomm Snapdragon wird derzeit nicht unterstützt; die
+Verfügbarkeit einer Docker-ARM-Version ist keine Freigabe dieses Wartezimmer-Stacks.
+Als Orientierung dienen 16 GB RAM und mindestens 10 GB freier Speicherplatz für
+Installation und Updates. Der Betrieb wurde auf einem Intel Core i7 mit 16 GB RAM
+erfolgreich getestet. Für den Betrieb selbst und Backups ist zusätzlicher Platz einzuplanen.
+Der Installationsrechner muss während der Nutzung erreichbar sein.
+
+**Technischer Aufbau:** Die Praxisoberflächen verwenden Svelte, TypeScript und
+Vite. Der app-Container bündelt Node.js/Fastify, Anwendungslogik, Browseroberflächen
+und SQLite. Der separate sandbox-Container übernimmt Dokumentenprüfung mit ClamAV,
+Vorschau und Formular-zu-PDF-Verarbeitung. Der optionale Caddy-Proxy vermittelt
+HTTP- beziehungsweise HTTPS-Zugriffe. Der lokale Manager verwendet Electron;
+Docker Compose verwaltet die Container. Die Praxis erhält versionierte Pakete
+und baut die Anwendung nicht selbst aus dem Quellcode.
+
+**Betriebsvarianten:**
+
+- Interner Betrieb: Team und Geräte befinden sich im Praxisnetz oder einem
+  dedizierten Netz. Das Portal kann ausschließlich intern genutzt werden.
+  Lesender Kontaktzugriff kann über gezielt freigegebene Quellen erfolgen.
+- HTTP: ohne Proxy Port 8080, mit dem mitgelieferten Proxy Port 80. Betrieb ohne
+  TLS wird nur im dedizierten, abgesicherten Netz empfohlen: für Tests mit
+  fiktiven Daten oder anonymen Betrieb ohne Kontaktabgleich, personenbezogene
+  Dokumente oder Anamnese. Die Übertragung bleibt unverschlüsselt.
+- HTTPS: Der Manager begleitet die Einrichtung über den Proxy. Eine bereitgestellte
+  Standard-Domain oder eine eigene Domain kann verwendet werden. Zertifikate
+  werden im verwalteten Modus über Let's Encrypt und DNS-Prüfung ausgestellt.
+  Sie gelten für Domainnamen; DNS verweist auf feste lokale IP-Adressen.
+- Getrennter Patientenzugang: HTTPS, eine zweite Netzwerkkarte und eine von der
+  Praxis-IT geplante sichere Netzinfrastruktur sind erforderlich. Der Proxy
+  begrenzt den Zugang auf die Portaloberflächen und benötigten Schnittstellen an
+  der vorgesehenen IP-Adresse auf Port 443. IP-/Port-Bindung allein schafft keine
+  Netztrennung. Der getrennte Zugang verwendet verwaltetes Wildcard-TLS und wird
+  auf Mac und Windows unterstützt.
+
+**Daten und externe Dienste:** Die Anwendung läuft lokal in der Praxis.
+Portalunterlagen werden vorübergehend in der Sandbox verarbeitet und vom Team
+für die weitere Dokumentation exportiert; das Portal ist eine Übergabeoberfläche.
+SMS und WhatsApp benötigen einen eingerichteten Nachrichtenanbieter; Anbieter-
+und Versandkosten kommen hinzu. Zertifikatsausstellung und -erneuerung sowie
+Virensignatur-Updates benötigen die jeweiligen externen Dienste. Netzwerk,
+Zugriffsrechte, Datensicherung und Wiederherstellung werden mit der Praxis-IT
+abgestimmt. Die Betreiber der Praxisinstallation legen die Informationen zur
+Verarbeitung von Patientendaten für ihren konkreten Einsatz fest.
+
+**Verfügbarkeit und Betreuung:** Wartezimmer ist Open Source; der gesamte
+Funktionsumfang ist verfügbar. Manager und Installationspakete stehen im
+Downloadbereich bereit. Einrichtung, Anpassung und Betreuung können optional
+vereinbart werden. Das interaktive Beispiel auf der Website verwendet fiktive
+Daten. Die Datenschutzerklärung der Website beschreibt die öffentliche
+Informationsseite, nicht automatisch den Betrieb der Software in einer Praxis.
+Betreiber: Daniel Deuter; Kontakt: info@notaus.de.
+
+## Produkt und Einführung
+
+- [Startseite](./index.html): Nutzen für Praxisteam und Patienten sowie Zielgruppen.
+- [Beispielablauf](./index.html#wz-ablauf): Ankommen, Warten und Aufruf aus Team- und Patientensicht.
+- [Optionale Module](./index.html#wz-funktionen): Sechs Ausbaustufen vom internen Einstieg bis zum Patientenportal.
+- [Einführung und Betreuung](./index.html#wz-einfuehrung): Einrichtung, Anpassung und Unterstützung nach Bedarf.
+
+## Installation und Betrieb
+
+- [Downloads](./index.html#wz-downloads): Manager, Installationspakete und Docker-Desktop-Link.
+- [Installationsszenarien](./technik.html#installationsszenarien): Interner Betrieb, HTTP, HTTPS und getrennter Portalzugang.
+- [Systemvoraussetzungen](./technik.html#voraussetzungen): Laufzeit, Ressourcen, Verfügbarkeit, Netz und Datensicherung.
+
+## Optional
+
+- [Impressum](./impressum.html): Betreiber und Kontakt.
+- [Datenschutz](./datenschutz.html): Datenverarbeitung der öffentlichen Website.
+- [Lizenzen und Markenhinweise](./lizenzen.html): Projektlizenz, Schriften, Symbole und Marken.

@@ -18,6 +18,13 @@ Die Tabelle beschreibt die vorhandenen Oberflächen. Als geplant oder Discovery 
 
 Details und offene fachliche Punkte siehe Abschnitte pro Flow unten.
 
+**Bekanntes Verhalten (2026-10-07):** Erneutes Einchecken zum selben Thema erzeugt
+derzeit auch bei einem bereits offenen Visit eine weitere Wartenummer, am
+Terminal wie im MFA-Desktop. Kein Showstopper; ein Schutz mit Hinweis auf die
+bestehende Wartenummer wird für später empfohlen. Mehrere unterschiedliche
+Themen sollen weiterhin möglich sein. Einbaupunkt und Grenzen der
+Patientenerkennung: [Check-in-Guards](architecture/apis.md#bekanntes-verhalten-mehrfach-check-in-zum-selben-thema).
+
 ## Produktprinzipien (Kurz)
 
 - **Lokal:** keine Cloud, Daten bleiben in der Praxis

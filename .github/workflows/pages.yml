@@ -20,6 +20,8 @@ jobs:
         with:
           node-version: '22.22.2'
       - name: Validate publication details and assemble website
+        env:
+          PAGES_BASE_URL: ${{ vars.PAGES_BASE_URL }}
         run: node scripts/build-pages.mjs
       - uses: actions/upload-pages-artifact@v3
         with:
