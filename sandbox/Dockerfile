@@ -15,6 +15,7 @@ COPY setup/package.json ./setup/package.json
 COPY manager/package.json ./manager/package.json
 COPY packages/domain/package.json ./packages/domain/package.json
 COPY packages/server-shared/package.json ./packages/server-shared/package.json
+COPY packages/flow-core/package.json ./packages/flow-core/package.json
 
 RUN npm ci --foreground-scripts
 

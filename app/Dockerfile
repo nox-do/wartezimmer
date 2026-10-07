@@ -44,6 +44,7 @@ COPY ui/svelte.config.js ./ui/svelte.config.js
 COPY ui/vite.config.ts ./ui/vite.config.ts
 COPY ui/tsconfig.json ./ui/tsconfig.json
 COPY ui/src ./ui/src
+COPY ui/static ./ui/static
 
 ARG VITE_API_BASE=
 ENV VITE_API_BASE=${VITE_API_BASE}
