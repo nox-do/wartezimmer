@@ -45,6 +45,7 @@
     handleMfaMarkAway,
     handleMfaQueueDrop,
     handleMfaRecall,
+    handleMfaRetryRecallNotify,
     handleMfaReassign,
     handleMfaSupersede,
     cancelMfaSupersede,
@@ -143,6 +144,7 @@
       onReturnToWaiting={returnMfaTicketToWaiting}
       onRecall={(visitId) => void handleMfaRecall(visitId)}
       onFixRecallNotify={handleMfaFixRecallNotify}
+      onRetryRecallNotify={handleMfaRetryRecallNotify}
       onMarkAway={handleMfaMarkAway}
       onOpenDocuments={openMfaDocumentPreview}
       onCycleTriage={cycleMfaTriage}
@@ -191,7 +193,7 @@
     ticket={phoneModalVisit}
     purpose={phoneModalPurpose}
     busy={phoneModalVisit != null && mfaQueueActions.busyVisitId === phoneModalVisit.visitId}
-    onConfirm={(phoneNumber) => void confirmMfaPhoneCorrection(phoneNumber)}
+    onConfirm={(phoneNumber, consentConfirmed) => void confirmMfaPhoneCorrection(phoneNumber, consentConfirmed)}
     onCancel={cancelMfaPhoneCorrection}
   />
 

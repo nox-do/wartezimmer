@@ -9,8 +9,6 @@ export type PhoneCorrectionTicket = {
   number: number;
   initialPhone: string;
   purpose: PhoneCorrectionPurpose;
-  /** Set after set-absence succeeded so a failed callback PUT can be retried (markAway only). */
-  absenceConfirmed: boolean;
 };
 
 export type ReassignTicket = {
@@ -118,7 +116,6 @@ export function handleMfaMarkAway(visitId: string) {
     number: item.number,
     initialPhone,
     purpose: 'markAway',
-    absenceConfirmed: false,
   };
 }
 
@@ -145,7 +142,6 @@ export function handleMfaFixRecallNotify(visitId: string) {
     number: item.number,
     initialPhone,
     purpose: 'fixRecallNotify',
-    absenceConfirmed: false,
   };
 }
 

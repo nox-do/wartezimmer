@@ -89,7 +89,7 @@ async function main() {
   const visitId = checkin.body?.visitId;
   assert(typeof visitId === 'string' && visitId.length > 0, 'Missing visitId');
 
-  console.log('4b) wait_here + recall nutzt checkin_phone fuer SMS');
+  console.log('4b) Terminalnummer allein erlaubt keinen Benachrichtigungsversand');
   await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(visitId)}/transition`, {
     auth: mfaAuth,
     jsonBody: { type: 'set_absence', mode: 'wait_here' },
@@ -105,14 +105,7 @@ async function main() {
       expectedStatus: 200,
     },
   );
-  assert(
-    recallWaitHere.body?.smsDispatch?.provider === 'mock',
-    'Expected mock smsDispatch for wait_here recall',
-  );
-  assert(
-    recallWaitHere.body?.smsDispatch?.sent === true,
-    'Expected smsDispatch sent=true for wait_here recall',
-  );
+  assert(recallWaitHere.body?.smsDispatch === null, 'Expected no dispatch without oral consent');
 
   console.log('4c) zweiter Recall bei laufendem Fenster -> 409');
   await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(visitId)}/transition`, {
@@ -135,7 +128,7 @@ async function main() {
   });
   await requestJson(baseUrl, 'PUT', `/api/v1/queue/${encodeURIComponent(visitId)}/callback-phone`, {
     auth: mfaAuth,
-    jsonBody: { callbackPhone: '4917612345678' },
+    jsonBody: { callbackPhone: '4917612345678', recallConsentConfirmed: true },
     expectedStatus: 200,
   });
   const recallSms = await requestJson(
@@ -166,7 +159,7 @@ async function main() {
   });
   await requestJson(baseUrl, 'PUT', `/api/v1/queue/${encodeURIComponent(visitId)}/callback-phone`, {
     auth: mfaAuth,
-    jsonBody: { callbackPhone: '4917612345678' },
+    jsonBody: { callbackPhone: '4917612345678', recallConsentConfirmed: true },
     expectedStatus: 200,
   });
 
@@ -265,6 +258,16 @@ async function main() {
     jsonBody: { type: 'set_absence', mode: 'wait_here' },
     expectedStatus: 200,
   });
+  await requestJson(
+    baseUrl,
+    'PUT',
+    `/api/v1/queue/${encodeURIComponent(visitRetry)}/callback-phone`,
+    {
+      auth: mfaAuth,
+      jsonBody: { callbackPhone: '+4917612345679', recallConsentConfirmed: true },
+      expectedStatus: 200,
+    },
+  );
   const recallFail = await requestJson(
     baseUrl,
     'POST',

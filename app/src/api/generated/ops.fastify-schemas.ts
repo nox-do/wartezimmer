@@ -2514,7 +2514,16 @@ export const MessagingProviderCatalogResponse = {
             type: 'array',
             items: {
               type: 'object',
-              required: ['id', 'label', 'channel', 'configured', 'enabled', 'requires'],
+              required: [
+                'id',
+                'label',
+                'channel',
+                'configured',
+                'enabled',
+                'requires',
+                'hasApiKey',
+                'settings',
+              ],
               properties: {
                 id: {
                   type: 'string',
@@ -2531,6 +2540,24 @@ export const MessagingProviderCatalogResponse = {
                 },
                 enabled: {
                   type: 'boolean',
+                },
+                hasApiKey: {
+                  type: 'boolean',
+                },
+                settings: {
+                  type: 'object',
+                  required: ['from', 'template', 'language'],
+                  properties: {
+                    from: {
+                      type: 'string',
+                    },
+                    template: {
+                      type: 'string',
+                    },
+                    language: {
+                      type: 'string',
+                    },
+                  },
                 },
                 requires: {
                   type: 'array',
@@ -6840,7 +6867,16 @@ export const GET_api_v1_ops_messaging_providersResponse200 = {
             type: 'array',
             items: {
               type: 'object',
-              required: ['id', 'label', 'channel', 'configured', 'enabled', 'requires'],
+              required: [
+                'id',
+                'label',
+                'channel',
+                'configured',
+                'enabled',
+                'requires',
+                'hasApiKey',
+                'settings',
+              ],
               properties: {
                 id: {
                   type: 'string',
@@ -6857,6 +6893,24 @@ export const GET_api_v1_ops_messaging_providersResponse200 = {
                 },
                 enabled: {
                   type: 'boolean',
+                },
+                hasApiKey: {
+                  type: 'boolean',
+                },
+                settings: {
+                  type: 'object',
+                  required: ['from', 'template', 'language'],
+                  properties: {
+                    from: {
+                      type: 'string',
+                    },
+                    template: {
+                      type: 'string',
+                    },
+                    language: {
+                      type: 'string',
+                    },
+                  },
                 },
                 requires: {
                   type: 'array',

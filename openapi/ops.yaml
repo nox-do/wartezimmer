@@ -1544,6 +1544,8 @@ components:
                     - configured
                     - enabled
                     - requires
+                    - hasApiKey
+                    - settings
                   properties:
                     id:
                       type: string
@@ -1558,6 +1560,18 @@ components:
                       type: boolean
                     enabled:
                       type: boolean
+                    hasApiKey:
+                      type: boolean
+                    settings:
+                      type: object
+                      required: [from, template, language]
+                      properties:
+                        from:
+                          type: string
+                        template:
+                          type: string
+                        language:
+                          type: string
                     requires:
                       type: array
                       items:

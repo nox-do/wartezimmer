@@ -309,14 +309,17 @@ svg {
 }
 #wz-concept .w-pillar {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   font-size: 14px;
+  line-height: 1.6;
   font-weight: 500;
 }
 #wz-concept .w-pillar svg {
-  width: 17px;
-  height: 17px;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  flex-shrink: 0;
   color: var(--w-green);
 }
 #wz-concept .w-section {
@@ -1307,10 +1310,45 @@ svg {
   font-weight: 400;
 }
 #wz-concept .w-download-table tbody + tbody {
-  border-top: 2px solid var(--w-line);
-}
-#wz-concept .w-download-table tbody tr + tr {
   border-top: 1px solid var(--w-line);
+}
+#wz-concept .w-download-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+#wz-concept .w-download-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border: 1px solid var(--w-line);
+  border-radius: 50%;
+  color: var(--w-green);
+  font-size: 14px;
+  font-weight: 600;
+}
+#wz-concept .w-download-table tbody th > .w-download-detail,
+#wz-concept .w-download-table tbody th > .w-download-file {
+  margin-left: 40px;
+}
+#wz-concept .w-download-manager .w-download-group-heading th {
+  padding-bottom: 4px;
+}
+#wz-concept .w-download-manager tr + tr {
+  border-top: 0;
+}
+#wz-concept .w-download-manager tr:not(.w-download-group-heading) th {
+  padding-left: 64px;
+}
+#wz-concept .w-download-manager tr:not(.w-download-group-heading) th > .w-download-file {
+  margin-left: 8px;
+}
+#wz-concept .w-download-manager tr:not(.w-download-group-heading) > * {
+  padding-top: 10px;
+  padding-bottom: 10px;
 }
 #wz-concept .w-download-table td {
   width: 25%;
@@ -2416,5 +2454,59 @@ svg {
   #wz-concept .w-room-panel {
     padding: 20px 12px;
     width: 75%;
+  }
+}
+
+/* Direct contact at the end of the homepage. */
+#wz-concept .w-contact h2 {
+  margin-top: 12px;
+}
+#wz-concept .w-contact > p {
+  max-width: 610px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.7;
+}
+#wz-concept .w-contact-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 18px 26px;
+  margin-top: 26px;
+}
+#wz-concept .w-contact-actions .w-button {
+  margin-top: 0;
+}
+#wz-concept .w-contact-phone {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--w-green);
+  font-size: 15px;
+  padding: 12px 0;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+#wz-concept .w-contact-phone svg {
+  flex-shrink: 0;
+}
+#wz-concept .w-contact a:focus-visible {
+  outline: 2px solid var(--w-green);
+  outline-offset: 5px;
+}
+
+@media (max-width: 820px) {
+  #wz-concept .w-download-manager tr:not(.w-download-group-heading) th {
+    padding-left: 56px;
+  }
+}
+@media (max-width: 600px) {
+  #wz-concept .w-download-manager tr:not(.w-download-group-heading) th {
+    padding-left: 0;
+  }
+  #wz-concept .w-download-manager tr:not(.w-download-group-heading) > * {
+    padding-top: 0;
+    padding-bottom: 0;
   }
 }

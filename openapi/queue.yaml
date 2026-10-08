@@ -107,9 +107,14 @@ components:
           type: string
           nullable: true
           description: Set when recall SMS/WhatsApp failed; enables MFA retry (staff queue only)
+        recallNotifyStatus:
+          type: string
+          nullable: true
+          enum: [sending, accepted, delivered, failed, unknown, simulated, null]
+          description: Current notification outcome; accepted is not proof of delivery.
         recallNotifySent:
           type: boolean
-          description: True when recall SMS/WhatsApp was successfully sent for the current return window (staff queue only)
+          description: Compatibility flag for provider acceptance; does not prove delivery. See recallNotifyStatus.
         triageLevel:
           type: string
           nullable: true
@@ -179,13 +184,16 @@ components:
           type: boolean
         sent:
           type: boolean
+        status:
+          type: string
+          enum: [accepted, failed, unknown, simulated]
         messageId:
           type: string
         errorCode:
           type: string
         fallbackFrom:
           type: string
-          description: Set when WhatsApp was attempted first and SMS completed delivery.
+          description: Set when WhatsApp was attempted first and SMS was accepted by the provider.
     QueueRecallRetryNotifyResponse:
       type: object
       additionalProperties: false
@@ -676,11 +684,19 @@ components:
           maxLength: 64
         mode:
           $ref: '#/components/schemas/AbsenceMode'
+        callbackPhone:
+          description: Optional MFA absence notification number. Empty disables recall notifications.
+          type: string
+          maxLength: 32
+        recallConsentConfirmed:
+          description: MFA confirms oral consent to a one-time recall notification for this visit. Required when callbackPhone is non-empty.
+          type: boolean
         returnWindowMinutes:
           type: integer
           minimum: 1
           maximum: 240
         notifyChannel:
+          description: Optional transport override. Omitted selects WhatsApp when configured, otherwise SMS.
           type: string
           enum:
             - sms
@@ -763,13 +779,16 @@ components:
                   type: boolean
                 sent:
                   type: boolean
+                status:
+                  type: string
+                  enum: [accepted, failed, unknown, simulated]
                 messageId:
                   type: string
                 errorCode:
                   type: string
                 fallbackFrom:
                   type: string
-                  description: Set when WhatsApp was attempted first and SMS completed delivery.
+                  description: Set when WhatsApp was attempted first and SMS was accepted by the provider.
     AbsenceMode:
       type: string
       enum:
@@ -906,7 +925,7 @@ paths:
     parameters:
       - $ref: './common.yaml#/components/parameters/XClientRole'
     put:
-      summary: Set MFA callback phone for recall SMS (separate from terminal check-in phone)
+      summary: Set MFA callback phone with oral consent for recall SMS or WhatsApp
       parameters:
         - in: path
           name: visitId
@@ -923,7 +942,12 @@ paths:
               additionalProperties: false
               required:
                 - callbackPhone
+                - recallConsentConfirmed
               properties:
+                recallConsentConfirmed:
+                  type: boolean
+                  enum: [true]
+                  description: MFA has obtained oral consent for a one-time SMS or WhatsApp recall for this visit.
                 callbackPhone:
                   type: string
                   minLength: 3
@@ -954,7 +978,7 @@ paths:
               schema:
                 $ref: './common.yaml#/components/schemas/Error'
     delete:
-      summary: Clear MFA callback phone (recall falls back to terminal check-in phone)
+      summary: Clear MFA callback phone and revoke recall notification consent
       parameters:
         - in: path
           name: visitId

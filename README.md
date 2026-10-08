@@ -53,6 +53,7 @@ CLI: `npm run setup` · Test-Install: `WARTEZIMMER_HOME=/tmp/pf-dev-001 npm run 
 ```bash
 npm run verify                  # lint + typecheck + tests + UI-Build + Secret-Scan
 npm run generate:api            # nach Änderungen an openapi/*.yaml
+npm run dump:notifications      # fokussierter Rückhol-/Messaging-Dump mit API, ohne Tests
 npm run smoke:all               # Integration — braucht laufenden Stack auf :8080
 npm run release:images          # Erstinstallationspaket (.pfinstall + Sidecar)
 npm run release:pfupdate        # Updatepaket (.pfupdate)

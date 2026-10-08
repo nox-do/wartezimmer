@@ -1,3 +1,4 @@
+import { ensureRecallDeliverySchema } from '../db/visit-recall-delivery.js';
 import type { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -6,6 +7,7 @@ import {
   ensureVisitEventAuditColumns,
   ensureVisitSupersedeColumns,
 } from '@wartezimmer/flow-core/server';
+import { ensureVisitRecallConsentSchema } from '../db/visit-recall-consent.js';
 import { ensureVisitHostStateSchema } from '../db/visit-host-state.js';
 import { ensureVisitPortalSchema } from '../db/visit-portal-schema.js';
 import { ensureVisitLegacyDropSchema } from '../db/visit-legacy-drop-schema.js';
@@ -22,6 +24,8 @@ export function ensureFlowCoreSchema(db: DatabaseSync): void {
   ensureVisitEventAuditColumns(db);
   ensureVisitSupersedeColumns(db);
   ensureVisitHostStateSchema(db);
+  ensureVisitRecallConsentSchema(db);
+  ensureRecallDeliverySchema(db);
   ensureVisitPortalSchema(db);
   ensureVisitLegacyDropSchema(db);
 }
@@ -50,6 +54,8 @@ export function clearFlowCoreVisitRuntime(db: DatabaseSync): void {
   deleteAllFromIfExists(db, 'visit_topics');
   deleteAllFromIfExists(db, 'documents');
   deleteAllFromIfExists(db, 'patient_sessions');
+  deleteAllFromIfExists(db, 'visit_recall_delivery');
+  deleteAllFromIfExists(db, 'visit_recall_consent');
   deleteAllFromIfExists(db, 'visit_host_state');
   deleteAllFromIfExists(db, 'visits');
   deleteAllFromIfExists(db, 'patients');

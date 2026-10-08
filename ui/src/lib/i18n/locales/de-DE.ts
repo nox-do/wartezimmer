@@ -141,7 +141,14 @@ export const dict = {
     messagingTitle: 'SMS & Messenger',
     messagingLead: 'Versand für Rückruf-SMS und Messenger (seven.io).',
     messagingEnabledLabel: 'Aktiv',
-    messagingConfigured: 'Konfiguriert',
+    messagingSmsEnabledLabel: 'SMS-Versand aktivieren',
+    messagingApiKeyStored: 'API-Key hinterlegt',
+    messagingApiKeyStoredHint:
+      'Ein API-Key ist gespeichert. Er wird aus Sicherheitsgründen nicht angezeigt.',
+    messagingApiKeyReplace:
+      'Beim Speichern wird der hinterlegte API-Key für SMS und WhatsApp ersetzt.',
+    messagingApiKeyMissing: 'Noch kein API-Key hinterlegt.',
+    messagingConfigured: 'Zugangsdaten hinterlegt',
     messagingNotConfigured: 'Nicht konfiguriert',
     messagingSaveOk: 'Messaging-Einstellungen gespeichert.',
     messagingSaveSmsOk: 'SMS-Einstellungen gespeichert.',
@@ -160,7 +167,7 @@ export const dict = {
     messagingSaveSms: 'SMS speichern',
     messagingWhatsappSectionTitle: 'WhatsApp-Rückruf',
     messagingWhatsappSectionHint:
-      'WhatsApp Business über seven.io (WABA). Template braucht zwei Platzhalter: {{1}} Rückkehrzeit, {{2}} Wartenummer (z. B. A-001). Beim Rückruf wird zuerst WhatsApp versucht; schlägt das fehl oder ist nicht aktiv, wird automatisch SMS verwendet (sofern SMS konfiguriert ist).',
+      'WhatsApp Business über seven.io (WABA). Template braucht zwei Platzhalter: {{1}} Rückkehrzeit, {{2}} Wartenummer (z. B. A-001). Beim Rückruf wird zuerst WhatsApp versucht. Ist WhatsApp nicht aktiv oder sicher fehlgeschlagen, folgt SMS (sofern konfiguriert). Bei unklarem Versand wird keine zweite Nachricht automatisch verschickt.',
     messagingWhatsappFromLabel: 'WABA-Absendernummer',
     messagingWhatsappTemplateLabel: 'Template-Name',
     messagingWhatsappLanguageLabel: 'Template-Sprache',
@@ -256,7 +263,7 @@ export const dict = {
       contactsOwnReady: 'CSV ist geprüft und gespeichert — Sie können weitergehen.',
       contactsNextBlocked: 'Bitte Kontakt-CSV abschließen (Beispieldatei oder Test erfolgreich).',
       messagingWizardHint:
-        'Optional: seven.io SMS für Rückruf-Nachrichten (API-Key eintragen und speichern). Sie können diesen Schritt überspringen und SMS später unter System → SMS & Messenger einrichten.',
+        'Optional: SMS und WhatsApp für Rückruf-Nachrichten einrichten. API-Key eintragen, gewünschten Versand aktivieren und speichern. Sie können diesen Schritt auch überspringen.',
       messagingWhatsappLater: 'WhatsApp/Messenger ebenfalls später unter System → SMS & Messenger.',
       messagingReady: 'SMS ist konfiguriert.',
       messagingSkipNote:
@@ -316,7 +323,7 @@ export const dict = {
     backendUnreachableTip: 'Bitte IT oder Praxisleitung informieren.',
     markAwaySuccess: 'Patient ist auf abwesend gesetzt.',
     recallStarted: 'Rückkehr angefordert · Rückkehr bis {time}',
-    recallSmsFailedTitle: 'Rückhol-SMS · {ticket}',
+    recallSmsFailedTitle: 'Benachrichtigung · {ticket}',
     recallSmsErrorInvalidNumber:
       'Ungültige Mobilnummer — bitte Nummer prüfen und Patient am Empfang ansprechen.',
     recallSmsErrorNotConfigured:
@@ -326,10 +333,14 @@ export const dict = {
     recallSmsErrorInsufficientCredit:
       'SMS-Guthaben reicht nicht — Patient bitte am Empfang ansprechen.',
     recallSmsErrorGeneric: 'Versand fehlgeschlagen ({code}) — Patient bitte am Empfang ansprechen.',
-    recallNotifyRetrySuccess: 'Rückhol-SMS erneut gesendet.',
+    recallNotifyRetrySuccess: 'Benachrichtigung an Nachrichtendienst übergeben.',
+    recallNotifySending: 'Benachrichtigung wird gesendet…',
+    recallNotifyDelivered: 'Benachrichtigung zugestellt',
+    recallNotifyUnknown: 'Versand unklar – bitte vor erneutem Versand prüfen.',
+    recallNotifySimulated: 'Simulation – keine Nachricht verschickt',
     fixRecallNotifyModalTitle: 'Nummer korrigieren',
     fixRecallNotifyModalDesc:
-      'Rückhol-SMS für {ticket} ist fehlgeschlagen. Nummer prüfen und erneut senden — der Countdown läuft weiter.',
+      'Benachrichtigung für {ticket} ist fehlgeschlagen. Nummer prüfen und erneut senden — der Countdown läuft weiter.',
     fixRecallNotifySubmit: 'Erneut senden',
     fixRecallNotifySubmitting: 'Wird gesendet…',
     actionFixRecallNotify: 'Nummer korrigieren',
@@ -435,7 +446,15 @@ export const dict = {
     returnUntilTitle: 'Rückkehr bis {time}',
     markAwayModalTitle: 'Abwesend setzen',
     markAwayModalDesc:
-      'Patient {ticket} verlässt das Wartezimmer. Optional Mobilnummer — beim Rückholen geht dann eine SMS (Rückkehr innerhalb von {minutes} Min.) raus.',
+      'Patient {ticket} verlässt das Wartezimmer. Optional Mobilnummer und mündliche Zustimmung erfassen — beim Rückholen geht dann eine SMS (Rückkehr innerhalb von {minutes} Min.) raus.',
+    recallConsentLabel:
+      'Ich habe die mündliche Zustimmung des Patienten eingeholt, ihn für den heutigen Praxisbesuch einmalig per SMS oder WhatsApp zur Rückkehr in die Praxis zu benachrichtigen.',
+    recallConsentHint:
+      'Bitte den Patienten vorher fragen und auf die Datenschutzhinweise der Praxis hinweisen. Ohne Zustimmung die Mobilnummer leer lassen.',
+    recallConsentRequired:
+      'Bitte zuerst die mündliche Zustimmung zur Rückholbenachrichtigung bestätigen.',
+    recallSmsErrorConsentRequired:
+      'Die Zustimmung zur Rückholbenachrichtigung fehlt. Bitte beim Patienten erfragen und im Nummerndialog bestätigen.',
     markAwayPhoneLabel: 'Mobilnummer (optional)',
     markAwayPhonePlaceholder: 'z. B. 0171 …',
     markAwaySubmit: 'Abwesend setzen',
@@ -512,9 +531,9 @@ export const dict = {
     entryArrivedHere: 'OK · {room}',
     entryRecallActive: '{topic} · Rückholung aktiv',
     entryMonitor: 'Monitor',
-    entryAbsentRecallSent: 'Benachrichtigung gesendet · Abwesend seit {time}',
-    entryAbsentRecallWindow: 'Rückkehrfenster · Abwesend seit {time}',
-    entryAbsentRecallSmsFailed: 'SMS fehlgeschlagen · Abwesend seit {time}',
+    entryAbsentRecallSent: 'An Nachrichtendienst übergeben · Abwesend seit {time}',
+    entryAbsentRecallWindow: 'Ohne Benachrichtigung · Abwesend seit {time}',
+    entryAbsentRecallSmsFailed: 'Benachrichtigung fehlgeschlagen · Abwesend seit {time}',
     entryAbsentOutSince: 'Abwesend seit {time}',
     entryCheckedInAt: 'Eingecheckt {time}',
     entryNamePlaceholder: 'Name eingeben',

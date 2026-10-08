@@ -256,7 +256,7 @@ export interface paths {
       cookie?: never;
     };
     get?: never;
-    /** Set MFA callback phone for recall SMS (separate from terminal check-in phone) */
+    /** Set MFA callback phone with oral consent for recall SMS or WhatsApp */
     put: {
       parameters: {
         query?: never;
@@ -272,6 +272,11 @@ export interface paths {
       requestBody: {
         content: {
           'application/json': {
+            /**
+             * @description MFA has obtained oral consent for a one-time SMS or WhatsApp recall for this visit.
+             * @enum {boolean}
+             */
+            recallConsentConfirmed: true;
             callbackPhone: string;
           };
         };
@@ -316,7 +321,7 @@ export interface paths {
       };
     };
     post?: never;
-    /** Clear MFA callback phone (recall falls back to terminal check-in phone) */
+    /** Clear MFA callback phone and revoke recall notification consent */
     delete: {
       parameters: {
         query?: never;
@@ -569,7 +574,19 @@ export interface components {
       returnUntil?: string | null;
       /** @description Set when recall SMS/WhatsApp failed; enables MFA retry (staff queue only) */
       recallNotifyErrorCode?: string | null;
-      /** @description True when recall SMS/WhatsApp was successfully sent for the current return window (staff queue only) */
+      /**
+       * @description Current notification outcome; accepted is not proof of delivery.
+       * @enum {string|null}
+       */
+      recallNotifyStatus?:
+        | 'sending'
+        | 'accepted'
+        | 'delivered'
+        | 'failed'
+        | 'unknown'
+        | 'simulated'
+        | null;
+      /** @description Compatibility flag for provider acceptance; does not prove delivery. See recallNotifyStatus. */
       recallNotifySent?: boolean;
       /**
        * @description MFA-only visual marker (staff triage); not shown on TV
@@ -601,9 +618,11 @@ export interface components {
       provider: string;
       attempted: boolean;
       sent: boolean;
+      /** @enum {string} */
+      status?: 'accepted' | 'failed' | 'unknown' | 'simulated';
       messageId?: string;
       errorCode?: string;
-      /** @description Set when WhatsApp was attempted first and SMS completed delivery. */
+      /** @description Set when WhatsApp was attempted first and SMS was accepted by the provider. */
       fallbackFrom?: string;
     };
     QueueRecallRetryNotifyResponse: {
@@ -805,8 +824,15 @@ export interface components {
       roomLabel?: string;
       actingRoomId?: string;
       mode?: components['schemas']['AbsenceMode'];
+      /** @description Optional MFA absence notification number. Empty disables recall notifications. */
+      callbackPhone?: string;
+      /** @description MFA confirms oral consent to a one-time recall notification for this visit. Required when callbackPhone is non-empty. */
+      recallConsentConfirmed?: boolean;
       returnWindowMinutes?: number;
-      /** @enum {string} */
+      /**
+       * @description Optional transport override. Omitted selects WhatsApp when configured, otherwise SMS.
+       * @enum {string}
+       */
       notifyChannel?: 'sms' | 'whatsapp';
     };
     QueueVisitTransitionResponse:
@@ -840,9 +866,11 @@ export interface components {
             provider: string;
             attempted: boolean;
             sent: boolean;
+            /** @enum {string} */
+            status?: 'accepted' | 'failed' | 'unknown' | 'simulated';
             messageId?: string;
             errorCode?: string;
-            /** @description Set when WhatsApp was attempted first and SMS completed delivery. */
+            /** @description Set when WhatsApp was attempted first and SMS was accepted by the provider. */
             fallbackFrom?: string;
           })
         | null;

@@ -197,10 +197,17 @@ Der Pages-Build übernimmt `images/` als lokale Assets.
 
 ## Orientierung: Produktkarussell
 
-Der Abschnitt „Orientierung. Bei jedem Schritt.“ zeigt fünf Themen: Anmeldung,
+Der Abschnitt „Orientierung. Bei jedem Schritt.“ zeigt sechs Themen: Praxisübersicht, Anmeldung,
 Terminal-Hardware und Bondrucker, Wartezimmer-TV, Wege/Routing sowie Raum-Panels.
 Die Themenwahl, Pfeile und Tastatur (Links/Rechts, Home/End) wechseln die Karte;
 auf Touchgeräten unterstützt der Inhaltsbereich horizontales Wischen. Es gibt
 keinen automatischen Wechsel. Ohne JavaScript bleiben alle Karten untereinander
 lesbar. Hardware, Routing und Tür-Panel sind ausdrücklich schematische Beispiele,
 keine Hardware-Produktfotos oder Screenshots der Konfiguration.
+
+## Gesicherter Ausprobieren-Bereich
+
+Der interaktive Beispielbesuch ist vorerst aus der Website entfernt und unter
+`snippets/ausprobieren.html` gesichert. Zum Wiederverwenden innerhalb von
+`#wz-concept` einfügen. Die zugehörigen Styles und die bei vorhandenem
+`#wz-ablauf` aktivierte Demo-Logik bleiben erhalten.

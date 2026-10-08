@@ -71,6 +71,7 @@
     "dev:manager": "npm run -w @wartezimmer/manager dev",
     "dist:manager:mac": "npm run -w @wartezimmer/manager dist:mac",
     "dump": "node ./scripts/dump.mjs",
+    "dump:notifications": "node ./scripts/dump.mjs notifications",
     "dist:manager:win": "npm run -w @wartezimmer/manager dist:win",
     "dev:seed": "node scripts/dev-seed.mjs"
   },

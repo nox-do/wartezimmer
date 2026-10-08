@@ -358,11 +358,29 @@ function handleSetAbsence(ctx: TransitionContext): QueueVisitTransitionResponse 
     });
     return undefined;
   }
+  if (ctx.body.callbackPhone?.trim() && ctx.body.recallConsentConfirmed !== true) {
+    sendApiError(ctx.reply, 400, {
+      code: 'INVALID_ARGUMENT',
+      message: 'Bitte die mündliche Zustimmung zur Rückholbenachrichtigung bestätigen.',
+    });
+    return undefined;
+  }
   const absenceMode = ctx.body.mode;
   return runVisitTransition({
     reply: ctx.reply,
     visitId: ctx.visitId,
-    execute: () => ctx.db.setAbsence(ctx.visitId, absenceMode),
+    execute: () =>
+      ctx.db.setAbsence(
+        ctx.visitId,
+        absenceMode,
+        ctx.body.callbackPhone !== undefined
+          ? {
+              callbackPhone: ctx.body.callbackPhone,
+              recallConsentConfirmed: ctx.body.recallConsentConfirmed === true,
+              actorId: ctx.actorId,
+            }
+          : undefined,
+      ),
     mapSuccess: (transition) => transitionBody(transition, ctx.visitId),
     errorOptions: {
       invalidTransitionMessage: `Ticket ${ctx.visitId} kann nicht als abwesend markiert werden.`,
@@ -373,7 +391,7 @@ function handleSetAbsence(ctx: TransitionContext): QueueVisitTransitionResponse 
 async function handleRecall(
   ctx: TransitionContext,
 ): Promise<QueueVisitTransitionResponse | undefined> {
-  const notifyChannel = ctx.body.notifyChannel ?? 'sms';
+  const notifyChannel = ctx.body.notifyChannel ?? 'whatsapp';
   try {
     const transition = ctx.db.recallVisit(ctx.visitId, ctx.body.returnWindowMinutes);
     let smsDispatch: MessageDispatchResult | null = null;
@@ -402,7 +420,7 @@ async function handleRecall(
   } catch (error) {
     const handled = handleQueueRouteError(ctx.reply, ctx.visitId, error, {
       invalidTransitionMessage: `Ticket ${ctx.visitId} kann nicht zurueckgeholt werden.`,
-      missingCallbackPhoneMessage: 'Rueckholen per SMS nicht moeglich: callbackPhone fehlt.',
+      missingCallbackPhoneMessage: 'Rueckholbenachrichtigung nicht moeglich: callbackPhone fehlt.',
     });
     if (handled) {
       return undefined;
@@ -414,7 +432,7 @@ async function handleRecall(
 async function handleRetryRecallNotify(
   ctx: TransitionContext,
 ): Promise<QueueVisitTransitionResponse | undefined> {
-  const notifyChannel = ctx.body.notifyChannel ?? 'sms';
+  const notifyChannel = ctx.body.notifyChannel ?? 'whatsapp';
   try {
     const retry = ctx.db.retryRecallNotify(ctx.visitId);
     const smsDispatch = await dispatchRecallNotifyAndPersist(
@@ -437,12 +455,13 @@ async function handleRetryRecallNotify(
     };
   } catch (error) {
     const handled = handleQueueRouteError(ctx.reply, ctx.visitId, error, {
-      invalidTransitionMessage: `Ticket ${ctx.visitId} kann keine Rückhol-SMS erneut senden.`,
-      missingCallbackPhoneMessage: 'Fuer erneuten SMS-Versand ist eine Handynummer erforderlich.',
+      invalidTransitionMessage: `Ticket ${ctx.visitId} kann keine Rückholbenachrichtigung erneut senden.`,
+      missingCallbackPhoneMessage:
+        'Fuer eine erneute Benachrichtigung ist eine Handynummer erforderlich.',
       recallNotifyRetryNotAllowedMessage:
-        'Erneuter SMS-Versand ist fuer dieses Ticket nicht moeglich.',
+        'Eine erneute Benachrichtigung ist fuer dieses Ticket nicht moeglich.',
       recallWindowExpiredMessage:
-        'Das Rueckkehrfenster ist abgelaufen — erneuter SMS-Versand nicht moeglich.',
+        'Das Rueckkehrfenster ist abgelaufen — erneute Benachrichtigung nicht moeglich.',
     });
     if (handled) {
       return undefined;

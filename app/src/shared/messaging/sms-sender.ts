@@ -9,8 +9,9 @@ export type MessageDispatchResult = {
   attempted: boolean;
   sent: boolean;
   messageId?: string;
+  status?: 'accepted' | 'failed' | 'unknown' | 'simulated';
   errorCode?: string;
-  /** Set when WhatsApp was tried first and SMS carried the delivery. */
+  /** Set when WhatsApp was tried first and SMS was accepted by the provider. */
   fallbackFrom?: string;
 };
 
@@ -128,7 +129,18 @@ export function parseSevenGatewaySendResponse(
   const firstMessage = messages?.[0];
   const firstMessageRecord = isRecord(firstMessage) ? firstMessage : undefined;
   const successCode = String(data?.success ?? '');
-  const accepted = successCode === '100' || firstMessageRecord?.success === true;
+  const accepted =
+    firstMessageRecord?.success === true ||
+    (successCode === '100' && firstMessageRecord?.success !== false);
+  if (!data || (!/^\d+$/.test(successCode) && typeof firstMessageRecord?.success !== 'boolean')) {
+    return {
+      provider,
+      attempted: true,
+      sent: false,
+      status: 'unknown',
+      errorCode: 'PROVIDER_RESPONSE_UNKNOWN',
+    };
+  }
 
   if (!accepted) {
     const fallbackCode =
@@ -137,7 +149,10 @@ export function parseSevenGatewaySendResponse(
       provider,
       attempted: true,
       sent: false,
-      errorCode: String(firstMessageRecord?.error ?? data?.success ?? fallbackCode),
+      status: 'failed',
+      errorCode: String(
+        firstMessageRecord?.error ?? (successCode !== '100' ? data?.success : null) ?? fallbackCode,
+      ),
     };
   }
 
@@ -145,6 +160,7 @@ export function parseSevenGatewaySendResponse(
     provider,
     attempted: true,
     sent: true,
+    status: data?.debug === true || data?.debug === 'true' ? 'simulated' : 'accepted',
     messageId: typeof firstMessageRecord?.id === 'string' ? firstMessageRecord.id : undefined,
   };
 }
@@ -158,6 +174,7 @@ async function sendWithSeven(
     to: input.callbackPhone,
     text: formatRecallMessage(input),
     json: '1',
+    ttl: String(Math.max(1, Math.floor((Date.parse(input.returnUntil) - Date.now()) / 60_000))),
   });
   if (from && from.trim().length > 0) {
     body.set('from', from.trim());
@@ -181,6 +198,7 @@ async function sendWithSeven(
       provider: 'seven',
       attempted: true,
       sent: false,
+      status: 'unknown',
       errorCode: isProviderTimeoutError(error) ? 'SEVEN_TIMEOUT' : 'SEVEN_UNREACHABLE',
     };
   }
@@ -191,6 +209,7 @@ async function sendWithSeven(
       provider: 'seven',
       attempted: true,
       sent: false,
+      status: 'unknown',
       errorCode: 'SEVEN_TIMEOUT',
     };
   }
@@ -200,6 +219,7 @@ async function sendWithSeven(
       provider: 'seven',
       attempted: true,
       sent: false,
+      status: response.status >= 500 || response.status === 408 ? 'unknown' : 'failed',
       errorCode: `SEVEN_HTTP_${response.status}`,
     };
   }
@@ -226,7 +246,8 @@ async function sendWithSevenWhatsApp(
       },
       body: JSON.stringify({
         from,
-        to: input.callbackPhone,
+        to: input.callbackPhone.replace(/^\+/, ''),
+        ttl: Math.max(1, Math.floor((Date.parse(input.returnUntil) - Date.now()) / 60_000)),
         type: 'template',
         template,
         language,
@@ -239,6 +260,7 @@ async function sendWithSevenWhatsApp(
       provider: 'seven_whatsapp',
       attempted: true,
       sent: false,
+      status: 'unknown',
       errorCode: isProviderTimeoutError(error)
         ? 'SEVEN_WHATSAPP_TIMEOUT'
         : 'SEVEN_WHATSAPP_UNREACHABLE',
@@ -251,6 +273,7 @@ async function sendWithSevenWhatsApp(
       provider: 'seven_whatsapp',
       attempted: true,
       sent: false,
+      status: 'unknown',
       errorCode: 'SEVEN_WHATSAPP_TIMEOUT',
     };
   }
@@ -260,6 +283,7 @@ async function sendWithSevenWhatsApp(
       provider: 'seven_whatsapp',
       attempted: true,
       sent: false,
+      status: response.status >= 500 || response.status === 408 ? 'unknown' : 'failed',
       errorCode: `SEVEN_WHATSAPP_HTTP_${response.status}`,
     };
   }
@@ -281,6 +305,7 @@ export async function dispatchRecallSms(
       provider: 'mock',
       attempted: true,
       sent: true,
+      status: 'simulated',
       messageId: `mock-${Date.now()}`,
     };
   }
@@ -308,7 +333,7 @@ export async function dispatchRecallSms(
   };
 }
 
-function resolveSevenApiKey(
+export function resolveSevenApiKey(
   db: CoreDatabase,
   primaryProviderId: 'seven' | 'seven_whatsapp',
 ): string | undefined {
@@ -342,16 +367,35 @@ export async function dispatchRecallWhatsApp(
   return sendWithSevenWhatsApp(apiKey, from, template, language, input);
 }
 
-/** Try WhatsApp first; fall back to SMS when WhatsApp is unavailable or fails. */
+/** Try WhatsApp first; fall back only when unavailable or definitely rejected. */
 export async function dispatchRecallWithFallback(
   db: CoreDatabase,
   input: RecallMessageInput,
+  canFallback: () => boolean,
 ): Promise<MessageDispatchResult> {
   const whatsapp = await dispatchRecallWhatsApp(db, input);
-  if (whatsapp.sent) {
+  if (whatsapp.sent || whatsapp.status === 'unknown') {
     return whatsapp;
   }
 
+  if (Date.parse(input.returnUntil) <= Date.now()) {
+    return {
+      provider: 'none',
+      attempted: false,
+      sent: false,
+      status: 'failed',
+      errorCode: 'RECALL_WINDOW_EXPIRED',
+    };
+  }
+  if (!canFallback()) {
+    return {
+      provider: 'none',
+      attempted: false,
+      sent: false,
+      status: 'failed',
+      errorCode: 'RECALL_NOTIFY_RETRY_NOT_ALLOWED',
+    };
+  }
   const sms = await dispatchRecallSms(db, input);
   if (sms.sent) {
     if (whatsapp.attempted) {
@@ -363,5 +407,5 @@ export async function dispatchRecallWithFallback(
     return sms;
   }
 
-  return sms.attempted ? sms : whatsapp;
+  return sms;
 }

@@ -75,10 +75,27 @@ test('parseSevenGatewaySendResponse accepts documented WhatsApp success envelope
   assert.equal(result.errorCode, undefined);
 });
 
+test('seven sandbox success is simulated, not a real accepted message', () => {
+  // Shape observed with a real seven sandbox key; credentials and recipient omitted.
+  for (const debug of ['true', true]) {
+    const result = parseSevenGatewaySendResponse(
+      {
+        success: '100',
+        debug,
+        messages: [{ id: null, success: true, error: null }],
+      },
+      'seven',
+    );
+    assert.equal(result.status, 'simulated');
+    assert.equal(result.messageId, undefined);
+  }
+});
+
 test('parseSevenGatewaySendResponse rejects missing messages as invalid', () => {
   const result = parseSevenGatewaySendResponse({ success: true, id: 'legacy' }, 'seven_whatsapp');
   assert.equal(result.sent, false);
-  assert.equal(result.errorCode, 'true');
+  assert.equal(result.status, 'unknown');
+  assert.equal(result.errorCode, 'PROVIDER_RESPONSE_UNKNOWN');
 });
 
 test('formatReturnUntilTime uses BUSINESS_TZ even when process TZ is UTC', () => {

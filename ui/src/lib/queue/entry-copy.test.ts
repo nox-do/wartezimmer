@@ -171,4 +171,17 @@ describe('queueEntrySecondary', () => {
     );
     expect(secondary).toContain('mfa.entryAbsentRecallSent');
   });
+  it.each([
+    ['sending', 'mfa.recallNotifySending'],
+    ['delivered', 'mfa.recallNotifyDelivered'],
+    ['unknown', 'mfa.recallNotifyUnknown'],
+    ['simulated', 'mfa.recallNotifySimulated'],
+  ] as const)('shows %s without claiming ordinary delivery', (status, key) => {
+    expect(
+      queueEntrySecondary(
+        baseItem({ status: 'absent_return_later', recallNotifyStatus: status }),
+        'away',
+      ),
+    ).toContain(key);
+  });
 });

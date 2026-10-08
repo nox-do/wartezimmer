@@ -98,10 +98,14 @@ export async function clearCallbackPhoneVisit(visitId: string) {
   });
 }
 
-export async function setCallbackPhoneVisit(visitId: string, callbackPhone: string) {
+export async function setCallbackPhoneVisit(
+  visitId: string,
+  callbackPhone: string,
+  recallConsentConfirmed: boolean,
+) {
   return mfaAuthFetch<QueueCallbackPhoneResponse>(visitPath(visitId, 'callback-phone'), {
     method: 'PUT',
-    body: JSON.stringify({ callbackPhone: callbackPhone.trim() }),
+    body: JSON.stringify({ callbackPhone: callbackPhone.trim(), recallConsentConfirmed }),
   });
 }
 
@@ -122,6 +126,11 @@ export async function supersedeVisitTopic(visitId: string, topicId: string) {
 export async function setAbsenceVisit(
   visitId: string,
   mode: Extract<AbsenceMode, 'wait_here' | 'return_later'> = 'wait_here',
+  notification?: { callbackPhone: string; recallConsentConfirmed: boolean },
 ) {
-  return transitionVisit<QueueTransitionResponse>(visitId, { type: 'set_absence', mode });
+  return transitionVisit<QueueTransitionResponse>(visitId, {
+    type: 'set_absence',
+    mode,
+    ...notification,
+  });
 }

@@ -50,6 +50,7 @@
     onRecall?: () => void;
     onMarkAway?: () => void;
     onFixRecallNotify?: () => void;
+    onRetryRecallNotify?: () => void;
     onOpenDocuments?: (item: QueueItem) => void;
     onCycleTriage?: () => void;
     onSupersedeTopic?: () => void;
@@ -76,6 +77,7 @@
     onRecall,
     onMarkAway,
     onFixRecallNotify,
+    onRetryRecallNotify,
     onOpenDocuments,
     onCycleTriage,
     onSupersedeTopic,
@@ -611,7 +613,12 @@
         >
           {formatReturnCountdown(returnRemainingMs)}
         </span>
-        {#if recallNotifyFailed && returnRemainingMs > 0 && onFixRecallNotify}
+        {#if recallNotifyFailed && item.recallNotifyStatus !== 'unknown' && item.recallNotifyStatus !== 'sending' && returnRemainingMs > 0 && onFixRecallNotify}
+          {#if onRetryRecallNotify && item.recallNotifyErrorCode !== 'RECALL_CONSENT_REQUIRED'}
+            <MfaActionButton disabled={busy} onclick={onRetryRecallNotify}>
+              {t('mfa.fixRecallNotifySubmit')}
+            </MfaActionButton>
+          {/if}
           <MfaActionButton disabled={busy} onclick={onFixRecallNotify}>
             {t('mfa.actionFixRecallNotify')}
           </MfaActionButton>

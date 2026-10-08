@@ -19,7 +19,7 @@
     ticket?: TicketRef | null;
     purpose?: 'markAway' | 'fixRecallNotify';
     busy?: boolean;
-    onConfirm?: (phoneNumber: string) => void;
+    onConfirm?: (phoneNumber: string, consentConfirmed: boolean) => void;
     onCancel?: () => void;
   }
 
@@ -31,12 +31,15 @@
 
   let open = $derived(ticket != null);
   let phoneNumber = $state('');
+  let consentConfirmed = $state(false);
+  const needsConsent = $derived(phoneNumber.trim().length > 0 || purpose === 'fixRecallNotify');
 
   function handleClose() {
     onCancel?.();
   }
 
   $effect(() => {
+    consentConfirmed = false;
     if (ticket) {
       phoneNumber = formatStoredPhoneForDisplay(ticket.initialPhone?.trim() ?? '');
     }
@@ -44,7 +47,8 @@
 
   function submit(event: Event) {
     event.preventDefault();
-    onConfirm?.(compactPhoneForApi(phoneNumber));
+    if (busy || (needsConsent && !consentConfirmed) || (purpose === 'fixRecallNotify' && !phoneNumber.trim())) return;
+    onConfirm?.(compactPhoneForApi(phoneNumber), consentConfirmed);
   }
 </script>
 
@@ -99,9 +103,17 @@
         {/snippet}
       </FormField>
 
+      {#if needsConsent}
+        <label class="recall-consent">
+          <input type="checkbox" bind:checked={consentConfirmed} disabled={busy} required />
+          <span>{t('mfa.recallConsentLabel')}</span>
+        </label>
+        <p class="modal-form-hint">{t('mfa.recallConsentHint')}</p>
+      {/if}
+
       <div class="form-actions">
         <Button type="button" variant="outline" disabled={busy} onclick={handleClose}>{t('ui.cancel')}</Button>
-        <Button type="submit" variant="primary" disabled={busy} loading={busy}>
+        <Button type="submit" variant="primary" disabled={busy || (needsConsent && !consentConfirmed) || (purpose === 'fixRecallNotify' && !phoneNumber.trim())} loading={busy}>
           {busy
             ? purpose === 'fixRecallNotify'
               ? t('mfa.fixRecallNotifySubmitting')
@@ -114,3 +126,17 @@
     </form>
   {/if}
 </Modal>
+
+<style>
+  .recall-consent {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+  .recall-consent input {
+    flex-shrink: 0;
+    margin-top: 0.25rem;
+  }
+</style>

@@ -27,6 +27,7 @@
   let whatsappProvider = $state<MessagingProviderDescriptor | null>(null);
 
   let sharedApiKey = $state('');
+  const hasStoredApiKey = $derived(Boolean(sevenProvider?.hasApiKey || whatsappProvider?.hasApiKey));
   let smsEnabled = $state(false);
   let smsFrom = $state('');
   let whatsappEnabled = $state(false);
@@ -74,6 +75,10 @@
 
     smsEnabled = sevenProvider?.enabled ?? false;
     whatsappEnabled = whatsappProvider?.enabled ?? false;
+    smsFrom = sevenProvider?.settings.from ?? '';
+    whatsappFrom = whatsappProvider?.settings.from ?? '';
+    whatsappTemplate = whatsappProvider?.settings.template ?? '';
+    whatsappLanguage = whatsappProvider?.settings.language ?? '';
     syncReady();
   }
 
@@ -162,9 +167,6 @@
   <p class="text-muted">{t('ui.loading')}</p>
 {:else}
   <p class="text-desc">{setupMode ? t('ops.setup.messagingWizardHint') : t('ops.messagingSevenIntro')}</p>
-  {#if setupMode}
-    <p class="text-desc">{t('ops.setup.messagingWhatsappLater')}</p>
-  {/if}
 
   <section class="panel">
     <FormField layout="row" label={t('ops.messagingSevenApiKeyLabel')} id="seven-shared-api-key">
@@ -174,12 +176,17 @@
           class="form-input"
           type="password"
           bind:value={sharedApiKey}
-          placeholder={t('ops.messagingApiKeyPlaceholder')}
+          placeholder={hasStoredApiKey ? t('ops.messagingApiKeyStored') : t('ops.messagingApiKeyPlaceholder')}
           disabled={disabled || savingTarget != null}
           autocomplete="off"
         />
       {/snippet}
     </FormField>
+    <p class="text-desc text-desc--tight" aria-live="polite">
+      {hasStoredApiKey
+        ? sharedApiKey.trim() ? t('ops.messagingApiKeyReplace') : t('ops.messagingApiKeyStoredHint')
+        : t('ops.messagingApiKeyMissing')}
+    </p>
     <p class="text-desc text-desc--tight">{t('ops.messagingSevenApiKeyHint')}</p>
   </section>
 
@@ -201,7 +208,7 @@
       </h3>
       <p class="text-desc text-desc--tight">{t('ops.messagingSmsSectionHint')}</p>
 
-      <ChoiceField label={t('ops.messagingEnabledLabel')} variant="toggle">
+      <ChoiceField label={t('ops.messagingSmsEnabledLabel')} variant="toggle">
         <input type="checkbox" bind:checked={smsEnabled} disabled={disabled || savingTarget != null} />
       </ChoiceField>
 
@@ -233,7 +240,6 @@
     </article>
   </section>
 
-  {#if !setupMode}
     <section class="panel">
       <article class="panel panel--inset panel--inset-zinc">
         <h3 class="panel__title">
@@ -307,7 +313,6 @@
         </div>
       </article>
     </section>
-  {/if}
 
   {#if setupMode && isSmsReady()}
     <p class="text-desc">{t('ops.setup.messagingReady')}</p>

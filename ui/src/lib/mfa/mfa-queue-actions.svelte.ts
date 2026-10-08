@@ -41,6 +41,7 @@ export {
   cycleMfaTriage,
   handleMfaQueueDrop,
   handleMfaRecall,
+  handleMfaRetryRecallNotify,
   returnMfaTicketToWaiting,
   runMfaQueueAction,
   startMfaTicket,

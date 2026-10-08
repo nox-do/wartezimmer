@@ -30,6 +30,10 @@ function identityLine(item: QueueItem): string {
 export function queueEntryPrimary(item: QueueItem): string {
   switch (item.status) {
     case 'absent_return_later':
+      if (item.recallNotifyStatus === 'sending') return t('mfa.recallNotifySending');
+      if (item.recallNotifyStatus === 'unknown') return t('mfa.recallNotifyUnknown');
+      if (item.recallNotifyStatus === 'delivered') return t('mfa.recallNotifyDelivered');
+      if (item.recallNotifyStatus === 'simulated') return t('mfa.recallNotifySimulated');
       return tf('mfa.entryRecallActive', { topic: topicLabel(item) });
     default:
       return identityLine(item);
@@ -53,6 +57,10 @@ export function queueEntrySecondary(item: QueueItem, zone: QueueEntryZone): stri
         ? tf('mfa.entryDirectedTo', { room: destination })
         : t('mfa.entryDirected');
     case 'absent_return_later':
+      if (item.recallNotifyStatus === 'sending') return t('mfa.recallNotifySending');
+      if (item.recallNotifyStatus === 'unknown') return t('mfa.recallNotifyUnknown');
+      if (item.recallNotifyStatus === 'delivered') return t('mfa.recallNotifyDelivered');
+      if (item.recallNotifyStatus === 'simulated') return t('mfa.recallNotifySimulated');
       if (item.recallNotifyErrorCode) {
         return tf('mfa.entryAbsentRecallSmsFailed', { time: arrived });
       }

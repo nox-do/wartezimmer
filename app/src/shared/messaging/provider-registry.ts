@@ -11,6 +11,8 @@ export type MessagingProviderDescriptor = {
   configured: boolean;
   enabled: boolean;
   requires: string[];
+  hasApiKey: boolean;
+  settings: { from: string; template: string; language: string };
 };
 
 export type MessagingProviderCatalog = {
@@ -92,6 +94,14 @@ export function buildMessagingProviderCatalog(
       configured,
       enabled,
       requires: provider.requires,
+      hasApiKey: Boolean(
+        credentials.apiKey?.trim() || (provider.id === 'seven_whatsapp' && sharedSevenApiKey),
+      ),
+      settings: {
+        from: credentials.from ?? '',
+        template: credentials.template ?? '',
+        language: credentials.language ?? '',
+      },
     };
   };
 

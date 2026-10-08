@@ -1,3 +1,4 @@
+import { publishTvQueueUpdate } from '../queue/queue-stream-hub.js';
 import type { CoreDatabase } from '../db/database.js';
 import {
   dispatchRecallSms,
@@ -10,14 +11,9 @@ export function persistRecallNotifyResult(
   db: CoreDatabase,
   visitId: string,
   smsDispatch: MessageDispatchResult,
+  token: string,
 ): void {
-  if (smsDispatch.sent) {
-    db.setRecallNotifyError(visitId, null);
-    db.setRecallNotifySent(visitId, true);
-  } else {
-    db.setRecallNotifyError(visitId, smsDispatch.errorCode ?? 'UNKNOWN');
-    db.setRecallNotifySent(visitId, false);
-  }
+  db.finishRecallDelivery(visitId, token, smsDispatch);
 }
 
 /**
@@ -35,10 +31,8 @@ export function resolveRecallTicketCode(visitId: string): string {
 /**
  * Dispatch recall SMS/WhatsApp and persist notify outcome on the ticket.
  *
- * Intentionally no second DB re-check while the provider call is in flight: the HTTP
- * step is short (~100–500 ms) vs a multi-minute return window. Guard instead with
- * RECALL_WINDOW_EXPIRED / MFA UI (no retry at 0:00). A scheduler race in the last
- * seconds is accepted — not treated as a bug worth outbox/extra transactions.
+ * One persisted state per recall window prevents concurrent retries. An interrupted
+ * send is recovered as unknown, never automatically resent.
  */
 export async function dispatchRecallNotifyAndPersist(
   db: CoreDatabase,
@@ -49,8 +43,29 @@ export async function dispatchRecallNotifyAndPersist(
     returnUntil: string;
     checkinLocale?: string | null;
   },
-  notifyChannel: 'sms' | 'whatsapp',
+  notifyChannel: 'sms' | 'whatsapp' = 'whatsapp',
 ): Promise<MessageDispatchResult> {
+  if (!db.hasRecallNotifyConsent(visitId, input.callbackPhone)) {
+    const result: MessageDispatchResult = {
+      provider: 'none',
+      attempted: false,
+      sent: false,
+      errorCode: 'RECALL_CONSENT_REQUIRED',
+    };
+    return result;
+  }
+  const previous = db.listRecallDeliveries().find((row) => row.visitId === visitId);
+  const token = db.beginRecallDelivery(visitId, input.returnUntil, input.callbackPhone);
+  if (!token) {
+    return {
+      provider: 'none',
+      attempted: false,
+      sent: false,
+      status: 'unknown',
+      errorCode: 'RECALL_NOTIFY_RETRY_NOT_ALLOWED',
+    };
+  }
+  publishTvQueueUpdate(db);
   const dispatchInput = {
     ticketId: resolveRecallTicketCode(visitId),
     callbackPhone: input.callbackPhone,
@@ -58,12 +73,25 @@ export async function dispatchRecallNotifyAndPersist(
     returnUntil: input.returnUntil,
     checkinLocale: input.checkinLocale ?? null,
   };
+  // A failed SMS (including fallback) should not restart WhatsApp on manual retry.
+  const retrySms =
+    previous?.returnUntil === input.returnUntil &&
+    previous.phone === input.callbackPhone &&
+    previous.provider === 'seven';
   const smsDispatch =
-    notifyChannel === 'whatsapp'
-      ? await dispatchRecallWithFallback(db, dispatchInput)
+    notifyChannel === 'whatsapp' && !retrySms
+      ? await dispatchRecallWithFallback(db, dispatchInput, () => {
+          const current = db.listQueue().find((item) => item.id === visitId);
+          return (
+            current?.status === 'absent_return_later' &&
+            current.returnUntil === input.returnUntil &&
+            (current.callbackPhone || current.checkinPhone) === input.callbackPhone &&
+            db.hasRecallNotifyConsent(visitId, input.callbackPhone)
+          );
+        })
       : await dispatchRecallSms(db, dispatchInput);
 
-  persistRecallNotifyResult(db, visitId, smsDispatch);
+  persistRecallNotifyResult(db, visitId, smsDispatch, token);
 
   return smsDispatch;
 }

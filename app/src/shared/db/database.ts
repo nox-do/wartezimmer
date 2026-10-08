@@ -1,3 +1,15 @@
+import {
+  beginRecallDelivery,
+  finishRecallDelivery,
+  listRecallDeliveries,
+  type RecallDeliveryStatus,
+} from './visit-recall-delivery.js';
+import type { MessageDispatchResult } from '../messaging/sms-sender.js';
+import {
+  recordVisitRecallConsent,
+  clearVisitRecallConsent,
+  hasVisitRecallConsent,
+} from './visit-recall-consent.js';
 import { isRegistrationLaneBlocked } from '../queue/registration-number-limit.js';
 import { resolveTicketLaneCodeFromSettings } from '../checkin-topic-settings.js';
 import fs from 'node:fs';
@@ -103,7 +115,7 @@ import {
   getOpsSetupFromDb,
   updateOpsSetupProgressInDb,
 } from './database-ops-setup.js';
-import { DomainError } from '../errors/domain-error.js';
+import { DomainError, domainError } from '../errors/domain-error.js';
 import type { SetupContactMode, SetupWizardStep } from '../ops/setup-types.js';
 import {
   completeSetupInDb,
@@ -796,12 +808,13 @@ export class CoreDatabase {
 
   /** Visit-only queue (Phase A). Legacy ticket merge removed — Phase B drops tickets/queue_entries. */
   listQueue(): QueueVisitRow[] {
+    const deliveries = new Map(listRecallDeliveries(this.db).map((row) => [row.visitId, row]));
     return listVisitQueueRows(
       getFlowCoreRuntime(this.db),
       this.getOpsSettings(),
       this.commonHelperDeps().getBusinessDay(),
       this.db,
-    );
+    ).map((item) => ({ ...item, recallNotifyStatus: deliveries.get(item.id)?.status ?? null }));
   }
 
   processExpiredRecallWindows(): string[] {
@@ -1127,6 +1140,7 @@ export class CoreDatabase {
   setAbsence(
     visitId: string,
     mode: AbsenceMode,
+    notification?: { callbackPhone: string; recallConsentConfirmed: boolean; actorId?: string },
   ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
     return this.withTransaction('setAbsence', () => {
       requireVisitExistsInDb(this.db, visitId);
@@ -1139,6 +1153,35 @@ export class CoreDatabase {
         mode,
         updatedAt,
       );
+      if (notification) {
+        if (notification.callbackPhone.trim()) {
+          if (!notification.recallConsentConfirmed) throw domainError('INVALID_ARGUMENT');
+          const result = setVisitCallbackPhone(
+            this.db,
+            getFlowCoreRuntime(this.db),
+            this.getOpsSettings(),
+            visitId,
+            notification.callbackPhone,
+            updatedAt,
+          );
+          recordVisitRecallConsent(
+            this.db,
+            visitId,
+            result.callbackPhone,
+            updatedAt,
+            notification.actorId,
+          );
+        } else {
+          clearVisitCallbackPhone(
+            this.db,
+            getFlowCoreRuntime(this.db),
+            this.getOpsSettings(),
+            visitId,
+            updatedAt,
+          );
+          clearVisitRecallConsent(this.db, visitId);
+        }
+      }
       this.emitOutboxEvent('QueueStatusChanged', visitId, {
         visitId: visitId,
         fromStatus: transition.fromStatus,
@@ -1155,10 +1198,11 @@ export class CoreDatabase {
   setCallbackPhone(
     visitId: string,
     callbackPhone: string,
+    consentActorId?: string,
   ): { callbackPhone: string; updatedAt: string } {
     return this.withTransaction('setCallbackPhone', () => {
       requireVisitExistsInDb(this.db, visitId);
-      return setVisitCallbackPhone(
+      const result = setVisitCallbackPhone(
         this.db,
         getFlowCoreRuntime(this.db),
         this.getOpsSettings(),
@@ -1166,12 +1210,21 @@ export class CoreDatabase {
         callbackPhone,
         this.commonHelperDeps().nowIso(),
       );
+      recordVisitRecallConsent(
+        this.db,
+        visitId,
+        result.callbackPhone,
+        result.updatedAt,
+        consentActorId,
+      );
+      return result;
     });
   }
 
   clearCallbackPhone(visitId: string): { updatedAt: string } {
     return this.withTransaction('clearCallbackPhone', () => {
       requireVisitExistsInDb(this.db, visitId);
+      clearVisitRecallConsent(this.db, visitId);
       return clearVisitCallbackPhone(
         this.db,
         getFlowCoreRuntime(this.db),
@@ -1299,10 +1352,80 @@ export class CoreDatabase {
         updatedAt,
         returnUntil: recall.returnUntil,
       });
-      return recall;
+      return {
+        ...recall,
+        callbackPhone:
+          recall.callbackPhone && this.hasRecallNotifyConsent(visitId, recall.callbackPhone)
+            ? recall.callbackPhone
+            : null,
+      };
     });
     scheduleRecallWindowExpiry(this, visitId, Date.parse(result.returnUntil));
     return result;
+  }
+
+  listRecallDeliveries() {
+    return listRecallDeliveries(this.db);
+  }
+
+  beginRecallDelivery(visitId: string, returnUntil: string, phone: string): string | null {
+    return this.withTransaction('beginRecallDelivery', () => {
+      const current = this.listQueue().find((item) => item.id === visitId);
+      if (
+        current?.status !== 'absent_return_later' ||
+        current.returnUntil !== returnUntil ||
+        (current.callbackPhone || current.checkinPhone) !== phone ||
+        Date.parse(returnUntil) <= Date.now() ||
+        !this.hasRecallNotifyConsent(visitId, phone)
+      ) {
+        return null;
+      }
+      const token = beginRecallDelivery(this.db, visitId, returnUntil, phone);
+      if (token) {
+        const now = this.commonHelperDeps().nowIso();
+        setVisitRecallNotifyError(this.db, visitId, null, now);
+        setVisitRecallNotifySent(this.db, visitId, false, now);
+      }
+      return token;
+    });
+  }
+
+  finishRecallDelivery(
+    visitId: string,
+    token: string,
+    result: MessageDispatchResult,
+    status?: RecallDeliveryStatus,
+  ): boolean {
+    return this.withTransaction('finishRecallDelivery', () => {
+      if (!finishRecallDelivery(this.db, visitId, token, result, status)) return false;
+      const now = this.commonHelperDeps().nowIso();
+      setVisitRecallNotifyError(
+        this.db,
+        visitId,
+        result.sent ? null : (result.errorCode ?? 'UNKNOWN'),
+        now,
+      );
+      setVisitRecallNotifySent(this.db, visitId, result.sent, now);
+      return true;
+    });
+  }
+
+  recoverRecallDeliveries(): void {
+    for (const row of listRecallDeliveries(this.db)) {
+      if (row.status === 'sending') {
+        this.finishRecallDelivery(row.visitId, row.token, {
+          provider: row.provider,
+          attempted: true,
+          sent: false,
+          status: 'unknown',
+          errorCode: 'PROVIDER_RESPONSE_UNKNOWN',
+        });
+      }
+    }
+  }
+
+  hasRecallNotifyConsent(visitId: string, phone: string): boolean {
+    return hasVisitRecallConsent(this.db, visitId, phone);
   }
 
   setRecallNotifyError(visitId: string, errorCode: string | null): void {
@@ -1327,6 +1450,9 @@ export class CoreDatabase {
   } {
     return this.withTransaction('retryRecallNotify', () => {
       requireVisitExistsInDb(this.db, visitId);
+      const delivery = listRecallDeliveries(this.db).find((row) => row.visitId === visitId);
+      if (delivery && delivery.status !== 'failed')
+        throw domainError('RECALL_NOTIFY_RETRY_NOT_ALLOWED');
       return readVisitRecallNotifyRetryContext(this.db, visitId, this.commonHelperDeps().nowIso());
     });
   }

@@ -36,6 +36,7 @@
     onReturnToWaiting: (visitId: string) => void;
     onRecall: (visitId: string) => void;
     onFixRecallNotify: (visitId: string) => void;
+    onRetryRecallNotify?: (visitId: string) => void;
     onMarkAway: (visitId: string) => void;
     onOpenDocuments: (item: QueueItem) => void;
     onCycleTriage: (visitId: string) => void;
@@ -66,6 +67,7 @@
     onReturnToWaiting,
     onRecall,
     onFixRecallNotify,
+    onRetryRecallNotify,
     onMarkAway,
     onOpenDocuments,
     onCycleTriage,
@@ -239,6 +241,7 @@
           busy={isBusy(item.visitId)}
           onRecall={() => onRecall(item.visitId)}
           onFixRecallNotify={() => onFixRecallNotify(item.visitId)}
+          onRetryRecallNotify={onRetryRecallNotify ? () => onRetryRecallNotify(item.visitId) : undefined}
           onCancelVisit={() => onCancelVisit(item.visitId)}
           onOpenDocuments={onOpenDocuments}
           onCycleTriage={() => onCycleTriage(item.visitId)}

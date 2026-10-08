@@ -29,7 +29,6 @@ import {
   returnVisitToWaiting,
   setAbsenceVisit,
   setCallbackPhoneVisit,
-  clearCallbackPhoneVisit,
   startTreatmentVisit,
 } from '$lib/queue/queue-actions';
 import { canMfaCallTransition, canMfaCallVisit } from '$lib/queue/mfa-call-gate';
@@ -115,6 +114,7 @@ export async function confirmMfaAssistancePlacement() {
 
 type RecallSmsDispatch = {
   attempted?: boolean;
+  status?: string;
   sent?: boolean;
   errorCode?: string;
 } | null;
@@ -129,7 +129,10 @@ function showRecallSmsFailureToast(
   }
 
   const ticketLabel = item != null ? formatTicketCode(item.laneCode, item.number) : visitId;
-  const errorKey = resolveRecallDispatchErrorKey(dispatch.errorCode);
+  const errorKey =
+    dispatch.status === 'unknown'
+      ? 'mfa.recallNotifyUnknown'
+      : resolveRecallDispatchErrorKey(dispatch.errorCode);
   const errorMessage =
     errorKey === 'mfa.recallSmsErrorGeneric'
       ? tf('mfa.recallSmsErrorGeneric', { code: dispatch.errorCode?.trim() || 'UNKNOWN' })
@@ -141,7 +144,7 @@ function showRecallSmsFailureToast(
   });
 }
 
-async function confirmMarkAwayWithPhone(phoneNumber: string) {
+async function confirmMarkAwayWithPhone(phoneNumber: string, consentConfirmed = false) {
   const markAway = mfaQueueActions.phoneCorrectionVisit;
   if (!markAway || markAway.purpose !== 'markAway') {
     return;
@@ -149,28 +152,21 @@ async function confirmMarkAwayWithPhone(phoneNumber: string) {
 
   const { visitId } = markAway;
   const trimmedPhone = phoneNumber.trim();
+  if (mfaQueueActions.busyVisitId === visitId) return;
+  if (trimmedPhone && !consentConfirmed) {
+    toastStore.error(t('mfa.recallConsentRequired'));
+    return;
+  }
   mfaQueueActions.busyVisitId = visitId;
 
-  if (!markAway.absenceConfirmed) {
-    const result = await setAbsenceVisit(visitId, 'wait_here');
-    if (!result.ok) {
-      const alreadyAway = queueItem(visitId)?.status === 'absent_wait_here';
-      if (!alreadyAway) {
-        mfaQueueActions.busyVisitId = null;
-        toastStore.error(result.error.message);
-        return;
-      }
-    }
-    mfaQueueActions.phoneCorrectionVisit = { ...markAway, absenceConfirmed: true };
-  }
-
-  if (trimmedPhone.length > 0) {
-    const phoneResult = await setCallbackPhoneVisit(visitId, trimmedPhone);
-    if (!phoneResult.ok) {
-      mfaQueueActions.busyVisitId = null;
-      toastStore.error(phoneResult.error.message);
-      return;
-    }
+  const result = await setAbsenceVisit(visitId, 'wait_here', {
+    callbackPhone: trimmedPhone,
+    recallConsentConfirmed: consentConfirmed,
+  });
+  if (!result.ok) {
+    mfaQueueActions.busyVisitId = null;
+    toastStore.error(result.error.message);
+    return;
   }
 
   mfaQueueActions.busyVisitId = null;
@@ -178,7 +174,7 @@ async function confirmMarkAwayWithPhone(phoneNumber: string) {
   toastStore.success(t('mfa.markAwaySuccess'));
 }
 
-async function confirmFixRecallNotifyWithPhone(phoneNumber: string) {
+async function confirmFixRecallNotifyWithPhone(phoneNumber: string, consentConfirmed = false) {
   const fixVisit = mfaQueueActions.phoneCorrectionVisit;
   if (!fixVisit || fixVisit.purpose !== 'fixRecallNotify') {
     return;
@@ -186,23 +182,21 @@ async function confirmFixRecallNotifyWithPhone(phoneNumber: string) {
 
   const { visitId, laneCode, number } = fixVisit;
   const trimmedPhone = phoneNumber.trim();
-  const storedCallback = queueItem(visitId)?.callbackPhone?.trim() ?? '';
+  if (mfaQueueActions.busyVisitId === visitId) return;
+  if (trimmedPhone && !consentConfirmed) {
+    toastStore.error(t('mfa.recallConsentRequired'));
+    return;
+  }
+  if (!trimmedPhone) {
+    toastStore.error(t('mfa.recallConsentRequired'));
+    return;
+  }
   mfaQueueActions.busyVisitId = visitId;
-
-  if (trimmedPhone.length > 0) {
-    const phoneResult = await setCallbackPhoneVisit(visitId, trimmedPhone);
-    if (!phoneResult.ok) {
-      mfaQueueActions.busyVisitId = null;
-      toastStore.error(phoneResult.error.message);
-      return;
-    }
-  } else if (storedCallback.length > 0) {
-    const clearResult = await clearCallbackPhoneVisit(visitId);
-    if (!clearResult.ok) {
-      mfaQueueActions.busyVisitId = null;
-      toastStore.error(clearResult.error.message);
-      return;
-    }
+  const phoneResult = await setCallbackPhoneVisit(visitId, trimmedPhone, consentConfirmed);
+  if (!phoneResult.ok) {
+    mfaQueueActions.busyVisitId = null;
+    toastStore.error(phoneResult.error.message);
+    return;
   }
 
   const result = await retryRecallNotifyVisit(visitId);
@@ -216,7 +210,13 @@ async function confirmFixRecallNotifyWithPhone(phoneNumber: string) {
   cancelMfaPhoneCorrection();
 
   if (result.data.smsDispatch.sent) {
-    toastStore.success(t('mfa.recallNotifyRetrySuccess'));
+    toastStore.success(
+      t(
+        result.data.smsDispatch.status === 'simulated'
+          ? 'mfa.recallNotifySimulated'
+          : 'mfa.recallNotifyRetrySuccess',
+      ),
+    );
     return;
   }
 
@@ -224,27 +224,55 @@ async function confirmFixRecallNotifyWithPhone(phoneNumber: string) {
 }
 
 /** Unified phone-correction confirm — dispatches by `phoneCorrectionVisit.purpose`. */
-export async function confirmMfaPhoneCorrection(phoneNumber: string) {
+export async function confirmMfaPhoneCorrection(phoneNumber: string, consentConfirmed = false) {
   const visit = mfaQueueActions.phoneCorrectionVisit;
   if (!visit) {
     return;
   }
   if (visit.purpose === 'fixRecallNotify') {
-    await confirmFixRecallNotifyWithPhone(phoneNumber);
+    await confirmFixRecallNotifyWithPhone(phoneNumber, consentConfirmed);
     return;
   }
-  await confirmMarkAwayWithPhone(phoneNumber);
+  await confirmMarkAwayWithPhone(phoneNumber, consentConfirmed);
 }
 
-export async function confirmMfaMarkAwayWithPhone(phoneNumber: string) {
-  await confirmMarkAwayWithPhone(phoneNumber);
+export async function confirmMfaMarkAwayWithPhone(phoneNumber: string, consentConfirmed = false) {
+  await confirmMarkAwayWithPhone(phoneNumber, consentConfirmed);
 }
 
-export async function confirmMfaFixRecallNotifyWithPhone(phoneNumber: string) {
-  await confirmFixRecallNotifyWithPhone(phoneNumber);
+export async function confirmMfaFixRecallNotifyWithPhone(
+  phoneNumber: string,
+  consentConfirmed = false,
+) {
+  await confirmFixRecallNotifyWithPhone(phoneNumber, consentConfirmed);
+}
+
+export async function handleMfaRetryRecallNotify(visitId: string) {
+  if (mfaQueueActions.busyVisitId === visitId) return;
+  await runMfaQueueAction(visitId, async () => {
+    const result = await retryRecallNotifyVisit(visitId);
+    if (result.ok) {
+      if (result.data.smsDispatch.sent)
+        toastStore.success(
+          t(
+            result.data.smsDispatch.status === 'simulated'
+              ? 'mfa.recallNotifySimulated'
+              : 'mfa.recallNotifyRetrySuccess',
+          ),
+        );
+      else
+        showRecallSmsFailureToast(
+          visitId,
+          result.data.smsDispatch,
+          queueItem(visitId) ?? undefined,
+        );
+    }
+    return result;
+  });
 }
 
 export async function handleMfaRecall(visitId: string) {
+  if (mfaQueueActions.busyVisitId === visitId) return;
   const item = queueItem(visitId);
   mfaQueueActions.busyVisitId = visitId;
   const result = await recallVisit(visitId);

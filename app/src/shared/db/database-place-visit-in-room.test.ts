@@ -324,3 +324,70 @@ test('placeVisitInRoom rolls back every Core event and the outbox event on failu
     cleanup();
   }
 });
+
+test('MFA absence saves number and oral consent atomically and permits recall', () => {
+  const { core, cleanup } = openCoreDatabase();
+  try {
+    const visitId = seedPlacementVisit(core);
+    core.setAbsence(visitId, 'wait_here', {
+      callbackPhone: '+49 176 12345678',
+      recallConsentConfirmed: true,
+      actorId: 'mfa-consent-test',
+    });
+    assert.equal(core.hasRecallNotifyConsent(visitId, '+4917612345678'), true);
+    assert.equal(core.hasRecallNotifyConsent(visitId, '+4917612345679'), false);
+    assert.equal(core.recallVisit(visitId, 15).callbackPhone, '+4917612345678');
+  } finally {
+    cleanup();
+  }
+});
+
+test('MFA absence rolls back status and consent for an invalid phone or missing consent', () => {
+  const { core, cleanup } = openCoreDatabase();
+  try {
+    const visitId = seedPlacementVisit(core);
+    for (const notification of [
+      { callbackPhone: '+4917612345678', recallConsentConfirmed: false },
+      { callbackPhone: 'invalid', recallConsentConfirmed: true },
+    ]) {
+      assert.throws(() => core.setAbsence(visitId, 'wait_here', notification));
+      assert.equal(core.listQueue().find((entry) => entry.id === visitId)?.status, 'waiting');
+      assert.equal(core.hasRecallNotifyConsent(visitId, '+4917612345678'), false);
+    }
+  } finally {
+    cleanup();
+  }
+});
+
+test('MFA absence with an empty number revokes earlier consent and disables notification', () => {
+  const { core, cleanup } = openCoreDatabase();
+  try {
+    const visitId = seedPlacementVisit(core);
+    core.setAbsence(visitId, 'wait_here', {
+      callbackPhone: '+4917612345678',
+      recallConsentConfirmed: true,
+    });
+    core.setAbsence(visitId, 'wait_here', { callbackPhone: '', recallConsentConfirmed: false });
+    assert.equal(core.hasRecallNotifyConsent(visitId, '+4917612345678'), false);
+    assert.equal(core.recallVisit(visitId, 15).callbackPhone, null);
+  } finally {
+    cleanup();
+  }
+});
+
+test('terminal check-in number alone cannot trigger recall notification', () => {
+  const { core, cleanup } = openCoreDatabase();
+  try {
+    seedPlacementVisit(core);
+    const { visitId } = core.createTicket({
+      topicId: 'blut',
+      authPath: 'phone_dob',
+      checkinPhone: '+4917612345678',
+      needsAssistance: true,
+    });
+    core.setAbsence(visitId, 'wait_here');
+    assert.equal(core.recallVisit(visitId, 15).callbackPhone, null);
+  } finally {
+    cleanup();
+  }
+});

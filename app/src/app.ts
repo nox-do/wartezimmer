@@ -1,3 +1,4 @@
+import { startRecallDeliveryPolling } from './shared/messaging/recall-delivery-poller.js';
 import Fastify, { type FastifyInstance } from 'fastify';
 import multipart from '@fastify/multipart';
 import { getCoreDatabase } from './shared/db/database.js';
@@ -63,12 +64,15 @@ export async function buildApp(): Promise<FastifyInstance> {
   registerDocumentRoutes(app, db);
   registerSandboxEmbedProxyRoutes(app);
 
+  let stopRecallDeliveryPolling: (() => Promise<void>) | undefined;
   app.addHook('onReady', async () => {
     resyncRecallWindowExpiryScheduler(db);
     outboxWorker.start();
+    stopRecallDeliveryPolling = startRecallDeliveryPolling(db);
   });
   app.addHook('onClose', async () => {
     outboxWorker.stop();
+    await stopRecallDeliveryPolling?.();
   });
 
   return app;

@@ -14,11 +14,10 @@ function createDbStub(): CoreDatabase & {
   return {
     errors,
     sentFlags,
-    setRecallNotifyError(_visitId: string, errorCode: string | null) {
-      errors.push(errorCode);
-    },
-    setRecallNotifySent(_visitId: string, sent: boolean) {
-      sentFlags.push(sent);
+    finishRecallDelivery(_visitId: string, _token: string, result: MessageDispatchResult) {
+      errors.push(result.sent ? null : (result.errorCode ?? 'UNKNOWN'));
+      sentFlags.push(result.sent);
+      return true;
     },
   } as unknown as CoreDatabase & { errors: Array<string | null>; sentFlags: boolean[] };
 }
@@ -38,7 +37,7 @@ test('persistRecallNotifyResult stores error when provider is not configured', (
     errorCode: 'SEVEN_NOT_CONFIGURED',
   };
 
-  persistRecallNotifyResult(db, 't1', dispatch);
+  persistRecallNotifyResult(db, 't1', dispatch, 'test-token');
 
   assert.deepEqual(db.errors, ['SEVEN_NOT_CONFIGURED']);
   assert.deepEqual(db.sentFlags, [false]);
@@ -53,8 +52,30 @@ test('persistRecallNotifyResult clears error and marks sent on success', () => {
     messageId: 'mock-1',
   };
 
-  persistRecallNotifyResult(db, 't1', dispatch);
+  persistRecallNotifyResult(db, 't1', dispatch, 'test-token');
 
   assert.deepEqual(db.errors, [null]);
   assert.deepEqual(db.sentFlags, [true]);
+});
+
+test('dispatch refuses SMS and WhatsApp before calling a provider without number-bound consent', async () => {
+  const { dispatchRecallNotifyAndPersist } = await import('./recall-notify-persist.js');
+  const db = createDbStub();
+  db.hasRecallNotifyConsent = () => false;
+  for (const channel of ['sms', 'whatsapp'] as const) {
+    const result = await dispatchRecallNotifyAndPersist(
+      db,
+      'visit-1',
+      {
+        callbackPhone: '+4917612345678',
+        returnWindowMinutes: 15,
+        returnUntil: '2026-10-08T15:15:00Z',
+      },
+      channel,
+    );
+    assert.equal(result.attempted, false);
+    assert.equal(result.sent, false);
+    assert.equal(result.errorCode, 'RECALL_CONSENT_REQUIRED');
+  }
+  assert.deepEqual(db.sentFlags, []);
 });

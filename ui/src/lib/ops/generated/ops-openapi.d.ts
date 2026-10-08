@@ -2472,6 +2472,12 @@ export interface components {
           channel: 'sms' | 'messenger';
           configured: boolean;
           enabled: boolean;
+          hasApiKey: boolean;
+          settings: {
+            from: string;
+            template: string;
+            language: string;
+          };
           requires: string[];
         }[];
       }[];

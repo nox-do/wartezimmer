@@ -24,6 +24,7 @@ export type MfaQueueSnapshot = {
     callbackPhone: string | null;
     recallNotifyErrorCode: string | null;
     recallNotifySent: boolean;
+    recallNotifyStatus?: import('../db/visit-recall-delivery.js').RecallDeliveryStatus | null;
     identityRef: string | null;
     identityRefEditable: boolean;
     returnUntil: string | null;
@@ -80,6 +81,7 @@ export function buildMfaQueueSnapshot(
       callbackPhone,
       recallNotifyErrorCode: item.recallNotifyErrorCode?.trim() || null,
       recallNotifySent: Boolean(item.recallNotifySent),
+      recallNotifyStatus: item.recallNotifyStatus ?? null,
       identityRef,
       identityRefEditable: item.identityRefEditable === true,
       returnUntil,

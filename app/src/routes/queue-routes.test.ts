@@ -1110,3 +1110,85 @@ test('supersede returns registration limit as 409 with the host hint', async () 
     await app.close();
   }
 });
+
+test('callback phone API rejects missing or false oral consent', async () => {
+  const app = Fastify({ logger: false });
+  let called = false;
+  registerQueueRoutes(
+    app,
+    buildQueueRouteDb({
+      setCallbackPhone: () => {
+        called = true;
+      },
+    }),
+  );
+  try {
+    for (const consent of [undefined, false]) {
+      const response = await app.inject({
+        method: 'PUT',
+        url: '/api/v1/queue/A-001/callback-phone',
+        payload: { callbackPhone: '+4917612345678', recallConsentConfirmed: consent },
+      });
+      assert.equal(response.statusCode, 400);
+    }
+    assert.equal(called, false);
+  } finally {
+    await app.close();
+  }
+});
+
+test('absence API requires oral consent for a non-empty notification number', async () => {
+  const app = Fastify({ logger: false });
+  let called = false;
+  registerQueueRoutes(
+    app,
+    buildQueueRouteDb({
+      setAbsence: () => {
+        called = true;
+      },
+    }),
+  );
+  try {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/queue/A-001/transition',
+      payload: { type: 'set_absence', mode: 'wait_here', callbackPhone: '+4917612345678' },
+    });
+    assert.equal(response.statusCode, 400);
+    assert.equal(called, false);
+  } finally {
+    await app.close();
+  }
+});
+
+test('absence API accepts the dashboard phone and consent payload', async () => {
+  const app = Fastify({ logger: false });
+  const received: unknown[] = [];
+  registerQueueRoutes(
+    app,
+    buildQueueRouteDb({
+      setAbsence: (...args: unknown[]) => {
+        received.push(args);
+        return transition('waiting', 'absent_wait_here');
+      },
+    }),
+  );
+  try {
+    for (const callbackPhone of ['01721234567', '+491721234567', '']) {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/queue/20261008-L-001/transition',
+        payload: {
+          type: 'set_absence',
+          mode: 'wait_here',
+          callbackPhone,
+          recallConsentConfirmed: Boolean(callbackPhone),
+        },
+      });
+      assert.equal(response.statusCode, 200, response.body);
+    }
+    assert.equal(received.length, 3);
+  } finally {
+    await app.close();
+  }
+});

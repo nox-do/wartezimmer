@@ -3,9 +3,19 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 const applyMfaQueueSnapshot = vi.fn();
 const fetchMfaQueue = vi.fn();
 const toastError = vi.fn();
+const setAbsenceVisit = vi.fn();
+const setCallbackPhoneVisit = vi.fn();
+const retryRecallNotifyVisit = vi.fn();
 const mfaQueueActions = {
   busyVisitId: null as string | null,
   assistancePlacementVisit: null,
+  phoneCorrectionVisit: null as null | {
+    visitId: string;
+    laneCode: string;
+    number: number;
+    initialPhone: string;
+    purpose: 'markAway' | 'fixRecallNotify';
+  },
 };
 
 vi.mock('$lib/mfa/mfa-practice-context.svelte', () => ({
@@ -28,11 +38,11 @@ vi.mock('$lib/queue/queue-actions', () => ({
   continueJourneyVisit: vi.fn(),
   cycleTriageVisit: vi.fn(),
   recallVisit: vi.fn(),
-  retryRecallNotifyVisit: vi.fn(),
+  retryRecallNotifyVisit,
   reassignRoomVisit: vi.fn(),
   returnVisitToWaiting: vi.fn(),
-  setAbsenceVisit: vi.fn(),
-  setCallbackPhoneVisit: vi.fn(),
+  setAbsenceVisit,
+  setCallbackPhoneVisit,
   clearCallbackPhoneVisit: vi.fn(),
   startTreatmentVisit: vi.fn(),
 }));
@@ -58,7 +68,8 @@ vi.mock('$lib/stores/toastStore', () => ({
   },
 }));
 
-const { runMfaQueueAction } = await import('./mfa-queue-commands.svelte');
+const { runMfaQueueAction, confirmMfaPhoneCorrection, handleMfaRetryRecallNotify } =
+  await import('./mfa-queue-commands.svelte');
 
 describe('runMfaQueueAction', () => {
   beforeEach(() => {
@@ -102,4 +113,65 @@ describe('runMfaQueueAction', () => {
     expect(toastError).toHaveBeenCalledWith('INVALID_TRANSITION');
     expect(mfaQueueActions.busyVisitId).toBeNull();
   });
+});
+
+describe('MFA oral recall consent', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mfaQueueActions.busyVisitId = null;
+    mfaQueueActions.phoneCorrectionVisit = {
+      visitId: 'M-018',
+      laneCode: 'M',
+      number: 18,
+      initialPhone: '',
+      purpose: 'markAway',
+    };
+  });
+
+  test('blocks entering a number without the consent checkbox', async () => {
+    await confirmMfaPhoneCorrection('+4917612345678', false);
+    expect(setAbsenceVisit).not.toHaveBeenCalled();
+    expect(setCallbackPhoneVisit).not.toHaveBeenCalled();
+    expect(toastError).toHaveBeenCalledWith('mfa.recallConsentRequired');
+  });
+
+  test('saves absence, number and consent in one API mutation', async () => {
+    setAbsenceVisit.mockResolvedValue({ ok: true, data: {} });
+    await confirmMfaPhoneCorrection('+4917612345678', true);
+    expect(setAbsenceVisit).toHaveBeenCalledWith('M-018', 'wait_here', {
+      callbackPhone: '+4917612345678',
+      recallConsentConfirmed: true,
+    });
+    expect(setCallbackPhoneVisit).not.toHaveBeenCalled();
+  });
+
+  test('permits absence without notification or consent', async () => {
+    setAbsenceVisit.mockResolvedValue({ ok: true, data: {} });
+    await confirmMfaPhoneCorrection('', false);
+    expect(setAbsenceVisit).toHaveBeenCalledWith('M-018', 'wait_here', {
+      callbackPhone: '',
+      recallConsentConfirmed: false,
+    });
+  });
+
+  test('also blocks a corrected retry number without consent', async () => {
+    mfaQueueActions.phoneCorrectionVisit!.purpose = 'fixRecallNotify';
+    await confirmMfaPhoneCorrection('+4917612345678', false);
+    expect(setCallbackPhoneVisit).not.toHaveBeenCalled();
+    expect(toastError).toHaveBeenCalledWith('mfa.recallConsentRequired');
+  });
+});
+
+test('direct retry reuses saved consent and number without opening a correction mutation', async () => {
+  vi.clearAllMocks();
+  mfaQueueActions.busyVisitId = null;
+  retryRecallNotifyVisit.mockResolvedValue({
+    ok: true,
+    data: { smsDispatch: { sent: true, status: 'accepted' } },
+  });
+  fetchMfaQueue.mockResolvedValue({ ok: true, data: { revision: 8, items: [] } });
+  await handleMfaRetryRecallNotify('M-018');
+  expect(retryRecallNotifyVisit).toHaveBeenCalledWith('M-018');
+  expect(setCallbackPhoneVisit).not.toHaveBeenCalled();
+  expect(setAbsenceVisit).not.toHaveBeenCalled();
 });

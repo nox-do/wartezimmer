@@ -63,6 +63,7 @@ export type QueueVisitRow = {
   callbackPhone: string | null;
   recallNotifyErrorCode: string | null;
   recallNotifySent: boolean;
+  recallNotifyStatus?: import('./visit-recall-delivery.js').RecallDeliveryStatus | null;
   returnUntil: string | null;
   triageLevel: string | null;
   documentCount: number;
@@ -299,6 +300,8 @@ export type MessagingProviderCatalog = {
       configured: boolean;
       enabled: boolean;
       requires: string[];
+      hasApiKey: boolean;
+      settings: { from: string; template: string; language: string };
     }>;
   }>;
 };

@@ -101,6 +101,10 @@ export const QueueItem = {
     recallNotifyErrorCode: {
       type: ['string', 'null'],
     },
+    recallNotifyStatus: {
+      type: ['string', 'null'],
+      enum: ['sending', 'accepted', 'delivered', 'failed', 'unknown', 'simulated', null],
+    },
     recallNotifySent: {
       type: 'boolean',
     },
@@ -161,6 +165,10 @@ export const QueueMessageDispatch = {
     sent: {
       type: 'boolean',
     },
+    status: {
+      type: 'string',
+      enum: ['accepted', 'failed', 'unknown', 'simulated'],
+    },
     messageId: {
       type: 'string',
     },
@@ -205,6 +213,10 @@ export const QueueRecallRetryNotifyResponse = {
         },
         sent: {
           type: 'boolean',
+        },
+        status: {
+          type: 'string',
+          enum: ['accepted', 'failed', 'unknown', 'simulated'],
         },
         messageId: {
           type: 'string',
@@ -435,6 +447,10 @@ export const QueueListMfaResponse = {
           },
           recallNotifyErrorCode: {
             type: ['string', 'null'],
+          },
+          recallNotifyStatus: {
+            type: ['string', 'null'],
+            enum: ['sending', 'accepted', 'delivered', 'failed', 'unknown', 'simulated', null],
           },
           recallNotifySent: {
             type: 'boolean',
@@ -1025,6 +1041,10 @@ export const QueueListResponse = {
               recallNotifyErrorCode: {
                 type: ['string', 'null'],
               },
+              recallNotifyStatus: {
+                type: ['string', 'null'],
+                enum: ['sending', 'accepted', 'delivered', 'failed', 'unknown', 'simulated', null],
+              },
               recallNotifySent: {
                 type: 'boolean',
               },
@@ -1481,6 +1501,13 @@ export const QueueVisitTransitionRequest = {
       type: 'string',
       enum: ['wait_here', 'return_later'],
     },
+    callbackPhone: {
+      type: 'string',
+      maxLength: 32,
+    },
+    recallConsentConfirmed: {
+      type: 'boolean',
+    },
     returnWindowMinutes: {
       type: 'integer',
       minimum: 1,
@@ -1646,6 +1673,10 @@ export const QueueVisitTransitionResponse = {
                 sent: {
                   type: 'boolean',
                 },
+                status: {
+                  type: 'string',
+                  enum: ['accepted', 'failed', 'unknown', 'simulated'],
+                },
                 messageId: {
                   type: 'string',
                 },
@@ -1693,6 +1724,10 @@ export const QueueVisitTransitionResponse = {
             },
             sent: {
               type: 'boolean',
+            },
+            status: {
+              type: 'string',
+              enum: ['accepted', 'failed', 'unknown', 'simulated'],
             },
             messageId: {
               type: 'string',
@@ -1831,6 +1866,10 @@ export const QueueRecallResponse = {
             },
             sent: {
               type: 'boolean',
+            },
+            status: {
+              type: 'string',
+              enum: ['accepted', 'failed', 'unknown', 'simulated'],
             },
             messageId: {
               type: 'string',
@@ -1988,6 +2027,10 @@ export const GET_api_v1_queueResponse200 = {
               },
               recallNotifyErrorCode: {
                 type: ['string', 'null'],
+              },
+              recallNotifyStatus: {
+                type: ['string', 'null'],
+                enum: ['sending', 'accepted', 'delivered', 'failed', 'unknown', 'simulated', null],
               },
               recallNotifySent: {
                 type: 'boolean',
@@ -2686,6 +2729,13 @@ export const POST_api_v1_queue_visitId_transitionRequestBody = {
       type: 'string',
       enum: ['wait_here', 'return_later'],
     },
+    callbackPhone: {
+      type: 'string',
+      maxLength: 32,
+    },
+    recallConsentConfirmed: {
+      type: 'boolean',
+    },
     returnWindowMinutes: {
       type: 'integer',
       minimum: 1,
@@ -2851,6 +2901,10 @@ export const POST_api_v1_queue_visitId_transitionResponse200 = {
                 sent: {
                   type: 'boolean',
                 },
+                status: {
+                  type: 'string',
+                  enum: ['accepted', 'failed', 'unknown', 'simulated'],
+                },
                 messageId: {
                   type: 'string',
                 },
@@ -2898,6 +2952,10 @@ export const POST_api_v1_queue_visitId_transitionResponse200 = {
             },
             sent: {
               type: 'boolean',
+            },
+            status: {
+              type: 'string',
+              enum: ['accepted', 'failed', 'unknown', 'simulated'],
             },
             messageId: {
               type: 'string',
@@ -3226,8 +3284,12 @@ export const PUT_api_v1_queue_visitId_callback_phoneParams = {
 export const PUT_api_v1_queue_visitId_callback_phoneRequestBody = {
   type: 'object',
   additionalProperties: false,
-  required: ['callbackPhone'],
+  required: ['callbackPhone', 'recallConsentConfirmed'],
   properties: {
+    recallConsentConfirmed: {
+      type: 'boolean',
+      enum: [true],
+    },
     callbackPhone: {
       type: 'string',
       minLength: 3,

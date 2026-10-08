@@ -4,12 +4,14 @@ export type RecallDispatchErrorKey =
   | 'mfa.recallSmsErrorNotConfigured'
   | 'mfa.recallSmsErrorNetwork'
   | 'mfa.recallSmsErrorInsufficientCredit'
-  | 'mfa.recallSmsErrorGeneric';
+  | 'mfa.recallSmsErrorGeneric'
+  | 'mfa.recallSmsErrorConsentRequired';
 
 export function resolveRecallDispatchErrorKey(
   errorCode: string | undefined,
 ): RecallDispatchErrorKey {
   const code = errorCode?.trim() ?? '';
+  if (code === 'RECALL_CONSENT_REQUIRED') return 'mfa.recallSmsErrorConsentRequired';
   if (!code) {
     return 'mfa.recallSmsErrorGeneric';
   }

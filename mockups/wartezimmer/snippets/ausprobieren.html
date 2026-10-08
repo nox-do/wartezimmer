@@ -1,0 +1,114 @@
+<!-- Gesicherter Ausprobieren-Bereich. Innerhalb von #wz-concept einfügen.
+Benötigt styles.css und demo.js; die Demo wird bei vorhandenem #wz-ablauf aktiviert. -->
+<section class="w-demo-section" id="wz-ablauf" aria-labelledby="wz-demo-heading">
+  <div class="w-wrap w-section">
+    <div class="w-section-head">
+      <div>
+        <span class="w-kicker">Ein Ablauf, zwei Perspektiven</span>
+        <h2 id="wz-demo-heading">Vom Ankommen<br />bis zum nächsten Raum.</h2>
+      </div>
+      <p class="w-section-aside">
+        So greifen Anmeldung, Warteliste und Aufruf ineinander. Erleben Sie denselben Besuch aus
+        Sicht Ihres Teams und Ihrer Patienten.
+      </p>
+    </div>
+    <div class="w-demo-layout">
+      <div>
+        <div class="w-steps" aria-label="Schritte des Beispielbesuchs">
+          <button type="button" class="w-step" data-w-step="0" aria-pressed="true">
+            <span class="w-step-num">01</span
+            ><span
+              ><strong>Ankommen</strong
+              ><small>Anliegen wählen und eine Wartenummer erhalten.</small></span
+            >
+          </button>
+          <button type="button" class="w-step" data-w-step="1" aria-pressed="false">
+            <span class="w-step-num">02</span
+            ><span
+              ><strong>Warten</strong
+              ><small>Das Team behält Wartende und nächste Ziele im Blick.</small></span
+            >
+          </button>
+          <button type="button" class="w-step" data-w-step="2" aria-pressed="false">
+            <span class="w-step-num">03</span
+            ><span
+              ><strong>Aufgerufen</strong
+              ><small>Die Nummer erscheint mit dem passenden Raum.</small></span
+            >
+          </button>
+        </div>
+        <p class="w-demo-note">Beispiel einer Sprechstunde.<br />Ihr Team bestimmt den Ablauf.</p>
+      </div>
+      <div class="w-demo-panel">
+        <div class="w-demo-toolbar">
+          <div class="w-view-switch" aria-label="Ansicht wählen">
+            <button type="button" data-w-view="team" aria-pressed="true">Praxisteam</button
+            ><button type="button" data-w-view="patient" aria-pressed="false">Patienten</button>
+          </div>
+          <span class="w-demo-label">Interaktives Beispiel</span>
+        </div>
+        <div class="w-demo-screen" id="wz-demo-screen" aria-live="polite" aria-atomic="true">
+          <div id="wz-team-screen">
+            <div class="w-screen-head">
+              <strong id="wz-screen-title">Neue Anmeldung</strong><span>Praxisübersicht</span>
+            </div>
+            <div class="w-demo-ticket">
+              <div>
+                <div class="w-demo-number">A–014</div>
+                <div class="w-demo-topic">Anliegen: Sprechstunde</div>
+              </div>
+              <span class="w-demo-state" id="wz-state">Angemeldet</span>
+            </div>
+            <div class="w-demo-detail">
+              <dl>
+                <dt>Aufenthalt</dt>
+                <dd id="wz-location">Anmeldung</dd>
+              </dl>
+              <dl>
+                <dt>Nächster Schritt</dt>
+                <dd id="wz-next">Wartezimmer</dd>
+              </dl>
+            </div>
+            <p class="w-screen-message" id="wz-team-message">
+              Die Anmeldung erscheint direkt in Ihrer Übersicht.
+            </p>
+          </div>
+          <div class="w-patient-screen" id="wz-patient-screen" hidden>
+            <div class="w-screen-head">
+              <strong>Wartezimmer</strong><span id="wz-patient-place">Anmeldeterminal</span>
+            </div>
+            <div class="w-patient-message" id="wz-patient-message">Sie sind angemeldet.</div>
+            <div class="w-demo-number">A–014</div>
+            <div class="w-patient-next" id="wz-patient-next">
+              Bitte nehmen Sie im Wartezimmer Platz.
+            </div>
+            <div class="w-patient-detail" id="wz-patient-detail">
+              Ihre Nummer verbindet Sie mit Ihrem Aufruf.
+            </div>
+          </div>
+        </div>
+        <div class="w-demo-bottom">
+          <p class="w-demo-caption" id="wz-demo-caption">Eine Nummer begleitet den Besuch.</p>
+          <button type="button" id="wz-demo-advance" class="w-button">
+            <span id="wz-demo-button-label">Weiter zum Warten</span
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M5 12h14" />
+              <path d="m12 5 7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

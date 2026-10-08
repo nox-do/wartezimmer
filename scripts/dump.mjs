@@ -8,6 +8,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { TextDecoder } from 'node:util';
 
+import {
+  NOTIFICATION_PATHS,
+  NOTIFICATION_PREAMBLE,
+  notificationContents,
+} from './notifications-dump.mjs';
+
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const ROOT_CONFIG_FILES = [
   'package.json',
@@ -259,10 +265,13 @@ const LOCAL_DATA_FILE = /\.(?:log|sqlite|sqlite3|db|pem|key)$/i;
 export function parseArea(args) {
   if (
     args.length !== 1 ||
-    (!Object.hasOwn(AREA_PATHS, args[0]) && args[0] !== 'all' && args[0] !== 'review')
+    (!Object.hasOwn(AREA_PATHS, args[0]) &&
+      args[0] !== 'all' &&
+      args[0] !== 'review' &&
+      args[0] !== 'notifications')
   ) {
     throw new Error(
-      `Unknown area "${args.join(' ')}". Expected one of: ${[...Object.keys(AREA_PATHS), 'review', 'all'].join(', ')}.`,
+      `Unknown area "${args.join(' ')}". Expected one of: ${[...Object.keys(AREA_PATHS), 'review', 'notifications', 'all'].join(', ')}.`,
     );
   }
   return args[0];
@@ -310,6 +319,7 @@ function walk(root, relativeDirectory, files, skippedBinaries) {
 
 export function selectPaths(area) {
   if (area === 'review') return REVIEW_PATHS;
+  if (area === 'notifications') return NOTIFICATION_PATHS;
   const areas = area === 'all' ? Object.keys(AREA_PATHS) : [area];
   const rootConfigFiles =
     area === 'core'
@@ -353,11 +363,15 @@ export function writeDump(root, area, date = new Date().toISOString().slice(0, 1
   fs.mkdirSync(outputDirectory, { recursive: true });
   const body = files
     .map((relativePath) => {
+      if (area === 'notifications')
+        return `#/${relativePath}\n${notificationContents(root, relativePath)}`;
       const context = area === 'review' ? `${reviewContext(relativePath)}\n` : '';
       return `#/${relativePath}\n${context}${normaliseText(fs.readFileSync(path.join(root, relativePath)))}`;
     })
     .join('\n');
-  const output = area === 'review' ? `${REVIEW_PREAMBLE}\n${body}` : body;
+  const preamble =
+    area === 'review' ? REVIEW_PREAMBLE : area === 'notifications' ? NOTIFICATION_PREAMBLE : '';
+  const output = preamble ? `${preamble}\n${body}` : body;
   fs.writeFileSync(outputPath, output.endsWith('\n') ? output : `${output}\n`, 'utf8');
   return { outputPath, files, skippedBinaries };
 }

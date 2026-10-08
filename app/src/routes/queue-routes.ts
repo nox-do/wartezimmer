@@ -228,7 +228,8 @@ export function registerQueueRoutes(app: FastifyInstance, db: CoreDatabase): voi
         db,
         reply,
         ticketId: visitId,
-        execute: () => db.setCallbackPhone(visitId, request.body.callbackPhone),
+        execute: () =>
+          db.setCallbackPhone(visitId, request.body.callbackPhone, request.authSession?.sessionId),
         mapSuccess: (result) => ({
           visitId,
           callbackPhone: result.callbackPhone,

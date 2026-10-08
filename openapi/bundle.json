@@ -3922,9 +3922,23 @@
                                 "nullable": true,
                                 "description": "Set when recall SMS/WhatsApp failed; enables MFA retry (staff queue only)"
                               },
+                              "recallNotifyStatus": {
+                                "type": "string",
+                                "nullable": true,
+                                "enum": [
+                                  "sending",
+                                  "accepted",
+                                  "delivered",
+                                  "failed",
+                                  "unknown",
+                                  "simulated",
+                                  null
+                                ],
+                                "description": "Current notification outcome; accepted is not proof of delivery."
+                              },
                               "recallNotifySent": {
                                 "type": "boolean",
-                                "description": "True when recall SMS/WhatsApp was successfully sent for the current return window (staff queue only)"
+                                "description": "Compatibility flag for provider acceptance; does not prove delivery. See recallNotifyStatus."
                               },
                               "triageLevel": {
                                 "type": "string",
@@ -4769,12 +4783,22 @@
                     "type": "string",
                     "enum": ["wait_here", "return_later"]
                   },
+                  "callbackPhone": {
+                    "description": "Optional MFA absence notification number. Empty disables recall notifications.",
+                    "type": "string",
+                    "maxLength": 32
+                  },
+                  "recallConsentConfirmed": {
+                    "description": "MFA confirms oral consent to a one-time recall notification for this visit. Required when callbackPhone is non-empty.",
+                    "type": "boolean"
+                  },
                   "returnWindowMinutes": {
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 240
                   },
                   "notifyChannel": {
+                    "description": "Optional transport override. Omitted selects WhatsApp when configured, otherwise SMS.",
                     "type": "string",
                     "enum": ["sms", "whatsapp"]
                   }
@@ -4945,6 +4969,10 @@
                                 "sent": {
                                   "type": "boolean"
                                 },
+                                "status": {
+                                  "type": "string",
+                                  "enum": ["accepted", "failed", "unknown", "simulated"]
+                                },
                                 "messageId": {
                                   "type": "string"
                                 },
@@ -4953,7 +4981,7 @@
                                 },
                                 "fallbackFrom": {
                                   "type": "string",
-                                  "description": "Set when WhatsApp was attempted first and SMS completed delivery."
+                                  "description": "Set when WhatsApp was attempted first and SMS was accepted by the provider."
                                 }
                               }
                             }
@@ -5001,6 +5029,10 @@
                             "sent": {
                               "type": "boolean"
                             },
+                            "status": {
+                              "type": "string",
+                              "enum": ["accepted", "failed", "unknown", "simulated"]
+                            },
                             "messageId": {
                               "type": "string"
                             },
@@ -5009,7 +5041,7 @@
                             },
                             "fallbackFrom": {
                               "type": "string",
-                              "description": "Set when WhatsApp was attempted first and SMS completed delivery."
+                              "description": "Set when WhatsApp was attempted first and SMS was accepted by the provider."
                             }
                           }
                         }
@@ -5365,7 +5397,7 @@
         }
       ],
       "put": {
-        "summary": "Set MFA callback phone for recall SMS (separate from terminal check-in phone)",
+        "summary": "Set MFA callback phone with oral consent for recall SMS or WhatsApp",
         "parameters": [
           {
             "in": "path",
@@ -5384,8 +5416,13 @@
               "schema": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["callbackPhone"],
+                "required": ["callbackPhone", "recallConsentConfirmed"],
                 "properties": {
+                  "recallConsentConfirmed": {
+                    "type": "boolean",
+                    "enum": [true],
+                    "description": "MFA has obtained oral consent for a one-time SMS or WhatsApp recall for this visit."
+                  },
                   "callbackPhone": {
                     "type": "string",
                     "minLength": 3,
@@ -5670,7 +5707,7 @@
         }
       },
       "delete": {
-        "summary": "Clear MFA callback phone (recall falls back to terminal check-in phone)",
+        "summary": "Clear MFA callback phone and revoke recall notification consent",
         "parameters": [
           {
             "in": "path",
@@ -16665,7 +16702,9 @@
                                 "channel",
                                 "configured",
                                 "enabled",
-                                "requires"
+                                "requires",
+                                "hasApiKey",
+                                "settings"
                               ],
                               "properties": {
                                 "id": {
@@ -16683,6 +16722,24 @@
                                 },
                                 "enabled": {
                                   "type": "boolean"
+                                },
+                                "hasApiKey": {
+                                  "type": "boolean"
+                                },
+                                "settings": {
+                                  "type": "object",
+                                  "required": ["from", "template", "language"],
+                                  "properties": {
+                                    "from": {
+                                      "type": "string"
+                                    },
+                                    "template": {
+                                      "type": "string"
+                                    },
+                                    "language": {
+                                      "type": "string"
+                                    }
+                                  }
                                 },
                                 "requires": {
                                   "type": "array",
@@ -19373,9 +19430,15 @@
             "nullable": true,
             "description": "Set when recall SMS/WhatsApp failed; enables MFA retry (staff queue only)"
           },
+          "recallNotifyStatus": {
+            "type": "string",
+            "nullable": true,
+            "enum": ["sending", "accepted", "delivered", "failed", "unknown", "simulated", null],
+            "description": "Current notification outcome; accepted is not proof of delivery."
+          },
           "recallNotifySent": {
             "type": "boolean",
-            "description": "True when recall SMS/WhatsApp was successfully sent for the current return window (staff queue only)"
+            "description": "Compatibility flag for provider acceptance; does not prove delivery. See recallNotifyStatus."
           },
           "triageLevel": {
             "type": "string",
@@ -19440,6 +19503,10 @@
           "sent": {
             "type": "boolean"
           },
+          "status": {
+            "type": "string",
+            "enum": ["accepted", "failed", "unknown", "simulated"]
+          },
           "messageId": {
             "type": "string"
           },
@@ -19448,7 +19515,7 @@
           },
           "fallbackFrom": {
             "type": "string",
-            "description": "Set when WhatsApp was attempted first and SMS completed delivery."
+            "description": "Set when WhatsApp was attempted first and SMS was accepted by the provider."
           }
         }
       },
@@ -19492,6 +19559,10 @@
               "sent": {
                 "type": "boolean"
               },
+              "status": {
+                "type": "string",
+                "enum": ["accepted", "failed", "unknown", "simulated"]
+              },
               "messageId": {
                 "type": "string"
               },
@@ -19500,7 +19571,7 @@
               },
               "fallbackFrom": {
                 "type": "string",
-                "description": "Set when WhatsApp was attempted first and SMS completed delivery."
+                "description": "Set when WhatsApp was attempted first and SMS was accepted by the provider."
               }
             }
           }
@@ -19738,9 +19809,23 @@
                   "nullable": true,
                   "description": "Set when recall SMS/WhatsApp failed; enables MFA retry (staff queue only)"
                 },
+                "recallNotifyStatus": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "sending",
+                    "accepted",
+                    "delivered",
+                    "failed",
+                    "unknown",
+                    "simulated",
+                    null
+                  ],
+                  "description": "Current notification outcome; accepted is not proof of delivery."
+                },
                 "recallNotifySent": {
                   "type": "boolean",
-                  "description": "True when recall SMS/WhatsApp was successfully sent for the current return window (staff queue only)"
+                  "description": "Compatibility flag for provider acceptance; does not prove delivery. See recallNotifyStatus."
                 },
                 "triageLevel": {
                   "type": "string",
@@ -20397,9 +20482,23 @@
                       "nullable": true,
                       "description": "Set when recall SMS/WhatsApp failed; enables MFA retry (staff queue only)"
                     },
+                    "recallNotifyStatus": {
+                      "type": "string",
+                      "nullable": true,
+                      "enum": [
+                        "sending",
+                        "accepted",
+                        "delivered",
+                        "failed",
+                        "unknown",
+                        "simulated",
+                        null
+                      ],
+                      "description": "Current notification outcome; accepted is not proof of delivery."
+                    },
                     "recallNotifySent": {
                       "type": "boolean",
-                      "description": "True when recall SMS/WhatsApp was successfully sent for the current return window (staff queue only)"
+                      "description": "Compatibility flag for provider acceptance; does not prove delivery. See recallNotifyStatus."
                     },
                     "triageLevel": {
                       "type": "string",
@@ -20889,12 +20988,22 @@
             "type": "string",
             "enum": ["wait_here", "return_later"]
           },
+          "callbackPhone": {
+            "description": "Optional MFA absence notification number. Empty disables recall notifications.",
+            "type": "string",
+            "maxLength": 32
+          },
+          "recallConsentConfirmed": {
+            "description": "MFA confirms oral consent to a one-time recall notification for this visit. Required when callbackPhone is non-empty.",
+            "type": "boolean"
+          },
           "returnWindowMinutes": {
             "type": "integer",
             "minimum": 1,
             "maximum": 240
           },
           "notifyChannel": {
+            "description": "Optional transport override. Omitted selects WhatsApp when configured, otherwise SMS.",
             "type": "string",
             "enum": ["sms", "whatsapp"]
           }
@@ -21057,6 +21166,10 @@
                       "sent": {
                         "type": "boolean"
                       },
+                      "status": {
+                        "type": "string",
+                        "enum": ["accepted", "failed", "unknown", "simulated"]
+                      },
                       "messageId": {
                         "type": "string"
                       },
@@ -21065,7 +21178,7 @@
                       },
                       "fallbackFrom": {
                         "type": "string",
-                        "description": "Set when WhatsApp was attempted first and SMS completed delivery."
+                        "description": "Set when WhatsApp was attempted first and SMS was accepted by the provider."
                       }
                     }
                   }
@@ -21113,6 +21226,10 @@
                   "sent": {
                     "type": "boolean"
                   },
+                  "status": {
+                    "type": "string",
+                    "enum": ["accepted", "failed", "unknown", "simulated"]
+                  },
                   "messageId": {
                     "type": "string"
                   },
@@ -21121,7 +21238,7 @@
                   },
                   "fallbackFrom": {
                     "type": "string",
-                    "description": "Set when WhatsApp was attempted first and SMS completed delivery."
+                    "description": "Set when WhatsApp was attempted first and SMS was accepted by the provider."
                   }
                 }
               }
@@ -21261,6 +21378,10 @@
                   "sent": {
                     "type": "boolean"
                   },
+                  "status": {
+                    "type": "string",
+                    "enum": ["accepted", "failed", "unknown", "simulated"]
+                  },
                   "messageId": {
                     "type": "string"
                   },
@@ -21269,7 +21390,7 @@
                   },
                   "fallbackFrom": {
                     "type": "string",
-                    "description": "Set when WhatsApp was attempted first and SMS completed delivery."
+                    "description": "Set when WhatsApp was attempted first and SMS was accepted by the provider."
                   }
                 }
               }
@@ -24597,7 +24718,16 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "required": ["id", "label", "channel", "configured", "enabled", "requires"],
+                    "required": [
+                      "id",
+                      "label",
+                      "channel",
+                      "configured",
+                      "enabled",
+                      "requires",
+                      "hasApiKey",
+                      "settings"
+                    ],
                     "properties": {
                       "id": {
                         "type": "string"
@@ -24614,6 +24744,24 @@
                       },
                       "enabled": {
                         "type": "boolean"
+                      },
+                      "hasApiKey": {
+                        "type": "boolean"
+                      },
+                      "settings": {
+                        "type": "object",
+                        "required": ["from", "template", "language"],
+                        "properties": {
+                          "from": {
+                            "type": "string"
+                          },
+                          "template": {
+                            "type": "string"
+                          },
+                          "language": {
+                            "type": "string"
+                          }
+                        }
                       },
                       "requires": {
                         "type": "array",
