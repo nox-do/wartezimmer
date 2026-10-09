@@ -27,6 +27,14 @@ dürfen `console` bleiben.
 
 - Steuerung: `LOG_LEVEL` (`debug` \| `info` \| `warn` \| `error` \| `fatal` \| `silent`)
 - Default: `warn` bei `NODE_ENV=production`, sonst `info`
+- Docker-Compose (Dev und Delivery) setzt für App und Sandbox explizit
+  `LOG_LEVEL=${LOG_LEVEL:-warn}`. Damit bleibt auch die lokale Docker-App mit
+  `NODE_ENV=development` ruhig; Warnungen und Fehler bleiben sichtbar.
+- Für eine zeitlich begrenzte Diagnose `LOG_LEVEL=info` oder `debug` setzen und
+  die Container neu erstellen. Fastify schreibt dann auch für statische Assets
+  jeweils `incoming request` und `request completed`. Danach wieder auf `warn`
+  zurückstellen und erneut erstellen. Ein bloßer Container-Neustart übernimmt
+  geänderte Umgebungsvariablen nicht.
 - High-Frequency-Probes: `SILENT_ROUTE_LOG` (`logLevel: 'silent'`) an der Route
 
 Pino-Konvention: **Objekt zuerst**, dann Message — `log.warn({ err }, '…')`, nicht

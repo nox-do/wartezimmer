@@ -23,7 +23,7 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       # Container images omit swagger/devDeps; docs are for host `npm run dev:app` (or explicit true + rebuild with deps).
       OPENAPI_DOCS_ENABLED: ${OPENAPI_DOCS_ENABLED:-false}
-      LOG_LEVEL: ${LOG_LEVEL:-}
+      LOG_LEVEL: ${LOG_LEVEL:-warn}
       HOST: 0.0.0.0
       PORT: 8080
       MAINTENANCE_HOST: 0.0.0.0
@@ -77,7 +77,7 @@ services:
     environment:
       HOST: 0.0.0.0
       PORT: 8081
-      LOG_LEVEL: ${LOG_LEVEL:-}
+      LOG_LEVEL: ${LOG_LEVEL:-warn}
       SANDBOX_AUTH_ENABLED: ${SANDBOX_AUTH_ENABLED:-true}
       SANDBOX_INTERNAL_TOKEN: ${SANDBOX_INTERNAL_TOKEN:?SANDBOX_INTERNAL_TOKEN is required}
       SANDBOX_SCAN_ENABLED: ${SANDBOX_SCAN_ENABLED:-true}

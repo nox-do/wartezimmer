@@ -12,6 +12,7 @@ services:
     pull_policy: never
     restart: unless-stopped
     environment:
+      LOG_LEVEL: ${LOG_LEVEL:-warn}
       HOST: 0.0.0.0
       PORT: 8080
       MAINTENANCE_HOST: 0.0.0.0
@@ -50,6 +51,7 @@ services:
     pull_policy: never
     restart: unless-stopped
     environment:
+      LOG_LEVEL: ${LOG_LEVEL:-warn}
       HOST: 0.0.0.0
       PORT: 8081
       SANDBOX_AUTH_ENABLED: ${SANDBOX_AUTH_ENABLED:-true}
