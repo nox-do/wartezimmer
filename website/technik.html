@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>Technik & Voraussetzungen – Wartezimmer</title>
+    <meta
+      name="description"
+      content="Wartezimmer lokal betreiben: Praxisrechner, Mac und Windows, Netzwerk, Patientenportal und optionale Geräte."
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="describedby" href="./llms.txt" type="text/plain" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Zum Inhalt</a>
+    <header class="site-header wrap">
+      <a class="brand" href="./index.html" aria-label="Wartezimmer – Startseite"
+        ><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span
+        >Wartezimmer<span class="brand-subtitle">Für Einzel- und Gemeinschaftspraxen</span></a
+      >
+      <nav aria-label="Hauptnavigation">
+        <a href="./index.html#wz-funktionen">Praxisalltag</a><a href="./downloads.html">Download</a
+        ><a href="./index.html#wz-kontakt">Kontakt</a>
+      </nav>
+    </header>
+    <main id="main" class="wrap">
+      <div class="page-heading">
+        <p class="eyebrow">Für Ihre Praxis-IT</p>
+        <h1>Auf Ihrem Rechner.<br />Im Browser genutzt.</h1>
+        <p class="lead">
+          Wartezimmer läuft lokal in Ihrer Praxis. Ihr Team greift über das Praxisnetz darauf zu.
+        </p>
+      </div>
+      <div class="prose page-content">
+        <h2>Was Sie zum Start brauchen</h2>
+        <ul>
+          <li>
+            <strong>Mac oder Windows x64:</strong> eine von Docker Desktop unterstützte
+            Betriebssystemversion. Windows on ARM wird derzeit nicht unterstützt.
+          </li>
+          <li>
+            <strong>Docker Desktop mit Docker Compose v2:</strong> eingerichtet und gestartet. Der
+            Manager installiert und verwaltet Wartezimmer.
+          </li>
+          <li>
+            <strong>Als Orientierung:</strong> 16 GB RAM und mindestens 10 GB freier Speicher für
+            Installation und Updates; zusätzlicher Platz für Betrieb und Backups. Erfolgreich
+            getestet auf einem Intel Core i7 mit 16 GB RAM.
+          </li>
+          <li>
+            <strong>Ein erreichbarer Praxisrechner:</strong> während der Nutzung eingeschaltet, mit
+            fester lokaler IP-Adresse oder DHCP-Reservierung.
+          </li>
+          <li>
+            <strong>Aktuelle Browser:</strong> an den Arbeitsplätzen und auf den eingebundenen
+            Geräten im Praxisnetz.
+          </li>
+        </ul>
+        <p>
+          <a href="https://docs.docker.com/desktop/setup/install/mac-install/"
+            >Docker-Voraussetzungen für Mac ↗</a
+          >
+          ·
+          <a href="https://docs.docker.com/desktop/setup/install/windows-install/"
+            >Docker-Voraussetzungen für Windows ↗</a
+          >
+        </p>
+        <h2>Windows und Netztrennung</h2>
+        <p>
+          Der bisherige Windows-Test ist abgeschlossen. Die Trennung von Praxis- und Patientennetz
+          über getrennte Netzwerkkarten zeigte sich dabei stabil. Da Docker Desktop, Firewall und
+          Netzwerk je nach Installation zusammenspielen, sollte Ihre Praxis-IT diese Trennung nach
+          der Einrichtung vor Ort validieren. Prüfen Sie den Zugriff aus beiden Netzen sowie nach
+          einem Neustart. Docker Desktop für Windows ARM befindet sich laut Hersteller noch im Early
+          Access; Wartezimmer unterstützt derzeit Windows x64.
+        </p>
+        <h2>Mit einzelnen Funktionen beginnen</h2>
+        <p>
+          Die Teamübersicht lässt sich ohne Terminal nutzen. Für die Selbstanmeldung kommt ein
+          Terminal-Tablet oder -PC hinzu, für die Wartezimmeranzeige ein geeigneter Bildschirm mit
+          Browser. Raum-Panels ergänzen Sie nach Bedarf.
+        </p>
+        <details id="terminal">
+          <summary>Das Terminal an Ihre Praxis anpassen</summary>
+          <p>
+            Ihre Praxis entscheidet, welche Anmeldemethoden angeboten werden – etwa Mobilnummer oder
+            Nachname mit Geburtsdatum. Eine Anmeldung per elektronischer Gesundheitskarte (eGK) ist
+            als Individualentwicklung möglich.
+          </p>
+          <p>
+            Das Terminal unterstützt mehrere Sprachen. Patienten können Begleitung anfordern; die
+            MFA wird benachrichtigt. Das ist besonders hilfreich, wenn das Terminal außer Sichtweite
+            steht.
+          </p>
+          <p>
+            Das WLAN-Banner lässt sich ausblenden, ein gedruckter Bon ist optional. Das Terminal
+            läuft auf Geräten mit einem aktuellen Webbrowser – vom Tablet bis zum Self-Service-Kiosk
+            mit Bondrucker.
+          </p>
+        </details>
+        <h2>Netzwerk und Patientenzugang</h2>
+        <details open>
+          <summary>Verschlüsselt im Praxisnetz arbeiten</summary>
+          <p>
+            Für den Praxisbetrieb mit personenbezogenen Daten empfehlen wir HTTPS. Der Manager
+            begleitet Domainwahl, DNS-Prüfung, Zertifikatsausstellung und die Umstellung auf HTTPS.
+            Eine bereitgestellte Standard-Domain oder eine eigene Domain kann verwendet werden; DNS
+            und Zugriffsrechte stimmen Sie mit Ihrer Praxis-IT ab.
+          </p>
+          <p>
+            Der Rechner bleibt im Praxisnetz. Anwendung und Dokumentenprüfung laufen als
+            Docker-Container. Die Verwaltung bleibt auf dem Installationsrechner.
+          </p>
+        </details>
+        <details>
+          <summary>Das Patientenportal gezielt freigeben</summary>
+          <p>
+            Für den selbstständigen Portalzugang durch Patienten sind eine zweite Netzwerkkarte und
+            eine von Ihrer Praxis-IT geplante sichere Netzinfrastruktur erforderlich. Der
+            Portalzugang erhält eine eigene HTTPS-Adresse. Team-, Terminal- und
+            Verwaltungsoberflächen bleiben im Praxisnetz.
+          </p>
+          <p>
+            Die Software begrenzt den getrennten Zugang auf das Portal. Firewall, Routing und
+            Netztrennung plant und betreut Ihre Praxis-IT. Eine zweite Netzwerkkarte allein schafft
+            diese Trennung noch nicht.
+          </p>
+        </details>
+        <details id="portal-dokumente">
+          <summary>Patientenportal, Formulare und Dokumente</summary>
+          <p>
+            Ihre Praxis kann das Portal direkt intern nutzen. Für Patienten führt der Manager durch
+            die Freigabe des Zugangs; ein getrenntes Gäste-WLAN richtet Ihre Praxis-IT ein.
+            Patienten melden sich mit ihrer Wartenummer an. Hochgeladene Dokumentinhalte können sie
+            nicht selbst einsehen.
+          </p>
+          <p>
+            Wartezimmer liefert einen Standard-Anamnesebogen mit. Als Individualentwicklung kann
+            Ihre Praxis Formulare selbst oder mit unserer Unterstützung anpassen und ergänzen.
+            Individuelle Anpassungen für den eigenen Betrieb durch beauftragte IT-Dienstleister sind
+            ebenfalls erlaubt. Für Weitergabe und andere Softwareangebote gelten die Grenzen der
+            <a href="./lizenzen.html">Wartezimmer-Lizenz</a>.
+          </p>
+          <p>
+            Der integrierte Virenscanner prüft hochgeladene Dokumente. Ihr Team kann Uploads und
+            ausgefüllte Formulare in einer geschützten Vorschau prüfen, exportieren oder direkt aus
+            der Vorschau drucken.
+          </p>
+          <p>
+            Nach erfolgreichem Export oder Verwerfen werden die Dokumente aus Wartezimmer gelöscht.
+            Bei der endgültigen Entlassung werden noch nicht exportierte Dokumente ebenfalls
+            gelöscht; Zwischenstationen bleiben davon ausgenommen. Beim Tagesreset werden die
+            verbleibenden Dokumente entfernt und die Dokumentenumgebung („Sandbox“) neu gestartet.
+            Bereits exportierte Dateien bleiben erhalten.
+          </p>
+        </details>
+        <details>
+          <summary>Intern ohne HTTPS testen</summary>
+          <p>
+            HTTP überträgt Daten unverschlüsselt. Dieser eingeschränkte Einstieg ist in einem
+            dedizierten, abgesicherten Netz für Tests mit fiktiven Daten oder anonymen Betrieb
+            vorgesehen: ohne Namen, Kontaktabgleich, personenbezogene Unterlagen oder Anamnese.
+          </p>
+          <p>
+            Die Anwendung nutzt Port 8080; mit dem optionalen Proxy Port 80, bei HTTPS Port 443.
+          </p>
+        </details>
+        <details id="rueckholen">
+          <summary>Patienten per SMS oder WhatsApp zurückholen</summary>
+          <p>
+            Für Rückholnachrichten benötigen Sie ein eigenes Konto bei seven.io und einen eigenen
+            API-Key, den Sie in Wartezimmer hinterlegen. Für WhatsApp kommen eine eingerichtete
+            Absendernummer und eine freigegebene Nachrichtenvorlage hinzu. Der Versand erfolgt mit
+            Zustimmung des Patienten.
+          </p>
+          <p>
+            Warum seven.io? SMS und WhatsApp lassen sich über denselben Anbieter nutzen. Für den
+            reinen SMS-Versand fallen keine Grundgebühr und kein Mindestumsatz an; die
+            Nachrichtenkosten werden direkt über Ihr Konto abgerechnet.
+            <a href="https://help.seven.io/de/sms/was-kostet-eine-sms">SMS-Kosten →</a> ·
+            <a href="https://www.seven.io/de/produkte/whatsapp/"
+              >WhatsApp-Einrichtung und Kosten →</a
+            >
+          </p>
+          <p>
+            SMS-Versand über eine Handy-Bridge ist technisch möglich, hängt aber von den Bedingungen
+            des jeweiligen Mobilfunktarifs ab. Automatisierter Versand kann vertraglich
+            ausgeschlossen sein. Wartezimmer nutzt deshalb eine für den automatisierten
+            Nachrichtenversand vorgesehene API.
+          </p>
+        </details>
+        <details id="bondrucker">
+          <summary>Optional einen Bondrucker nutzen</summary>
+          <p>
+            Eine Wartenummer kann auf einem Bon mitgegeben werden. Anschluss und Druckanbindung
+            müssen zu Terminal und Betriebssystem passen. Geeignet sind 58- oder 80-mm-Bons, ein
+            automatischer Papierschneider und ein einfacher Rollenwechsel.
+          </p>
+        </details>
+        <details>
+          <summary>Updates, Datensicherung und Übergaben</summary>
+          <p>
+            Der Manager importiert Erstinstallationspakete (.pfinstall) und getrennte Updatepakete
+            (.pfupdate). Ihre Praxis-IT plant Datensicherung und Wiederherstellung in den
+            bestehenden Betrieb ein.
+          </p>
+          <p>
+            Für den Kontaktabgleich liest Wartezimmer bei Bedarf CSV-Exporte aus Ihrem PVS, ohne
+            einen Stammdatenimport in eine eigene Patientenverwaltung. Unterlagen können per
+            Dateiexport übergeben werden. Die benötigten Ordner werden gezielt freigegeben.
+          </p>
+        </details>
+        <div class="actions">
+          <a class="button primary" href="./downloads.html">Zu den Downloads →</a
+          ><a class="text-link" href="./index.html#wz-kontakt">Einrichtung besprechen →</a>
+        </div>
+      </div>
+    </main>
+    <footer class="site-footer wrap">
+      <a class="brand" href="./index.html">Wartezimmer</a>
+      <nav aria-label="Weitere Informationen">
+        <a href="./downloads.html">Downloads</a><a href="./technik.html">Technik</a
+        ><a href="./lizenzen.html">Lizenzen</a><a href="./impressum.html">Impressum</a
+        ><a href="./datenschutz.html">Datenschutz</a>
+      </nav>
+      <span>Mehr Ruhe im Praxisalltag.</span>
+    </footer>
+  </body>
+</html>

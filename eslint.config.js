@@ -38,6 +38,12 @@ module.exports = tseslint.config(
     },
   },
   {
+    files: ['website/*.js'],
+    languageOptions: {
+      globals: globals.browser,
+    },
+  },
+  {
     files: ['**/*.{ts,tsx}'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',

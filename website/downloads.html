@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>Downloads – Wartezimmer</title>
+    <meta
+      name="description"
+      content="Manager für Mac und Windows, Erstinstallation und Updates für Wartezimmer."
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="describedby" href="./llms.txt" type="text/plain" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Zum Inhalt</a>
+    <header class="site-header wrap">
+      <a class="brand" href="./index.html" aria-label="Wartezimmer – Startseite"
+        ><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span
+        >Wartezimmer<span class="brand-subtitle">Für Einzel- und Gemeinschaftspraxen</span></a
+      >
+      <nav aria-label="Hauptnavigation">
+        <a href="./index.html#wz-funktionen">Praxisalltag</a><a href="./downloads.html">Download</a
+        ><a href="./index.html#wz-kontakt">Kontakt</a>
+      </nav>
+    </header>
+    <main id="main" class="wrap">
+      <div class="page-heading">
+        <p class="eyebrow">Herunterladen &amp; starten</p>
+        <h1>In 15 Minuten eingerichtet.</h1>
+        <p class="lead">
+          Docker Desktop, Manager, Installationspaket. Danach richten Sie Ihre Räume und Anliegen
+          ein.
+        </p>
+      </div>
+      <div class="page-content">
+        <div class="download-steps">
+          <article class="download-card">
+            <p class="eyebrow">01 / Laufzeit</p>
+            <h2>Docker Desktop</h2>
+            <p>Auf dem Praxisrechner installieren und starten.</p>
+            <a class="button secondary" href="https://www.docker.com/products/docker-desktop/"
+              >Docker herunterladen ↗</a
+            >
+          </article>
+          <article class="download-card">
+            <p class="eyebrow">02 / Einrichtung</p>
+            <h2>Manager</h2>
+            <p>Passend zu Ihrem Mac oder Windows-Rechner wählen.</p>
+            <a class="button secondary" href="#pakete">Manager auswählen ↓</a>
+          </article>
+          <article class="download-card">
+            <p class="eyebrow">03 / Software</p>
+            <h2>Wartezimmer</h2>
+            <p>Das Erstinstallationspaket im Manager auswählen.</p>
+            <a class="button secondary" href="#pakete">Installationspaket wählen ↓</a>
+          </article>
+        </div>
+        <p class="download-notice">
+          Die öffentlichen Downloads werden noch bereitgestellt. Sie möchten Wartezimmer
+          ausprobieren? <a href="mailto:info@notaus.de">Schreiben Sie uns.</a>
+        </p>
+        <p>
+          Für Wartezimmer gilt die <a href="./lizenzen.html">eigene Projektlizenz (Version 1.1)</a>.
+          Nutzung und interne Anpassung für den eigenen Betrieb sind kostenlos. Bitte nutzen und
+          verlinken Sie unsere offiziellen Downloads. Für eigene öffentliche Downloadangebote und
+          fremde Softwareprodukte oder Softwaredienste brauchen Sie unsere vorherige Erlaubnis, auch
+          bei kostenlosen Angeboten. GitHub-Ausnahme, nichtöffentliche Weitergabe und weitere
+          Details finden Sie unter <a href="./lizenzen.html">Was ist erlaubt?</a>.
+        </p>
+        <div class="package-list" id="pakete">
+          <div class="package-row">
+            <div>
+              <h3>Manager für Mac</h3>
+              <p>Apple Silicon oder Intel · .dmg</p>
+            </div>
+            <span class="version">6.1.3</span>
+            <div class="package-actions">
+              <button
+                class="button secondary"
+                type="button"
+                disabled
+                data-publish-placeholder="download-url"
+                aria-label="Mac-Manager für ARM64: noch nicht öffentlich verfügbar"
+              >
+                Apple Silicon</button
+              ><button
+                class="button secondary"
+                type="button"
+                disabled
+                data-publish-placeholder="download-url"
+                aria-label="Mac-Manager für AMD64: noch nicht öffentlich verfügbar"
+              >
+                Intel
+              </button>
+            </div>
+          </div>
+          <div class="package-row">
+            <div>
+              <h3>Manager für Windows</h3>
+              <p>Intel / AMD x64 · .exe · Netztrennung nach Installation vor Ort prüfen</p>
+            </div>
+            <span class="version">6.1.3</span>
+            <div class="package-actions">
+              <button
+                class="button secondary"
+                type="button"
+                disabled
+                data-publish-placeholder="download-url"
+                aria-label="Windows-Manager für AMD64: noch nicht öffentlich verfügbar"
+              >
+                Windows x64
+              </button>
+            </div>
+          </div>
+          <div class="package-row">
+            <div>
+              <h3>Erstinstallation</h3>
+              <p>Mit dem Manager importieren · .pfinstall</p>
+            </div>
+            <span class="version">6.1.3</span>
+            <div class="package-actions">
+              <button
+                class="button secondary"
+                type="button"
+                disabled
+                data-publish-placeholder="download-url"
+                aria-label="Erstinstallation für ARM64: noch nicht öffentlich verfügbar"
+              >
+                ARM64</button
+              ><button
+                class="button secondary"
+                type="button"
+                disabled
+                data-publish-placeholder="download-url"
+                aria-label="Erstinstallation für AMD64: noch nicht öffentlich verfügbar"
+              >
+                AMD64
+              </button>
+            </div>
+          </div>
+          <div class="package-row">
+            <div>
+              <h3>Updates</h3>
+              <p>Für bestehende Installationen · .pfupdate</p>
+            </div>
+            <span class="version">6.1.3</span>
+            <div class="package-actions">
+              <button
+                class="button secondary"
+                type="button"
+                disabled
+                data-publish-placeholder="download-url"
+                aria-label="Update für ARM64: noch nicht öffentlich verfügbar"
+              >
+                ARM64</button
+              ><button
+                class="button secondary"
+                type="button"
+                disabled
+                data-publish-placeholder="download-url"
+                aria-label="Update für AMD64: noch nicht öffentlich verfügbar"
+              >
+                AMD64
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="prose download-contact">
+          <p>
+            Apple Silicon nutzt ARM64. Intel-Macs und Windows x64 nutzen AMD64. Windows on ARM wird
+            derzeit nicht unterstützt.
+          </p>
+          <p>
+            <a href="./technik.html">Technik &amp; Voraussetzungen →</a> ·
+            <a href="./index.html#wz-kontakt">Hilfe beim Einstieg →</a>
+          </p>
+        </div>
+      </div>
+    </main>
+    <footer class="site-footer wrap">
+      <a class="brand" href="./index.html">Wartezimmer</a>
+      <nav aria-label="Weitere Informationen">
+        <a href="./downloads.html">Downloads</a><a href="./technik.html">Technik</a
+        ><a href="./lizenzen.html">Lizenzen</a><a href="./impressum.html">Impressum</a
+        ><a href="./datenschutz.html">Datenschutz</a>
+      </nav>
+      <span>Mehr Ruhe im Praxisalltag.</span>
+    </footer>
+  </body>
+</html>

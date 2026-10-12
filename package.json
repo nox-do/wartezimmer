@@ -23,7 +23,7 @@
     "build:ui": "npm run build:domain && node scripts/build-ui.mjs",
     "build:app": "npm run build:domain && npm run build:server-shared && npm run build:flow-core && npm run -w @wartezimmer/app build && node scripts/copy-ui-static.mjs",
     "build": "npm run build:domain && npm run build:server-shared && npm run build:ui && npm run build:app",
-    "lint": "npm run lint -w @wartezimmer/domain -w @wartezimmer/server-shared -w @wartezimmer/flow-core -w @wartezimmer/app -w @wartezimmer/sandbox -w @wartezimmer/ui -w @wartezimmer/setup -w @wartezimmer/manager && npm run lint:css",
+    "lint": "npm run lint -w @wartezimmer/domain -w @wartezimmer/server-shared -w @wartezimmer/flow-core -w @wartezimmer/app -w @wartezimmer/sandbox -w @wartezimmer/ui -w @wartezimmer/setup -w @wartezimmer/manager && npm run lint:css && npm run lint:website",
     "lint:css": "stylelint \"manager/src/renderer/**/*.css\" \"ui/src/**/*.css\" && node ./scripts/check-unused-css.mjs",
     "test": "npm run build:deps && npm run test:workspaces",
     "test:workspaces": "npm run test:scripts && npm run test -w @wartezimmer/domain && npm run test -w @wartezimmer/server-shared && npm run test -w @wartezimmer/setup && npm run test -w @wartezimmer/sandbox && npm run test -w @wartezimmer/manager && npm run test -w @wartezimmer/flow-core && npm run test -w @wartezimmer/app && npm run test:network -w @wartezimmer/app && npm run test -w @wartezimmer/ui",
@@ -73,7 +73,10 @@
     "dump": "node ./scripts/dump.mjs",
     "dump:notifications": "node ./scripts/dump.mjs notifications",
     "dist:manager:win": "npm run -w @wartezimmer/manager dist:win",
-    "dev:seed": "node scripts/dev-seed.mjs"
+    "dev:seed": "node scripts/dev-seed.mjs",
+    "lint:website": "eslint website/site.js scripts/build-pages.mjs scripts/check-pages.mjs && stylelint website/styles.css && node scripts/check-unused-css.mjs website",
+    "build:website": "node scripts/build-pages.mjs",
+    "preview:website": "node scripts/build-pages.mjs --preview"
   },
   "devDependencies": {
     "@apidevtools/swagger-parser": "^12.1.0",
@@ -84,6 +87,7 @@
     "eslint": "^10.4.0",
     "eslint-plugin-svelte": "^3.20.0",
     "globals": "^17.7.0",
+    "parse5": "7.3.0",
     "prettier": "^3.8.3",
     "purgecss": "^8.0.0",
     "stylelint": "^17.14.0",

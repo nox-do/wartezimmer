@@ -1,0 +1,345 @@
+Wartezimmer-Lizenz für Praxisnutzung, Anpassung und kontrollierte Weitergabe
+Version 1.1 — 12. Oktober 2026
+Copyright © 2026 Daniel Deuter
+Kontakt für gesonderte Vereinbarungen: info@notaus.de
+
+1. Geltungsbereich und Begriffe
+
+Diese Lizenz gilt für die von Daniel Deuter („Lizenzgeber“) ausdrücklich unter
+dieser Lizenz bereitgestellte Software Wartezimmer einschließlich ihres
+Quellcodes, ihrer ausführbaren Fassungen und der zugehörigen eigenen
+Dokumentation (zusammen „Software“).
+
+Sonstige Website-Inhalte, insbesondere eigenständige Werbetexte, Illustrationen,
+Fotos und Gestaltungselemente, sind nur einbezogen, soweit sie ausdrücklich
+dieser Lizenz zugeordnet werden. Ihre Veröffentlichung auf einer Website zur
+Software allein genügt hierfür nicht.
+
+Diese Lizenz gewährt ausschließlich Rechte, über die der Lizenzgeber verfügt.
+Komponenten und Inhalte Dritter mit eigenen Lizenzhinweisen unterliegen ihren
+jeweiligen Lizenzen. Deren Rechte und Pflichten werden durch diese Lizenz nicht
+eingeschränkt oder ersetzt.
+
+Zur Software gehört insbesondere der „Routing-Core“: die konkrete
+programmtechnische Umsetzung der Geschäftslogik zur Definition, Steuerung
+und Durchsetzung von Patientenjourneys in den Varianten „Simple Routing“
+und „Complex Routing“. Erfasst sind der hierfür bereitgestellte Quellcode
+und die zugehörigen Programmteile zur Verarbeitung von Ablaufschritten,
+Regeln und Zustandsübergängen, soweit sie unter dieser Lizenz bereitgestellt
+werden. „Routing“ bezeichnet hier die fachliche Steuerung der
+Patientenabläufe, nicht HTTP- oder Netzwerk-Routing.
+
+Diese Beschreibung ist unabhängig von Datei-, Verzeichnis-, Modul- und
+Paketnamen. Die besondere Benennung des Routing-Cores beschränkt den
+Geltungsbereich dieser Lizenz nicht auf diesen Bestandteil.
+
+Die Regelungen zur Übernahme und Bearbeitung beziehen sich auf
+urheberrechtlich geschützte Ausdrucksformen. Diese Lizenz beansprucht keine
+Ausschließlichkeitsrechte an abstrakten Ideen, Verfahren, Algorithmen,
+fachlichen Regeln oder der Funktionalität der Patientenjourney-Steuerung
+als solcher. Eigenständige Implementierungen ohne Übernahme oder
+Bearbeitung geschützter Ausdrucksformen der Software werden dadurch nicht
+beschränkt.
+
+Eine „abgeleitete Fassung“ ist eine Bearbeitung der Software oder ein Programm
+oder anderes Erzeugnis, das urheberrechtlich geschützte Teile der Software
+übernimmt. Erfasst werden auch einzelne übernommene Module und Komponenten,
+soweit sie urheberrechtlich geschützt sind. Eine andere Produktbezeichnung,
+Umgestaltung oder Portierung beseitigt die Bindung an diese Lizenz nicht,
+soweit weiterhin solche geschützten Teile unverändert oder in bearbeiteter
+Form weiterverwendet werden.
+
+Eigenständige Programme, die lediglich über Schnittstellen mit der Software
+kommunizieren und keine urheberrechtlich geschützten Teile der Software
+übernehmen, werden von dieser Lizenz nicht erfasst. Die Nutzung und
+Bereitstellung der Software selbst richtet sich auch bei einer solchen
+Anbindung weiterhin nach dieser Lizenz.
+
+2. Erlaubte Nutzung und interne Anpassung
+
+Der Lizenzgeber räumt dem Nutzer ein einfaches, weltweites und unentgeltliches
+Nutzungsrecht im Umfang dieser Lizenz ein. Die Software darf heruntergeladen,
+geprüft, ausgeführt, kopiert und für den eigenen Betrieb bearbeitet werden.
+Dies umfasst Tests, Sicherheitsprüfungen, Fehlerkorrekturen und die Integration
+in eigene betriebliche Systeme. Die Rechte sind nicht befristet; die Grenzen
+dieser Lizenz sind einzuhalten.
+
+Erlaubt ist ausdrücklich die Nutzung in Arztpraxen, Medizinischen
+Versorgungszentren und anderen wirtschaftlich tätigen Organisationen sowie
+bei der Erbringung entgeltlicher medizinischer oder sonstiger Leistungen.
+Eine Lizenzgebühr für diesen Einsatz fällt nicht an. Der eigene Betrieb
+umfasst auch mehrere Standorte desselben Nutzers.
+
+Patienten, Kunden, Begleitpersonen und andere am jeweiligen betrieblichen
+Ablauf beteiligte Personen dürfen die Software im Rahmen dieses Ablaufs
+mitbenutzen, insbesondere über Terminals, Anzeigen und Patientenportale.
+Dies ist keine Bereitstellung als Softwaredienst nach Abschnitt 4.
+Die Bereitstellung zur eigenständigen Betriebsorganisation anderer
+selbstständiger Organisationen fällt dagegen nicht unter diese Ausnahme.
+Für beauftragte IT-Dienstleistungen gilt Abschnitt 5.
+
+Interne Anpassungen dürfen innerhalb des eigenen Betriebs eingesetzt und
+hierzu Beschäftigten sowie beauftragten Dienstleistern nach Abschnitt 5
+zugänglich gemacht werden. Eine Pflicht zur Veröffentlichung eigener
+Änderungen entsteht durch diese Lizenz nicht.
+
+3. Offizielle Bezugsquellen, GitHub und begrenzte Weitergabe
+
+3.1 Offizielle Bezugsquellen
+
+Vorbehaltlich der Ausnahme nach Abschnitt 3.2 erfolgt die öffentliche
+Bereitstellung der Software zum Bezug ausschließlich durch den Lizenzgeber
+über von ihm betriebene oder ausdrücklich als offiziell benannte
+Bezugsquellen. Technische Dienstleister dürfen hierbei in seinem Auftrag
+und unter seiner Kontrolle tätig werden; dies erlaubt ihnen keine eigenen
+Veröffentlichungen.
+
+Ohne vorherige gesonderte Erlaubnis des Lizenzgebers in Textform dürfen
+Dritte weder die Software noch abgeleitete Fassungen, vollständig oder in
+urheberrechtlich geschützten Teilen, öffentlich zugänglich machen oder
+öffentlich zum Bezug anbieten, soweit Abschnitt 3.2 nichts anderes regelt.
+Dies gilt insbesondere für eigene Downloadangebote, Mirrors, öffentliche
+Quellcode-Repositories sowie Paket- und Container-Registries. Erfasst sind
+auch eigene Builds aus unverändertem Quellcode. Ob das Angebot entgeltlich
+oder unentgeltlich erfolgt, ist unerheblich.
+
+Die bloße Verlinkung auf die offiziellen Bezugsquellen des Lizenzgebers ist
+erlaubt.
+
+Die nach Abschnitt 2 erlaubte Mitbenutzung der Software, einschließlich der
+hierfür technisch erforderlichen Übertragung von Programmteilen an
+Endgeräte, bleibt unberührt.
+
+3.2 GitHub-Plattformrechte und Projektbeiträge
+
+Veröffentlicht der Lizenzgeber die Software selbst oder mit seiner
+Zustimmung in einem öffentlichen GitHub-Repository, bleiben die dabei nach
+den für diese Veröffentlichung geltenden GitHub-Nutzungsbedingungen
+wirksam eingeräumten Rechte unberührt. Dies gilt insbesondere für die
+Rechte anderer Nutzer nach Abschnitt D.5 („License Grant to Other Users“),
+die veröffentlichten Inhalte innerhalb des GitHub-Dienstes im dort
+eingeräumten Umfang zu nutzen, anzuzeigen, aufzuführen und durch Forken in
+eigene Repositories zu vervielfältigen. Im Umfang dieser unabhängig
+eingeräumten Rechte gehen diese entgegenstehenden Bestimmungen dieser
+Lizenz, insbesondere der Abschnitte 3 und 4, vor. Diese Lizenz erweitert
+diese Plattformrechte nicht pauschal auf andere Nutzungen oder Plattformen.
+
+Das Halten solcher Forks und die von den eingeräumten Plattformrechten
+erfasste öffentliche Bereitstellung ihrer Inhalte sind keine nach dieser
+Lizenz verbotene eigenständige Produktveröffentlichung. Quellcodearchive,
+die GitHub aus einem nach diesem Abschnitt zulässigen Repository oder Fork
+automatisch bereitstellt, sind im Rahmen dieser Ausnahme ebenfalls erlaubt
+und gelten nicht als eigenständige Software-Releases.
+
+Zusätzlich erlaubt diese Lizenz, die Software zur Erarbeitung und
+Einreichung von Änderungsvorschlägen zum offiziellen Projekt zu bearbeiten
+und zu testen sowie diese Vorschläge über GitHub-Forks und Pull Requests
+oder über andere vom Lizenzgeber ausdrücklich hierfür freigegebene
+Projektwege zugänglich zu machen. Diese zusätzliche Erlaubnis dient der
+Zusammenarbeit am offiziellen Projekt, nicht der Veröffentlichung eines
+eigenständigen Softwareprodukts. Die unabhängig eingeräumten
+Plattformrechte werden dadurch nicht auf diesen Zweck beschränkt. Eine
+Pflicht des Lizenzgebers zur Prüfung oder Übernahme von Beiträgen entsteht
+nicht.
+
+Allein die Erstellung oder Änderung eines Forks gewährt keine über die
+Plattformrechte und die ausdrücklichen Erlaubnisse dieser Lizenz
+hinausgehenden Nutzungsrechte. Insbesondere werden dadurch keine
+zusätzlichen Rechte zur Veröffentlichung eigener Software-Releases,
+Installer, ausführbarer Builds, Pakete oder Container-Images, zu Mirrors
+außerhalb GitHubs oder zu Produkt- und Softwaredienstangeboten nach
+Abschnitt 4 eingeräumt. Die bloße Verfügbarkeit einer GitHub-Funktion
+begründet keine darüber hinausgehende Erlaubnis.
+
+Die Ausnahme gilt nur für Inhalte, für die die betreffenden Plattformrechte
+wirksam eingeräumt wurden. Eine nicht autorisierte Veröffentlichung durch
+Dritte erweitert die ihnen vom Lizenzgeber eingeräumten Rechte nicht.
+
+3.3 Nichtöffentliche Weitergabe
+
+Unveränderte Fassungen einschließlich eigener Builds aus unverändertem
+Quellcode dürfen unentgeltlich und nichtöffentlich unmittelbar an einzelne
+Empfänger zur Nutzung im Rahmen dieser Lizenz weitergegeben werden. Diese
+Erlaubnis umfasst kein an einen unbestimmten Empfängerkreis gerichtetes
+Bezugsangebot, auch nicht bei Versand auf Anfrage oder nach einer
+Registrierung.
+
+Abgeleitete Fassungen dürfen nur innerhalb des eigenen Betriebs und im
+Rahmen der in Abschnitt 5 erlaubten Auftragsleistungen nichtöffentlich
+weitergegeben werden. Jede darüber hinausgehende Weitergabe bedarf der
+vorherigen gesonderten Erlaubnis des Lizenzgebers in Textform, auch wenn sie
+unentgeltlich erfolgt. Die Ausnahme nach Abschnitt 3.2 bleibt unberührt.
+
+3.4 Lizenzhinweise, Herkunft und Beiträge
+
+Bei jeder nach dieser Lizenz erlaubten Weitergabe müssen diese Lizenz und
+vorhandene Urheber- und Drittanbieterhinweise beigefügt und erhalten
+bleiben. Für die vom Lizenzgeber stammenden Teile erhält jeder Empfänger die
+Rechte unmittelbar unter dieser Lizenz. Diese Teile dürfen nicht stattdessen
+unter andere Lizenzbedingungen gestellt werden. Änderungen müssen als solche
+kenntlich gemacht werden. Die unabhängig eingeräumten Plattformrechte nach
+Abschnitt 3.2 bleiben unberührt.
+
+Die Weitergabe muss als Weitergabe der Software Wartezimmer erfolgen und
+darf nicht als eigenes Softwareprodukt des Weitergebenden dargestellt
+werden. Eigene Builds dürfen nicht irreführend als vom Lizenzgeber erstellt
+oder geprüft bezeichnet werden. Die sachliche Nennung des Weitergebenden als
+Dienstleister sowie die Kennzeichnung eines Forks und seiner Änderungen
+bleiben erlaubt.
+
+Änderungsvorschläge dürfen dem Lizenzgeber auch unentgeltlich und
+nichtöffentlich unmittelbar zur Prüfung angeboten werden. Rechte an
+fremden Beiträgen, die der Lizenzgeber für deren Übernahme oder weitere
+Lizenzierung benötigt und die ihm nicht bereits wirksam eingeräumt wurden,
+sind gesondert zu klären.
+
+4. Fremde Softwareprodukte und Softwaredienste
+
+Ohne vorherige gesonderte Erlaubnis des Lizenzgebers in Textform dürfen die
+Software, abgeleitete Fassungen und urheberrechtlich geschützte Teile daraus
+nicht als Grundlage oder Bestandteil eines für Dritte bestimmten eigenen
+oder fremden Softwareprodukts übernommen, bearbeitet, vervielfältigt,
+verbreitet oder öffentlich zugänglich gemacht werden. Dies gilt unabhängig
+davon, ob das Produkt entgeltlich oder unentgeltlich angeboten wird.
+
+Insbesondere nicht erlaubt sind:
+
+a) die Veröffentlichung oder Vermarktung als eigenes Produkt, als
+   eigenständig angebotener Produkt-Fork oder unter einer anderen
+   Produktbezeichnung;
+
+b) die Übernahme geschützter Teile in andere für Dritte bestimmte
+   Softwareprodukte oder Produktkomponenten;
+
+c) der Verkauf, die Vermietung oder die Bereitstellung der Software oder
+   abgeleiteter Fassungen gegen Lizenz-, Bezugs-, Nutzungs- oder
+   Abonnementgebühren sowie ihre Einbindung in ein kostenpflichtiges
+   Softwareprodukt oder Softwarepaket;
+
+d) das Angebot der Software oder abgeleiteter Fassungen als fremder
+   Softwaredienst, insbesondere als SaaS-Angebot oder als anwendungsbezogenes
+   Hosting- oder Managed-Service-Angebot, gleich ob entgeltlich oder
+   unentgeltlich.
+
+Diese Beschränkungen gelten insbesondere auch für die isolierte Übernahme
+oder Bearbeitung geschützter Teile des Routing-Cores, etwa als Grundlage
+eines anderen Praxisprodukts, einer Bibliothek, eines eigenständigen
+Routing-Moduls oder eines Routing-Dienstes für Dritte. Es ist nicht
+erforderlich, dass die gesamte Software oder ein bestimmter prozentualer
+Anteil ihres Quellcodes übernommen wird. Eine neue Benutzeroberfläche,
+Umbenennung, Umstrukturierung, Erweiterung oder Portierung beseitigt die
+Beschränkungen nicht, soweit urheberrechtlich geschützte Ausdrucksformen
+der Software unverändert oder in bearbeiteter Form weiterverwendet werden.
+
+Ausgenommen bleiben die ausdrücklich erlaubte betriebliche Nutzung und
+Anpassung nach Abschnitt 2, die nach Abschnitt 3 erlaubte Weitergabe,
+die dort geregelten GitHub-Nutzungen und Projektbeiträge sowie die
+Auftragsleistungen nach Abschnitt 5. Eine lediglich technische Trennung
+in mehrere Programme, Downloads oder Verträge erlaubt keine Nutzung der
+Software, die nach diesen Bestimmungen ausgeschlossen ist.
+
+Die Entwicklung, Prüfung und auch entgeltliche Bereitstellung eigenständiger
+Schnittstellenanbindungen nach Abschnitt 1 wird hierdurch nicht untersagt.
+
+5. Bezahlte Installation, Anpassung und Betreuung
+
+Dritte dürfen im konkreten Auftrag eines Nutzers für Installation,
+Einrichtung, individuelle Anpassung, Einweisung, Wartung und Betreuung Geld
+verlangen. Hierzu dürfen sie die Software im erforderlichen Umfang kopieren
+und für den eigenen Betrieb des Auftraggebers bearbeiten. Die angepasste
+Fassung darf dem Auftraggeber und seinen für diesen Betrieb beauftragten
+Dienstleistern überlassen werden. Die Vorgaben aus Abschnitt 3 zu Lizenz-,
+Urheber- und Änderungshinweisen sind einzuhalten.
+
+Das Entgelt muss sich auf diese Dienstleistungen beziehen. Die vom
+Lizenzgeber bereitgestellte Software muss dem Auftraggeber unter dieser
+Lizenz ohne Lizenz-, Bezugs- oder Nutzungsgebühr zur Verfügung stehen.
+Für vom Dienstleister geschaffene Anpassungen muss der Auftraggeber
+mindestens die Rechte zum unbefristeten eigenen Betrieb, zur eigenen
+Bearbeitung und zur Betreuung durch andere Dienstleister erhalten.
+
+Die Nutzung der überlassenen Software darf nicht vom Abschluss oder
+Fortbestand eines entgeltlichen Betreuungs-, Abonnement- oder sonstigen
+Dienstleistungsvertrags abhängig gemacht werden. Freiwillige laufende
+Wartungs- und Supportverträge sind zulässig. Die Beendigung solcher Verträge
+berührt die Nutzungsrechte an bereits überlassenen Fassungen nicht.
+
+Erlaubt ist die Betreuung von Installationen auf Systemen des Auftraggebers
+oder auf von ihm selbst angemieteter und administrativ kontrollierter
+Infrastruktur; die Administration darf er an Dienstleister delegieren.
+Die gewöhnliche entgeltliche Bereitstellung allgemeiner Infrastruktur wie
+Servern, Rechenleistung, Speicher und Netzverbindungen wird nicht beschränkt,
+sofern nicht die Software selbst als anwendungsbezogener Dienst angeboten wird.
+
+Diese Erlaubnis berechtigt nicht dazu, eine abgeleitete Fassung als eigenes,
+kundenübergreifend angebotenes Softwareprodukt bereitzustellen. Die
+Dienstleistung darf ein nach Abschnitt 4 ausgeschlossenes Angebot weder
+ersetzen noch dessen Entgelt verdecken. Maßgeblich ist die tatsächlich
+vereinbarte Leistung, nicht allein die Bezeichnung auf einer Rechnung.
+Ein Anspruch auf Dienstleistungen des Lizenzgebers entsteht nicht.
+
+6. Name und Herkunft
+
+Diese Lizenz gestattet die sachliche Nennung von Wartezimmer und des
+Lizenzgebers. Sie gewährt kein Recht, eine fremde oder angepasste Fassung als
+offizielle Veröffentlichung des Lizenzgebers auszugeben oder dessen
+Zustimmung, Prüfung oder Unterstützung zu behaupten.
+
+Vorhandene Urheber- und Lizenzhinweise dürfen nicht entfernt oder inhaltlich
+verfälscht werden. Die im Programm vorgesehene Konfiguration, etwa die Anzeige
+des Namens oder Logos einer nutzenden Praxis, ist im Rahmen der erlaubten
+betrieblichen Nutzung zulässig. Dadurch dürfen keine irreführenden Angaben
+über die Herkunft der Software entstehen.
+
+7. Bereitstellung, Mängel und Haftung
+
+Die Software wird unentgeltlich in ihrem bei Bereitstellung vorhandenen
+Entwicklungsstand überlassen. Eine Garantie für Fehlerfreiheit,
+Verfügbarkeit oder Eignung für einen bestimmten Zweck wird durch diese
+Lizenz nicht übernommen. Diese Lizenz begründet keine vertragliche Pflicht
+zur Weiterentwicklung, Fehlerbehebung, Bereitstellung von Updates oder
+Erbringung von Support. Gesetzliche Verpflichtungen bleiben unberührt.
+Für Mängel gelten die gesetzlichen Vorschriften.
+
+Gesetzliche Haftungs- und Gewährleistungserleichterungen aufgrund der
+unentgeltlichen Überlassung, insbesondere nach §§ 521, 523 und 524 BGB,
+bleiben unberührt, soweit sie auf die Überlassung anwendbar sind. Die
+nachfolgenden Haftungsregelungen begründen keine zusätzlichen Leistungs-
+oder Schadensersatzansprüche und erweitern eine nach diesen Vorschriften
+beschränkte Haftung nicht.
+
+Die Haftung des Lizenzgebers nach den gesetzlichen Vorschriften wird durch
+diese Lizenz nicht beschränkt bei Vorsatz oder grober Fahrlässigkeit, bei
+schuldhafter Verletzung von Leben, Körper oder Gesundheit, bei arglistigem
+Verschweigen von Mängeln, aus einer ausdrücklich übernommenen Garantie oder
+aufgrund sonstiger zwingender gesetzlicher Haftung.
+
+Außerhalb der im vorstehenden Absatz genannten Fälle gilt: Soweit nach den
+gesetzlichen Vorschriften eine Haftung für einfache Fahrlässigkeit besteht,
+ist sie bei Verletzung wesentlicher Vertragspflichten auf den
+vertragstypischen, bei Vertragsschluss vorhersehbaren Schaden begrenzt.
+Wesentliche Vertragspflichten sind Pflichten, deren Erfüllung die
+ordnungsgemäße Durchführung des Vertrags erst ermöglicht und auf deren
+Einhaltung der Vertragspartner regelmäßig vertrauen darf. Bei Verletzung
+anderer Pflichten ist die Haftung für einfache Fahrlässigkeit ausgeschlossen.
+
+8. Vorbehaltene Rechte und gesonderte Vereinbarungen
+
+Rechte, die diese Lizenz nicht ausdrücklich gewährt, bleiben vorbehalten.
+Gesetzlich erlaubte Nutzungen und zwingende gesetzliche Rechte bleiben
+unberührt, insbesondere die Rechte nach §§ 69d und 69e UrhG, soweit sie
+nicht wirksam vertraglich beschränkt werden dürfen.
+
+Der Lizenzgeber kann gesonderte Erlaubnisse für andere Nutzungen erteilen,
+insbesondere für Produktangebote, Weitergaben angepasster Fassungen und
+Softwaredienste. Dies setzt voraus, dass er über die hierfür erforderlichen
+Rechte verfügt. Eine solche Erlaubnis bedarf der Textform.
+
+Für eine überlassene Fassung gilt die mit ihr erteilte Lizenz. Eine spätere
+Veröffentlichung anderer Lizenzbedingungen ändert bereits wirksam
+eingeräumte Rechte nicht einseitig.
+
+Dies ist eine eigene Lizenz für Software mit offengelegtem Quellcode
+(„Source-available“), keine Apache-2.0-Lizenz. Wegen der Beschränkungen von
+Weitergabe und Produktverwertung ist sie keine Open-Source-Lizenz im Sinne
+der Open Source Initiative.

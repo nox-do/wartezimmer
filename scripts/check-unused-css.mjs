@@ -19,6 +19,12 @@ const allowlistPath = path.join(repoRoot, 'scripts/unused-css-allowlist.json');
 /** @type {Target[]} */
 const targets = [
   {
+    name: 'website',
+    css: ['website/styles.css'],
+    content: ['website/*.html', 'website/site.js'],
+    safelist: { standard: [':focus-visible'] },
+  },
+  {
     name: 'manager',
     css: [
       'manager/src/renderer/styles.css',

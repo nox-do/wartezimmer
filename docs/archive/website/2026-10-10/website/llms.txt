@@ -44,6 +44,16 @@ Installation und Updates. Der Betrieb wurde auf einem Intel Core i7 mit 16 GB RA
 erfolgreich getestet. Für den Betrieb selbst und Backups ist zusätzlicher Platz einzuplanen.
 Der Installationsrechner muss während der Nutzung erreichbar sein.
 
+**Optionaler Bondruck:** Thermobondrucker für 58 oder 80 mm Papier.
+Die Installation kann im Netz per LAN/WLAN oder lokal am Terminal-Tablet bzw.
+Terminal-Rechner geplant werden. Anschlüsse, Drucksoftware und bei Tablets
+USB-Druck mit gleichzeitigem Laden sind für die konkrete Kombination zu prüfen.
+Automatischer Tablet- und gemeinsamer Netzwerkdruck sind noch in Vorbereitung;
+der bisherige Druckweg nutzt den Browser am Terminal-PC.
+MUNBYN P047-WiFi ist ein Gerätetipp für den WLAN-Einstieg; weitere Beispiele
+sind Star TSP143IV UEWB/X4 und Epson TM-T20IV in passender Anschlussvariante.
+Die genannten Modelle sind noch nicht mit Wartezimmer erprobt.
+
 **Technischer Aufbau:** Die Praxisoberflächen verwenden Svelte, TypeScript und
 Vite. Der app-Container bündelt Node.js/Fastify, Anwendungslogik, Browseroberflächen
 und SQLite. Der separate sandbox-Container übernimmt Dokumentenprüfung mit ClamAV,
@@ -101,6 +111,7 @@ Betreiber: Daniel Deuter; Kontakt: info@notaus.de.
 
 - [Downloads](./index.html#wz-downloads): Manager, Installationspakete und Docker-Desktop-Link.
 - [Installationsszenarien](./technik.html#installationsszenarien): Interner Betrieb, HTTP, HTTPS und getrennter Portalzugang.
+- [Bondrucker](./technik.html#bondrucker): Anschlussmöglichkeiten, Auswahlkriterien und ein Gerätetipp.
 - [Systemvoraussetzungen](./technik.html#voraussetzungen): Laufzeit, Ressourcen, Verfügbarkeit, Netz und Datensicherung.
 
 ## Optional

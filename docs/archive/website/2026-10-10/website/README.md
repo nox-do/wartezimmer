@@ -1,10 +1,10 @@
 # Wartezimmer – GitHub Pages
 
-Die statische Website bleibt während der Vorbereitung in `mockups/wartezimmer/`.
+Die statische Projektwebsite liegt in `website/`.
 `index.html`, `styles.css` und `demo.js` enthalten die Website und das interaktive
 Beispiel. `technik.html` beschreibt den Betrieb auf einem vorhandenen Praxisrechner,
 Mac- und Windows-Unterstützung, Installationsszenarien (intern, HTTPS und
-getrennter Portalzugang) sowie erste Systemvoraussetzungen. Technische
+getrennter Portalzugang) sowie Systemvoraussetzungen und optionale Bondrucker. Technische
 Grundlage sind `docs/operations/delivery.md` und `docs/operations/runtime.md`;
 der erfolgreiche Windows-Test einschließlich Portalzugang wurde vom
 Projektverantwortlichen am 07.10.2026 bestätigt (die Betriebsdokumentation
@@ -193,7 +193,7 @@ Die Wartenummer bleibt unverändert. Das Ziel auf dem Bon im Einstieg ist
 als HTML umgesetzt und wechselt horizontal zwischen „Wartezimmer“, „Empfang“
 und „Infektion 1“. Bei reduzierter Bewegung bleibt „Wartezimmer“ stehen. Browserleisten, Praxisüberschriften
 und Zeitstempel werden in den jeweiligen Ausschnitten weggelassen.
-Der Pages-Build übernimmt `images/` als lokale Assets.
+Der Pages-Build übernimmt die verwendeten Bilder aus `images/`; die Unterordner `originale/` und `archiv/` werden ausgeschlossen.
 
 ## Orientierung: Produktkarussell
 
@@ -211,3 +211,70 @@ Der interaktive Beispielbesuch ist vorerst aus der Website entfernt und unter
 `snippets/ausprobieren.html` gesichert. Zum Wiederverwenden innerhalb von
 `#wz-concept` einfügen. Die zugehörigen Styles und die bei vorhandenem
 `#wz-ablauf` aktivierte Demo-Logik bleiben erhalten.
+
+## Bondrucker auf der Technik-Seite
+
+`technik.html#bondrucker` hält Anschlussmöglichkeiten und Auswahlkriterien kurz:
+LAN/WLAN oder lokal am Terminal-Tablet bzw. Terminal-PC, 58/80 mm, Schneider,
+Rollenwechsel und bei Tablet-USB gleichzeitiges Laden. Die öffentliche Seite
+nennt MUNBYN P047-WiFi als Gerätetipp sowie Star TSP143IV UEWB/X4 und Epson
+TM-T20IV als weitere Beispiele, ohne Produktlinks oder Preise.
+
+Grundlage des vorhandenen Browserdrucks sind `docs/flows.md` und die
+Druckkomponenten in `ui/src/lib/terminal/`. Automatischer Tablet- und gemeinsamer
+Netzwerkdruck sind noch nicht umgesetzt und werden als in Vorbereitung bezeichnet.
+Die Modellnennungen beruhen auf Herstellerangaben, nicht auf Tests mit Wartezimmer.
+Vor einer Gerätefreigabe Anschlüsse, Druckanbindung, Layout und Schnitt prüfen.
+
+
+## Eigenständiger Entwurf zum Praxisalltag
+
+`praxisalltag.html` und `praxisalltag.css` enthalten den eigenständigen Entwurf
+mit sechs Entlastungswünschen, einer offenen Patientenjourney und benannten
+Quellen von BGW sowie KBV/IGES. Die Quellen belegen den fachlichen Hintergrund,
+nicht die Wirksamkeit von Wartezimmer.
+
+Der Entwurf ist unter `/praxisalltag.html` erreichbar und wird nur beim
+Pages-Build mit `--preview` kopiert. Er ist mit `noindex` markiert.
+Die Startseite wird erst nach redaktioneller Abstimmung angepasst.
+
+Die Illustrationen zum Entwurf sind nach ihrem Einsatz benannt:
+`journey-anmeldung`, `journey-unterlagen-wartezeit`,
+`journey-abwesenheit-rueckholen` und `journey-aufruf-behandlungsraum`.
+Für Wunsch 2 und 6 liegen `wunsch-teamueberblick-{grau,farbe}` und
+`wunsch-patienten-begleiten-{grau,farbe}` vor. Umbenannte PNG-Originale
+bleiben erhalten; die Seite lädt optimierte WebP-Versionen.
+Die Wunschbilder starten grau, wechseln bei Hover und Tastaturfokus in Farbe
+und lassen sich per Klick oder Antippen umschalten (`praxisalltag.js`).
+
+Wunsch 5 verwendet das Bildpaar `wunsch-raumorientierung-{grau,farbe}`
+(ursprünglich `room_panel_2.png` und `room_panel_1.png`).
+
+Wunsch 1 verwendet `wunsch-empfang-entlasten-{grau,farbe}`
+(ursprünglich `empfang_2.png` und `empfang_1.png`).
+
+Wunsch 3 verwendet `wunsch-digitale-unterlagen-{grau,farbe}`
+(aktualisiertes Paar: `portal_1.png` in Grau und `portal_2.png` in Farbe).
+
+Wunsch 4 verwendet `wunsch-abwesenheit-rueckkehr-{grau,farbe}`
+(ursprünglich `raus_1.png` in Grau und `raus_2.png` in Farbe).
+Damit haben alle sechs Wunschkarten ein Bildpaar.
+
+
+Der Praxisalltag-Entwurf verbindet inzwischen Wünsche und Journey mit
+ausgewählten Startseiteninhalten: dem 15-Minuten-Einstieg, offenem lokalem
+Betrieb, Hilfe nach Bedarf, Technik, FAQ und direktem Kontakt. Downloads
+verweisen auf den gepflegten Bereich der Startseite.
+
+
+## Bildablage und Benennung
+
+- `images/`: verwendete, für die Website optimierte WebP-Dateien.
+- `images/originale/`: die 16 PNG-Originale der Illustrationen, mit demselben Basisnamen wie ihre WebP-Version.
+- `images/archiv/`: derzeit unbenutzte Bilder; aktuell die ältere Produktansicht zum Patientenaufruf.
+
+Die Präfixe unterscheiden echte Produktansichten (`produkt-`),
+Illustrationen zum Besuch (`journey-`) und die sechs Wunschmotive (`wunsch-`).
+Bei Bildpaaren bezeichnet `-grau` die Ausgangsansicht und `-farbe` die
+Hover-Ansicht. Originale und Archiv werden weder im Vorschau- noch im
+Veröffentlichungsbuild ausgeliefert.

@@ -1,0 +1,52 @@
+# Wartezimmer
+
+> Lokale Software für Anmeldung, Warteliste, Unterlagen, Aufruf und Patientenwege in Arztpraxen.
+
+## Zielgruppe und Nutzen
+Einzel- und Gemeinschaftspraxen. Ein gemeinsamer Überblick für das Team,
+Orientierung für Patienten. Einstieg mit der Teamübersicht; Terminal,
+Patientenportal, Wartezimmeranzeige und Raum-Panels nach Bedarf ergänzen.
+Die Reihenfolge und medizinische Prioritäten bestimmt das Praxisteam.
+
+## Funktionen
+Anmeldung bei der MFA oder am Terminal. Wartenummer als Verbindung zwischen
+Besuch, Unterlagen und Aufruf. Dokumente und Formulare dem Besuch zuordnen.
+Abwesenheiten erfassen und Patienten gezielt zurückholen. Einfache oder
+mehrstufige Patientenwege. Patientenportal im Browser.
+
+## Betrieb und Übergaben
+Lokaler Praxisrechner mit Mac oder Windows x64, Docker Desktop und Manager.
+Arbeitsplätze nutzen aktuelle Browser im Praxisnetz. HTTPS für personenbezogene
+Daten empfohlen. Selbstständiger Portalzugang für Patienten benötigt ein
+geplantes getrenntes Netz mit zweiter Netzwerkkarte und HTTPS.
+Kein PVS-Ersatz. Optionaler Kontaktabgleich mit CSV-Exporten des PVS, kein Stammdatenimport in eine eigene Patientenverwaltung. Unterlagen per Dateiexport.
+SMS als optionaler externer Dienst. Kein Cloud-Backend als Betriebsvoraussetzung.
+
+## Verfügbarkeit
+Die Website wird für die Veröffentlichung vorbereitet. Öffentliche Download-
+und Quellcode-URLs sind noch zu ergänzen. Die eigene Wartezimmer-Lizenz Version 1.1
+erlaubt kostenlose Nutzung und interne Anpassung für den eigenen Betrieb sowie
+beauftragte bezahlte Installation, Anpassung und Betreuung. Öffentliche Angebote
+bleiben den offiziellen Bezugsquellen vorbehalten, mit der geregelten Ausnahme
+für GitHub-Plattformrechte, Forks, automatische Quellcodearchive und Projektbeiträge.
+Unveränderte Fassungen dürfen kostenlos und nichtöffentlich unmittelbar an einzelne
+Empfänger weitergegeben werden. Weitere öffentliche Angebote und fremde Produkte
+oder Softwaredienste benötigen eine gesonderte Erlaubnis, auch bei kostenlosen Angeboten.
+Details und Ausnahmen regelt die Lizenz. Geschützte Teile des Routing-Cores sind
+einbezogen; eigenständige Implementierungen ohne Übernahme geschützter Ausdrucksformen
+werden nicht beschränkt. Das Projekt ist Source-available, keine Open-Source-Software.
+Sonstige Website-Inhalte sind nur bei ausdrücklicher Zuordnung umfasst.
+Vollständiger Lizenztext: ./lizenz.html.
+Textdatei zum Herunterladen: ./licenses/wartezimmer-LICENSE.txt.
+Die Veröffentlichungsprüfung verhindert den Live-Build, solange Markierungen
+für diese Angaben oder die Hosting-Datenschutzerklärung vorhanden sind.
+Keine automatische PVS-Integration oder pauschale Datenschutzkonformität zusagen.
+
+## Seiten
+- [Startseite](./index.html)
+- [Downloads](./downloads.html)
+- [Technik](./technik.html)
+- [Lizenzen](./lizenzen.html)
+- [Vollständige Projektlizenz](./lizenz.html)
+- [Impressum](./impressum.html)
+- [Datenschutz](./datenschutz.html)
