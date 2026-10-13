@@ -35,6 +35,7 @@ const queueVisitTransitionResponses = {
   403: queueErrorResponse,
   404: queueErrorResponse,
   409: queueErrorResponse,
+  502: queueErrorResponse,
 } as const;
 
 const queueCallbackPhoneResponses = {

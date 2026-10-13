@@ -6,20 +6,12 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { assertProductionTree, isBuildArtifact, isTestDirectory } from './production-artifacts.mjs';
 
 const baseDir = process.cwd();
 
 function shouldDropDistFile(fileName) {
-  return (
-    fileName.endsWith('.d.ts') ||
-    fileName.endsWith('.d.ts.map') ||
-    fileName.endsWith('.js.map') ||
-    fileName.endsWith('.css.map') ||
-    fileName.endsWith('.test.js') ||
-    fileName.endsWith('.test.mjs') ||
-    fileName.endsWith('.ts') ||
-    fileName.endsWith('.tsx')
-  );
+  return isBuildArtifact(fileName);
 }
 
 function stripDistTree(distDir) {
@@ -30,7 +22,8 @@ function stripDistTree(distDir) {
   for (const entry of fs.readdirSync(distDir, { withFileTypes: true })) {
     const fullPath = path.join(distDir, entry.name);
     if (entry.isDirectory()) {
-      stripDistTree(fullPath);
+      if (isTestDirectory(entry.name)) fs.rmSync(fullPath, { recursive: true, force: true });
+      else stripDistTree(fullPath);
       continue;
     }
     if (shouldDropDistFile(entry.name)) {
@@ -73,7 +66,8 @@ function stripFlatDist(distDir) {
   for (const entry of fs.readdirSync(abs, { withFileTypes: true })) {
     const fullPath = path.join(abs, entry.name);
     if (entry.isDirectory()) {
-      stripDistTree(fullPath);
+      if (isTestDirectory(entry.name)) fs.rmSync(fullPath, { recursive: true, force: true });
+      else stripDistTree(fullPath);
       continue;
     }
     if (shouldDropDistFile(entry.name)) {
@@ -92,11 +86,13 @@ if (args.length === 0) {
 
 for (const target of args) {
   if (target.startsWith('dist:')) {
-    stripFlatDist(path.join(baseDir, target.slice('dist:'.length)));
+    stripFlatDist(path.resolve(baseDir, target.slice('dist:'.length)));
+    assertProductionTree(path.resolve(baseDir, target.slice('dist:'.length)));
     console.log(`strip-production-artifacts: cleaned dist ${target.slice('dist:'.length)}`);
     continue;
   }
 
   stripPackageDir(path.isAbsolute(target) ? target : path.join(baseDir, target));
+  assertProductionTree(path.resolve(baseDir, target, 'dist'));
   console.log(`strip-production-artifacts: cleaned package ${target}`);
 }

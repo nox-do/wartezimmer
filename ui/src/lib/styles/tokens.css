@@ -240,7 +240,6 @@
   --terminal-text-welcome: 1.15rem;
   --terminal-text-field: 1.1rem;
   --terminal-text-ui: 1rem;
-  --terminal-text-emergency-count: 2rem;
   --terminal-text-ticket: 2.4rem;
   --terminal-text-room: 2rem;
   --terminal-text-locked-title: clamp(1.45rem, 4vw, 1.75rem);

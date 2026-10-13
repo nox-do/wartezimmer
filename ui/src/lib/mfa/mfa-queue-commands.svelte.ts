@@ -341,10 +341,10 @@ export async function confirmMfaCheckOut() {
   }
 
   const visitId = pending.visitId;
-  await runMfaQueueAction(visitId, () =>
+  const result = await runMfaQueueAction(visitId, () =>
     pending.purpose === 'cancel' ? cancelQueueVisit(visitId) : checkOutVisit(visitId),
   );
-  mfaQueueActions.checkOutVisit = null;
+  if (result?.ok) mfaQueueActions.checkOutVisit = null;
 }
 
 export function returnMfaTicketToWaiting(visitId: string) {

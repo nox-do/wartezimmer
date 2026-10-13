@@ -5,7 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { execFileSync } from 'node:child_process';
 import { rebuildHost, type RebuildHooks } from './rebuild-host.js';
-import { testSetupContext } from './test-setup-context.js';
+import { testSetupContext } from './test-helpers/test-setup-context.js';
 import { DEFAULT_PORTAL_PROXY_CONTRACT } from '@wartezimmer/server-shared';
 
 function fixture(t: test.TestContext, proxy = false) {

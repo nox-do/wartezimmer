@@ -1,111 +1,175 @@
 # Wartezimmer
 
-Lokales Praxis-System: Check-in am Terminal, Warteschlange (MFA), Wartezimmer-TV, Patient-Portal (Upload/Anamnese), Dokument-Export — als Docker-Stack ohne Cloud.
+Wartezimmer ist ein lokal betriebenes System zur Organisation von Patientenbesuchen in Arztpraxen. Es verbindet Anmeldung, Warteliste, Raumzuordnung und Patientenaufruf mit einem optionalen Portal für Dokumente und Anamnese. Das Praxisteam arbeitet im Browser; Anwendung und Datenverarbeitung laufen auf einem Docker-Host in der Praxis.
 
-**Stack:** `app` (Fastify + SQLite + UI), `ui` (Svelte 5), `sandbox` (Preview/Form2PDF, ClamAV). WLAN/Captive: Praxis-IT + geplante dünne Adapter — kein eigener Gateway-Container im Produkt.
+Diese README richtet sich an Entwickler und die Praxis-IT. Die [Projektwebsite](website/README.md) erklärt die Anwendung im Praxisalltag; die [Dokumentation](docs/README.md) beschreibt Fachlichkeit, Architektur und Betrieb.
 
-## Status
+## Fachlicher Umfang
 
-Produktfähig lokal ausgeliefert: versionierte Images, Manager, `.pfupdate`, optional Proxy und **LAN-TLS**. Kein öffentliches Store-Release. Einstieg IT: [`docs/operations/`](docs/operations/) · TLS: [`docs/operations/tls.md`](docs/operations/tls.md).
+| Bereich                | Funktion                                                                                                    |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Anmeldung              | Check-in am Terminal, Auswahl des Anliegens und Vergabe einer Wartenummer                                   |
+| Teamübersicht (MFA)    | Warteliste, Aufruf, Abwesenheit und Rückholen sowie Zuordnung zu Räumen                                     |
+| Patientenführung       | Wartezimmer-TV und Raum-Panels mit Wartenummer und Aufrufziel                                               |
+| Patientenportal        | Dokument-Upload und Anamnesebogen innerhalb einer Patientensitzung                                          |
+| Dokumentenverarbeitung | Virenprüfung, geschützte Vorschau, PDF-Erstellung und Export in einen Host-Ordner                           |
+| Verwaltung             | Praxis- und Geräteeinstellungen, Tagesreset sowie Installation, Updates und Datensicherung über den Manager |
 
-## Voraussetzungen
+Die Ablaufsteuerung unterstützt direkte Zuordnungen von Anliegen zu Zielräumen sowie mehrstufige Behandlungspfade. Details stehen in den [fachlichen Abläufen](docs/flows.md) und der [Routing-Dokumentation](docs/architecture/routing.md).
 
-- **Node.js 22+** und npm (Workspaces-Monorepo)
-- **Docker Desktop** mit Compose v2 (empfohlener Dev-Weg)
-- Port **8080** frei auf dem Host
-- Optional: Ordner `~/wartezimmer-imports` und `~/wartezimmer-exports` (Compose-Defaults; siehe `.env.example`)
+Wartezimmer ergänzt ein Praxisverwaltungssystem (PVS). Der vorhandene Kontaktabgleich nutzt CSV-Dateien; eine direkte PVS- oder eGK-Anbindung gehört nicht zum Standardumfang. Gäste-WLAN, Firewall und Netztrennung werden durch die Praxis-IT bereitgestellt. Optionaler Nachrichtenversand über einen externen Anbieter erfordert dessen Zugangsdaten.
 
-## Schnellstart (Docker)
+### Einblick in die Oberflächen
+
+Team-Warteliste mit Anliegen, Wartezeit und abwesenden Patienten:
+
+![Team-Warteliste mit Wartenummern, Anliegen und Aufrufaktionen](website/images/produkt-warteliste.png)
+
+Raumübersicht mit aufgerufenen und angekommenen Patienten:
+
+![Raumübersicht mit Besuchsstatus und Raumbelegung](website/images/produkt-raeume.png)
+
+Die Produktansichten stammen aus der Projektwebsite und zeigen fiktive Daten.
+
+## Systemaufbau
+
+Das Projekt ist ein TypeScript-Monorepo mit npm Workspaces.
+
+| Komponente          | Technik und Aufgabe                                                          |
+| ------------------- | ---------------------------------------------------------------------------- |
+| `app`               | Fastify-API, Fachlogik, SQLite-Persistenz und Auslieferung der statischen UI |
+| `ui`                | Browseroberflächen mit Svelte 5 und SvelteKit                                |
+| `sandbox`           | Separater Container für Dokumentenprüfung, Vorschau und Form2PDF mit ClamAV  |
+| `manager` / `setup` | Electron-Anwendung und Host-CLI für Installation und Wartung                 |
+| Optionaler Proxy    | Caddy für HTTP-Proxy und HTTPS im Praxisnetz                                 |
+
+Die Oberflächen führen Aktionen über REST aus und erhalten Echtzeitänderungen über Server-Sent Events (SSE). Die API-Verträge liegen unter [`openapi/`](openapi/); daraus werden Fastify-Schemas und TypeScript-Typen erzeugt.
+
+Der Kernbetrieb benötigt kein Cloud-Backend. Externe Dienste können für optionale Funktionen wie Nachrichtenversand oder Zertifikatsausstellung hinzukommen. Systemgrenzen und Datenhaltung beschreibt die [Systemarchitektur](docs/architecture/system.md).
+
+## Installation und Betrieb
+
+Die Auslieferung erfolgt über den **Wartezimmer Manager**, Erstinstallationspakete (`.pfinstall`) und Updatepakete (`.pfupdate`). Der Manager verwaltet den Docker-Stack auf dem Installationsrechner.
+
+- [Installation und Recovery](docs/operations/reinstall-recovery.md)
+- [Manager und Wartung](manager/README.md)
+- [Laufzeit, Konfiguration und Docker-Betrieb](docs/operations/runtime.md)
+- [HTTPS im Praxisnetz](docs/operations/tls.md)
+- [Backup und Wiederherstellung](docs/operations/backup.md)
+- [Netztrennung und Portalzugang](docs/operations/praxis-it-network-isolation.md)
+
+Das Projekt wird für die öffentliche Veröffentlichung vorbereitet. **macOS:** Die Software ist nutzbar. **Windows:** Der Test ist abgeschlossen; die NIC-Trennung zeigte sich stabil und sollte nach jeder Installation vor Ort validiert werden. Dokumentierte Plattformnachweise, ihre Grenzen und noch offene Prüfungen stehen unter [Offene Abnahmen und Entscheidungen](docs/open-items.md).
+
+## Lokale Entwicklung
+
+### Voraussetzungen
+
+- Node.js 22 oder neuer und npm
+- Docker Desktop mit Docker Compose v2 für den vollständigen lokalen Stack
+- Freier Host-Port `8080`
+- Import- und Exportordner; standardmäßig `~/wartezimmer-imports` und `~/wartezimmer-exports`
+
+Die Konfigurationsoptionen sind in [`.env.example`](.env.example) dokumentiert.
+
+### Vollständigen Stack starten
 
 ```bash
 npm install
-cp .env.example .env          # mindestens Secrets anpassen (siehe .env.example)
-npm run docker:up               # Build + Start: app + sandbox auf :8080
+cp .env.example .env
 ```
 
-**Dev-Login:** MFA und Ops — PIN **0000** (in der Datenbank; auch Delivery-Standard nach Erststart/`npm run setup`).
-
-Stoppen / Logs:
+Vor dem Start die Platzhalter für `AUTH_KEY_CAPTIVE`, `MAINTENANCE_TOKEN` und `SANDBOX_INTERNAL_TOKEN` in `.env` durch eigene Werte ersetzen.
 
 ```bash
-npm run docker:down
+npm run docker:up
+```
+
+Der Befehl baut und startet `app` und `sandbox`. Die Anwendung ist unter `http://localhost:8080` erreichbar. MFA und Ops verwenden nach Erststart die Standard-PIN `0000`; sie lässt sich in der Anwendung ändern. HTTP lokal mit fiktiven Daten verwenden; die Einrichtung für den Praxisbetrieb ist in der [Betriebsdokumentation](docs/operations/README.md) beschrieben.
+
+| Oberfläche          | Lokale URL                         |
+| ------------------- | ---------------------------------- |
+| Terminal            | <http://localhost:8080/terminal>   |
+| Teamübersicht (MFA) | <http://localhost:8080/mfa>        |
+| Wartezimmer-TV      | <http://localhost:8080/tv>         |
+| Raum-Panel          | <http://localhost:8080/room-panel> |
+| Patientenportal     | <http://localhost:8080/portal>     |
+| Einrichtung (Ops)   | <http://localhost:8080/ops/setup>  |
+
+Gerätefreigaben und Rollen sind in der [API-Dokumentation](docs/architecture/apis.md) beschrieben. Für eine reproduzierbare Belegung mit fiktiven Patienten siehe [Demo-Daten](docs/development/demo-data.md).
+
+```bash
 docker compose logs -f app
+npm run docker:down
 ```
 
-Images lokal: `wartezimmer/app:local`, `wartezimmer/sandbox:local`. Betrieb und Updates: [`docs/operations/runtime.md`](docs/operations/runtime.md).
+### UI und Backend ohne Docker entwickeln
 
-## Entwicklung ohne Docker
-
-Für schnelle UI- und API-Iteration — **ohne** Sandbox, ClamAV und volle Container-Nähe:
+Nach Installation der Abhängigkeiten und Konfiguration von `.env` in zwei Terminals starten:
 
 ```bash
-npm run dev:app                 # Backend :8080 (Terminal braucht oft noch laufendes UI-Build)
-npm run dev:ui                  # SvelteKit-Devserver mit Proxy auf :8080
+# Terminal 1: Backend auf Port 8080
+npm run dev:app
+
+# Terminal 2: SvelteKit-Devserver mit Proxy zum Backend
+npm run dev:ui
 ```
 
-Dokument-Preview, Form2PDF und Malware-Scan: Stack mit `npm run docker:up` (mindestens `app` + `sandbox`). Selten nativ: `npm run dev:sandbox` (nur Sandbox; App/API weiter separat).
+Dieser Weg eignet sich für UI- und API-Änderungen. Für Dokumentenvorschau, Form2PDF und Virenprüfung wird zusätzlich die Sandbox benötigt; dafür den vollständigen Docker-Stack verwenden. Ein nativer Sandbox-Start ist über `npm run dev:sandbox` möglich.
 
-Erstinstallation & Manager: [`docs/operations/delivery.md`](docs/operations/delivery.md) · [`manager/README.md`](manager/README.md).
-CLI: `npm run setup` · Test-Install: `WARTEZIMMER_HOME=/tmp/pf-dev-001 npm run setup` · Reset: `npm run setup:reset`
+Die API-Dokumentation unter <http://localhost:8080/api/docs> ist für den nativen Entwicklungsbetrieb vorgesehen und im Standard-Docker-Image deaktiviert.
 
-## Alltagsbefehle
+## Prüfung und Release-Werkzeuge
 
-```bash
-npm run verify                  # lint + typecheck + tests + UI-Build + Secret-Scan
-npm run generate:api            # nach Änderungen an openapi/*.yaml
-npm run dump:notifications      # fokussierter Rückhol-/Messaging-Dump mit API, ohne Tests
-npm run smoke:all               # Integration — braucht laufenden Stack auf :8080
-npm run release:images          # Erstinstallationspaket (.pfinstall + Sidecar)
-npm run release:pfupdate        # Updatepaket (.pfupdate)
-npm run dist:manager:mac        # Manager-DMG für macOS
-```
+| Befehl                     | Zweck                                                                                      |
+| -------------------------- | ------------------------------------------------------------------------------------------ |
+| `npm run verify`           | Lint, Formatprüfung, Typprüfung, Tests, UI-Build und Prüfung auf Secrets im UI-Bundle      |
+| `npm run generate:api`     | API-Artefakte nach Änderungen an `openapi/*.yaml` neu erzeugen                             |
+| `npm run smoke:all`        | Integrationsprüfungen; benötigen einen laufenden Stack und die jeweilige Testkonfiguration |
+| `npm run release:images`   | Erstinstallationspaket mit Images und Sidecar erzeugen                                     |
+| `npm run release:pfupdate` | Updatepaket erzeugen                                                                       |
+| `npm run dist:manager:mac` | Manager für macOS paketieren                                                               |
+| `npm run dist:manager:win` | Manager für Windows paketieren                                                             |
 
-## URLs (nach Start)
+Build-Befehle und Plattformvoraussetzungen stehen in der [Manager-Dokumentation](manager/README.md). Weitere Entwicklungswerkzeuge sind unter [`docs/development/`](docs/development/README.md) beschrieben.
 
-Basis: `http://localhost:8080`
-
-| Rolle          | URL                             |
-| -------------- | ------------------------------- |
-| Terminal       | http://localhost:8080/terminal  |
-| MFA            | http://localhost:8080/mfa       |
-| TV             | http://localhost:8080/tv        |
-| Portal         | http://localhost:8080/portal    |
-| Ops-Setup      | http://localhost:8080/ops/setup |
-| API-Docs (Dev) | http://localhost:8080/api/docs  |
-
-## Dokumentation
-
-Einstieg nach Rolle: **[`docs/README.md`](docs/README.md)**
-
-| Thema             | Datei                                                                                      |
-| ----------------- | ------------------------------------------------------------------------------------------ |
-| Produktinfo       | [`docs/product.md`](docs/product.md)                                                       |
-| Fachliche Abläufe | [`docs/flows.md`](docs/flows.md)                                                           |
-| Architektur       | [`docs/architecture/`](docs/architecture/) · [`system.md`](docs/architecture/system.md)    |
-| API-Vertrag       | `openapi/*.yaml` (+ [`docs/architecture/apis.md`](docs/architecture/apis.md) Rollenmatrix) |
-| Echtzeit (SSE)    | [`docs/architecture/realtime.md`](docs/architecture/realtime.md)                           |
-| Build & Release   | [`docs/operations/delivery.md`](docs/operations/delivery.md)                               |
-| Docker-Betrieb    | [`docs/operations/runtime.md`](docs/operations/runtime.md)                                 |
-| Manager           | [`manager/README.md`](manager/README.md)                                                   |
-| WLAN / Portal     | [`docs/operations/integrations.md`](docs/operations/integrations.md)                       |
-
-Env-Variablen: [`.env.example`](.env.example) — nicht hier duplizieren.
-
-Kundenbetrieb: `docker-compose.delivery.yml` — Runtime [`docs/operations/runtime.md`](docs/operations/runtime.md), Build/Release [`docs/operations/delivery.md`](docs/operations/delivery.md).
-
-## Repo-Struktur
+## Repository-Struktur
 
 ```text
-app/                    Backend (Fastify) + ausgelieferte UI (dist)
-ui/                     SvelteKit → Build nach app/dist/ui-static
-sandbox/                Dokument-Preview, ClamAV, Form2PDF
-packages/domain/        Geteilte Fachlogik / Typen
-packages/server-shared/ Geteilte Server-Helfer (Logger, …)
-setup/                  Host-CLI + Setup-API (CLI :9190; Manager-Child ephemer)
-manager/                Electron-App: Wizard, Wartung, Updates
-openapi/                API-Spezifikation (Source of Truth)
-docs/                   Fach- und Architektur-Doku
-
-docker-compose.yml              Dev: Build + Start (app, sandbox)
-docker-compose.delivery.yml     Kunden: nur Image-Tags aus Registry
+app/                    Backend, Persistenz und statische UI-Auslieferung
+ui/                     SvelteKit-Oberflächen
+sandbox/                Dokumentenprüfung, Vorschau und Form2PDF
+packages/domain/        Geteilte Fachtypen und Fachlogik
+packages/flow-core/     Besuchsstatus, Routing und Behandlungspfade
+packages/server-shared/ Geteilte Server-Helfer
+setup/                  Host-CLI und Setup-API
+manager/                Electron-Anwendung für Installation und Wartung
+openapi/                API-Spezifikationen und generierte Verträge
+docs/                   Fach-, Architektur- und Betriebsdokumentation
+website/                Projektwebsite für GitHub Pages
 ```
+
+[`docker-compose.yml`](docker-compose.yml) baut den lokalen Entwicklungsstack. [`docker-compose.delivery.yml`](docker-compose.delivery.yml) verwendet versionierte Images für den ausgelieferten Betrieb.
+
+## Weiterführende Dokumentation
+
+| Thema                                  | Einstieg                                                              |
+| -------------------------------------- | --------------------------------------------------------------------- |
+| Dokumentation nach Rolle               | [Dokumentationsübersicht](docs/README.md)                             |
+| Fachmodell und Abläufe                 | [Domäne](docs/architecture/domain.md) · [Abläufe](docs/flows.md)      |
+| Architektur und Entwurfsentscheidungen | [Architekturübersicht](docs/architecture/README.md)                   |
+| Dokumentenverarbeitung                 | [Dokumentenarchitektur](docs/architecture/documents.md)               |
+| Echtzeitkommunikation                  | [SSE](docs/architecture/realtime.md)                                  |
+| Integrationen                          | [Schnittstellen und Betriebsgrenzen](docs/operations/integrations.md) |
+| Website pflegen und lokal ansehen      | [Website-README](website/README.md)                                   |
+
+Frühere Website-Entwürfe und Originalbilder liegen im [Website-Archiv](docs/archive/website/2026-10-10/README.md) und werden nicht veröffentlicht. Eine lokale Website-Vorschau lässt sich mit `node scripts/build-pages.mjs --preview` bauen.
+
+## Lizenz
+
+Wartezimmer steht unter der eigenen [Wartezimmer-Lizenz, Version 1.1](LICENSE). Nutzung und interne Anpassung für den eigenen Betrieb sind kostenlos. Beauftragte IT-Dienstleister dürfen Installation, individuelle Anpassung und Betreuung berechnen.
+
+Öffentliche Softwareangebote erfolgen über die offiziellen Bezugsquellen. Die Lizenz berücksichtigt GitHub-Plattformrechte, Forks, automatisch bereitgestellte Quellcodearchive und Projektbeiträge. Unveränderte Fassungen dürfen außerdem kostenlos und nichtöffentlich unmittelbar an einzelne Empfänger weitergegeben werden.
+
+Weitere öffentliche Downloadangebote, sonstige Weitergabe angepasster Fassungen, Übernahme geschützter Teile in andere Softwareprodukte und fremde Softwaredienste benötigen eine gesonderte Erlaubnis, auch bei kostenlosen Angeboten. Das umfasst geschützte Teile des Routing-Cores; eigenständige Implementierungen ohne Übernahme solcher Ausdrucksformen werden nicht beschränkt. Details und Ausnahmen regelt der vollständige Lizenztext.
+
+Das Projekt ist Source-available, keine Open-Source-Software im Sinne der Open Source Initiative. Drittanbieterkomponenten behalten ihre jeweiligen Lizenzen. Sonstige Website-Inhalte sind nur bei ausdrücklicher Zuordnung einbezogen.

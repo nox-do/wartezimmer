@@ -46,3 +46,5 @@ Bewusste Abgrenzungen und Gründe gegen pauschale Zusammenlegungen:
 | Patienten-/MFA-Abläufe        | [`../flows.md`](../flows.md)                                     |
 | Endpoint-Listen               | `openapi/`                                                       |
 | Captive/SMS/CSV-Grenzen       | [`../operations/integrations.md`](../operations/integrations.md) |
+
+- [Transaktions-Ownership und Migration](transaction-ownership.md): Host-/Flow-Core-Transaktionen und spätere Architekturarbeiten.

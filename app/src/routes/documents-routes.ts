@@ -199,6 +199,7 @@ export function registerDocumentRoutes(app: FastifyInstance, db: CoreDatabase): 
             };
           },
           () => db.isSandboxResetPending(),
+          db.getDocumentById(request.params.documentId.trim()).visitId,
         );
       } catch (error) {
         if (sendResolvedDomainError(reply, error, DOCUMENT_ROUTE_MESSAGES)) {
@@ -289,6 +290,7 @@ export function registerDocumentRoutes(app: FastifyInstance, db: CoreDatabase): 
             return discarded;
           },
           () => db.isSandboxResetPending(),
+          db.getDocumentById(request.params.documentId.trim()).visitId,
         );
       } catch (error) {
         if (sendResolvedDomainError(reply, error, DOCUMENT_ROUTE_MESSAGES)) {
@@ -350,6 +352,7 @@ export function registerDocumentRoutes(app: FastifyInstance, db: CoreDatabase): 
             }
           },
           () => db.isSandboxResetPending(),
+          db.getDocumentById(request.params.documentId.trim()).visitId,
         );
       } catch (error) {
         if (sendResolvedDomainError(reply, error, DOCUMENT_ROUTE_MESSAGES)) {

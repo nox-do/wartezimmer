@@ -17,7 +17,7 @@ import {
   buildTlsArchiveBase64,
 } from './settings-backup.js';
 import { configureMaintenanceAuthHome } from './maintenance-auth.js';
-import { testSetupContext } from './test-setup-context.js';
+import { testSetupContext } from './test-helpers/test-setup-context.js';
 import { parseTlsSidecarManifestFromBytes } from './tls-backup-sidecar.js';
 
 const sampleDbSnapshot = {

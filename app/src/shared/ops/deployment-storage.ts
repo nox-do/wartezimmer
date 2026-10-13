@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import fg from 'fast-glob';
+import { scanImportDirectory } from '../contacts/scan-import-directory.js';
 import { resolveContactLookupBasePath } from '../contacts/contact-lookup-paths.js';
 
 export type DeploymentCsvFileInfo = {
@@ -44,12 +44,7 @@ async function isPathReady(targetPath: string, mode: number): Promise<boolean> {
 async function listCsvFiles(basePath: string): Promise<DeploymentCsvFileInfo[]> {
   let entries: string[];
   try {
-    entries = await fg('**/*.csv', {
-      cwd: basePath,
-      absolute: true,
-      onlyFiles: true,
-      caseSensitiveMatch: false,
-    });
+    entries = (await scanImportDirectory(basePath)).files;
   } catch {
     return [];
   }
@@ -79,11 +74,7 @@ async function listCsvFiles(basePath: string): Promise<DeploymentCsvFileInfo[]> 
 async function listImportFolders(basePath: string): Promise<DeploymentImportFolderInfo[]> {
   const options: DeploymentImportFolderInfo[] = [{ label: '/', containerPath: basePath }];
   try {
-    const dirs = await fg('**/', {
-      cwd: basePath,
-      onlyDirectories: true,
-      absolute: true,
-    });
+    const dirs = (await scanImportDirectory(basePath)).directories;
     for (const dirPath of dirs.sort((a, b) => a.localeCompare(b))) {
       const relative = path.relative(basePath, dirPath);
       options.push({

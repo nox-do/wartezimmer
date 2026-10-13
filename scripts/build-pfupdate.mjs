@@ -61,6 +61,7 @@ Package layout (extracted):
   templates/docker-compose.proxy-restricted.delivery.yml
   templates/proxy/Caddyfile
   templates/.env.example
+  LICENSE
   THIRD_PARTY_NOTICES.txt
   licenses/caddy/LICENSE.txt
 
@@ -396,6 +397,7 @@ for (const platform of platforms) {
       path.join(root, 'proxy', 'Caddyfile'),
       path.join(stagingRoot, 'templates', 'proxy', 'Caddyfile'),
     );
+    copyFileEnsuringDir(path.join(root, 'LICENSE'), path.join(stagingRoot, 'LICENSE'));
     copyFileEnsuringDir(
       path.join(root, 'THIRD_PARTY_NOTICES.txt'),
       path.join(stagingRoot, 'THIRD_PARTY_NOTICES.txt'),

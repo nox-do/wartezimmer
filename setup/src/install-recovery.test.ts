@@ -19,7 +19,7 @@ import {
 import { readInstallOperation } from './install-operation.js';
 import { sha256File } from './sha256-file.js';
 import { readEnvMap } from './env-file.js';
-import { testSetupContext } from './test-setup-context.js';
+import { testSetupContext } from './test-helpers/test-setup-context.js';
 
 async function withInstallFixture(
   run: (fixture: {

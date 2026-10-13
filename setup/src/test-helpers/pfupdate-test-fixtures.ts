@@ -18,7 +18,7 @@ import {
   serializePfupdateManifest,
   type PfupdateAllowedFilePath,
 } from '@wartezimmer/server-shared';
-import { sha256File } from './pfupdate-package.js';
+import { sha256File } from '../pfupdate-package.js';
 
 const defaultReleaseVersion = '2026.08.0';
 

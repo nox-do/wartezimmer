@@ -5,7 +5,7 @@ Die statische Projektwebsite liegt in `website/`.
 Beispiel. `technik.html` beschreibt den Betrieb auf einem vorhandenen Praxisrechner,
 Mac- und Windows-Unterstützung, Installationsszenarien (intern, HTTPS und
 getrennter Portalzugang) sowie Systemvoraussetzungen und optionale Bondrucker. Technische
-Grundlage sind `docs/operations/delivery.md` und `docs/operations/runtime.md`;
+Grundlage sind die damalige Auslieferungsdokumentation (Git-Historie) und `docs/operations/runtime.md`;
 der erfolgreiche Windows-Test einschließlich Portalzugang wurde vom
 Projektverantwortlichen am 07.10.2026 bestätigt (die Betriebsdokumentation
 ist hierzu noch nicht nachgezogen). Konkrete Hardware-Mindestwerte werden
@@ -94,7 +94,7 @@ externe Dienste → Veröffentlichungsstand → öffentliche Seitenlinks.
 
 Bei Änderungen die Aussagen mit `docs/architecture/system.md`,
 `docs/architecture/routing.md`, `docs/architecture/documents.md`,
-`docs/operations/delivery.md`, `docs/operations/runtime.md` und
+der damaligen Auslieferungsdokumentation (Git-Historie), `docs/operations/runtime.md` und
 `docs/operations/tls.md` abgleichen. Aktuelle bestätigte Projektentscheidungen
 haben Vorrang vor noch nicht nachgezogener Dokumentation, etwa beim Windows-Test.
 Die Datei beschreibt Fakten statt Empfehlungen an KI-Systeme. Sie enthält keine

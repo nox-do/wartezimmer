@@ -4,10 +4,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { CoreDatabase } from './database.js';
+import { getSandboxClient } from '../sandbox/sandbox-client.js';
+import { withSandboxIntakeOperation } from '../sandbox/sandbox-intake-gate.js';
 
 function openCoreDatabase(): { core: CoreDatabase; cleanup: () => void } {
   const dir = mkdtempSync(join(tmpdir(), 'pf-db-placement-'));
   const previousNodeEnv = process.env.NODE_ENV;
+  const previousSandboxToken = process.env.SANDBOX_INTERNAL_TOKEN;
+  process.env.SANDBOX_INTERNAL_TOKEN = 'checkout-test-token';
   const previousContactLookupBase = process.env.CONTACT_LOOKUP_BASE_PATH;
   process.env.NODE_ENV = 'test';
   process.env.CONTACT_LOOKUP_BASE_PATH = join(dir, 'imports');
@@ -19,6 +23,8 @@ function openCoreDatabase(): { core: CoreDatabase; cleanup: () => void } {
       else process.env.NODE_ENV = previousNodeEnv;
       if (previousContactLookupBase === undefined) delete process.env.CONTACT_LOOKUP_BASE_PATH;
       else process.env.CONTACT_LOOKUP_BASE_PATH = previousContactLookupBase;
+      if (previousSandboxToken === undefined) delete process.env.SANDBOX_INTERNAL_TOKEN;
+      else process.env.SANDBOX_INTERNAL_TOKEN = previousSandboxToken;
       rmSync(dir, { recursive: true, force: true });
     },
   };
@@ -98,7 +104,7 @@ test('panel toggles persist while an occupied room and its visit stay intact', (
   }
 });
 
-test('panel toggles preserve an active journey and its subsequent room transition', () => {
+test('panel toggles preserve an active journey and its subsequent room transition', async (t) => {
   const { core, cleanup } = openCoreDatabase();
   try {
     core.resetBusinessDay();
@@ -174,14 +180,33 @@ test('panel toggles preserve an active journey and its subsequent room transitio
       assert.throws(() => core.updateOpsSettings({ rooms }));
       assert.deepEqual(core.getOpsSettings().rooms, configured.rooms);
     }
+    const session = core.resolvePatientSession(core.getTicketCodeByVisitId(visitId));
+    const document = core.intakePatientDocument(session.sessionToken, {
+      fileName: 'journey.pdf',
+      mimeType: 'application/pdf',
+      sizeBytes: 20,
+      status: 'scan_clean',
+    });
+    const deletion = t.mock.method(getSandboxClient(), 'deleteDocument', async () => {});
     core.placeVisitInRoom(visitId, firstRoom.roomId, firstRoom.roomLabel);
-    core.checkOutRoom(visitId, firstRoom.roomId);
+    assert.equal(core.listQueue().find((row) => row.id === visitId)?.dischargeDocumentCount, 0);
+    await core.checkOutRoom(visitId, firstRoom.roomId);
+    assert.equal(deletion.mock.callCount(), 0);
+    assert.equal(core.getDocumentById(document.id).status, 'scan_clean');
+    assert.equal(core.getPatientSession(session.sessionToken).status, 'active');
     assert.ok(runtime.visits().find((visit) => visit.id === visitId)?.journeyStepCompletedAt);
     core.continueJourney(visitId, 'labor');
     const advanced = runtime.visits().find((visit) => visit.id === visitId)!;
     assert.equal(advanced.journeyState, 'active');
     assert.equal(advanced.journeyStepIndex, 1);
     assert.equal(advanced.targetLocationId, 'labor');
+    core.placeVisitInRoom(visitId, 'labor', 'Labor');
+    assert.equal(core.listQueue().find((row) => row.id === visitId)?.dischargeDocumentCount, 1);
+    const finished = await core.checkOutRoom(visitId, 'labor');
+    assert.equal(finished.toStatus, 'done');
+    assert.equal(deletion.mock.callCount(), 1);
+    assert.equal(core.getDocumentById(document.id).status, 'discarded_by_mfa');
+    assert.throws(() => core.getPatientSession(session.sessionToken));
   } finally {
     cleanup();
   }
@@ -387,6 +412,242 @@ test('terminal check-in number alone cannot trigger recall notification', () => 
     });
     core.setAbsence(visitId, 'wait_here');
     assert.equal(core.recallVisit(visitId, 15).callbackPhone, null);
+  } finally {
+    cleanup();
+  }
+});
+
+test('discharge deletes outstanding uploads and forms from all sessions, preserving exported documents', async (t) => {
+  const { core, cleanup } = openCoreDatabase();
+  try {
+    const visitId = seedPlacementVisit(core);
+    const ticketCode = core.getTicketCodeByVisitId(visitId);
+    const first = core.resolvePatientSession(ticketCode);
+    const upload = core.intakePatientDocument(first.sessionToken, {
+      fileName: 'upload.pdf',
+      mimeType: 'application/pdf',
+      sizeBytes: 20,
+      status: 'preview_requested',
+    });
+    const exported = core.intakePatientDocument(first.sessionToken, {
+      fileName: 'saved.pdf',
+      mimeType: 'application/pdf',
+      sizeBytes: 20,
+      status: 'exported',
+    });
+    const second = core.resolvePatientSession(ticketCode);
+    const [form] = core.intakeFormDocuments(second.sessionToken, [
+      {
+        source: 'form',
+        fileName: 'form.pdf',
+        mimeType: 'application/pdf',
+        sizeBytes: 20,
+        status: 'scan_clean',
+        templateId: 'test-form',
+        templateVersion: 1,
+      },
+    ]);
+    const third = core.intakePatientDocument(second.sessionToken, {
+      fileName: 'pending.pdf',
+      mimeType: 'application/pdf',
+      sizeBytes: 20,
+      status: 'received',
+    });
+    const scanning = core.intakePatientDocument(second.sessionToken, {
+      fileName: 'scanning.pdf',
+      mimeType: 'application/pdf',
+      sizeBytes: 20,
+      status: 'scanning',
+    });
+    const deleted: string[] = [];
+    t.mock.method(getSandboxClient(), 'deleteDocument', async (id: string) => {
+      deleted.push(id);
+    });
+    core.placeVisitInRoom(visitId, 'labor', 'Labor');
+    const eventsBefore = core.getFlowCoreRuntimeInstance().events(visitId).length;
+    assert.equal((await core.checkOutRoom(visitId, 'labor')).toStatus, 'done');
+    assert.deepEqual(deleted.sort(), [upload.id, form.id, third.id, scanning.id].sort());
+    for (const id of deleted) assert.equal(core.getDocumentById(id).status, 'discarded_by_mfa');
+    assert.equal(core.getDocumentById(exported.id).status, 'exported');
+    assert.deepEqual(core.listDocumentsForVisit(visitId), []);
+    assert.throws(() => core.getPatientSession(second.sessionToken));
+    assert.throws(() => core.resolvePatientSession(ticketCode));
+    assert.throws(() =>
+      core.intakePatientDocument(second.sessionToken, {
+        fileName: 'late.pdf',
+        mimeType: 'application/pdf',
+        sizeBytes: 20,
+        status: 'scan_clean',
+      }),
+    );
+    assert.equal(core.getFlowCoreRuntimeInstance().events(visitId).length, eventsBefore + 1);
+  } finally {
+    cleanup();
+  }
+});
+
+test('discharge validates scope before deleting and remains retryable after sandbox failure', async (t) => {
+  const { core, cleanup } = openCoreDatabase();
+  try {
+    const visitId = seedPlacementVisit(core);
+    const session = core.resolvePatientSession(core.getTicketCodeByVisitId(visitId));
+    const document = core.intakePatientDocument(session.sessionToken, {
+      fileName: 'upload.pdf',
+      mimeType: 'application/pdf',
+      sizeBytes: 20,
+      status: 'scan_clean',
+    });
+    const sandbox = getSandboxClient();
+    const deletion = t.mock.method(sandbox, 'deleteDocument', async () => {
+      assert.throws(() => core.supersedeVisit(visitId, 'blut'), /INVALID_TRANSITION/);
+      throw new Error('SANDBOX_DELETE_UNREACHABLE');
+    });
+    core.placeVisitInRoom(visitId, 'labor', 'Labor');
+    const before = core.getFlowCoreRuntimeInstance().events(visitId);
+    await assert.rejects(() => core.checkOutRoom(visitId, 'wrong-room'));
+    assert.equal(deletion.mock.callCount(), 0);
+    await assert.rejects(() => core.checkOutRoom(visitId, 'labor'), /SANDBOX_DELETE_UNREACHABLE/);
+    assert.equal(core.getDocumentById(document.id).status, 'scan_clean');
+    assert.equal(core.getPatientSession(session.sessionToken).status, 'active');
+    assert.equal(core.listQueue().find((item) => item.id === visitId)?.status, 'in_room');
+    assert.deepEqual(core.getFlowCoreRuntimeInstance().events(visitId), before);
+    deletion.mock.mockImplementation(async () => {});
+    assert.equal((await core.checkOutRoom(visitId, 'labor')).toStatus, 'done');
+    assert.equal(core.getDocumentById(document.id).status, 'discarded_by_mfa');
+  } finally {
+    cleanup();
+  }
+});
+
+test('discharge drains in-flight uploads before deletion and rejects new document work', async (t) => {
+  const { core, cleanup } = openCoreDatabase();
+  let release!: () => void;
+  const canFinish = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  try {
+    const visitId = seedPlacementVisit(core);
+    const session = core.resolvePatientSession(core.getTicketCodeByVisitId(visitId));
+    core.placeVisitInRoom(visitId, 'labor', 'Labor');
+    const deletion = t.mock.method(getSandboxClient(), 'deleteDocument', async () => {});
+    const upload = withSandboxIntakeOperation(
+      async () => {
+        await canFinish;
+        return core.intakePatientDocument(session.sessionToken, {
+          fileName: 'late.pdf',
+          mimeType: 'application/pdf',
+          sizeBytes: 20,
+          status: 'scan_clean',
+        });
+      },
+      () => false,
+      visitId,
+    );
+    const checkout = core.checkOutRoom(visitId, 'labor');
+    await assert.rejects(
+      () =>
+        withSandboxIntakeOperation(
+          async () => {},
+          () => false,
+          visitId,
+        ),
+      /CHECKIN_LOCKED/,
+    );
+    assert.equal(deletion.mock.callCount(), 0);
+    release();
+    const document = await upload;
+    assert.equal((await checkout).toStatus, 'done');
+    assert.equal(core.getDocumentById(document.id).status, 'discarded_by_mfa');
+  } finally {
+    release();
+    cleanup();
+  }
+});
+
+test('partially failed discharge retries only remaining documents', async (t) => {
+  const { core, cleanup } = openCoreDatabase();
+  try {
+    const visitId = seedPlacementVisit(core);
+    const session = core.resolvePatientSession(core.getTicketCodeByVisitId(visitId));
+    const documents = ['first.pdf', 'second.pdf'].map((fileName) =>
+      core.intakePatientDocument(session.sessionToken, {
+        fileName,
+        mimeType: 'application/pdf',
+        sizeBytes: 20,
+        status: 'scan_clean',
+      }),
+    );
+    const deleted: string[] = [];
+    const deletion = t.mock.method(getSandboxClient(), 'deleteDocument', async (id: string) => {
+      if (deleted.length === 1) throw new Error('SANDBOX_DELETE_UNREACHABLE');
+      deleted.push(id);
+    });
+    core.placeVisitInRoom(visitId, 'labor', 'Labor');
+    await assert.rejects(() => core.checkOutRoom(visitId, 'labor'), /SANDBOX_DELETE_UNREACHABLE/);
+    assert.equal(deleted.length, 1);
+    assert.equal(core.getDocumentById(deleted[0]).status, 'discarded_by_mfa');
+    assert.equal(core.listDocumentsForVisit(visitId).length, 1);
+    deletion.mock.mockImplementation(async (id: string) => {
+      deleted.push(id);
+    });
+    assert.equal((await core.checkOutRoom(visitId, 'labor')).toStatus, 'done');
+    assert.deepEqual(deleted.sort(), documents.map((doc) => doc.id).sort());
+    assert.equal(deletion.mock.callCount(), 3);
+  } finally {
+    cleanup();
+  }
+});
+
+test('discharge blocks competing visit transitions while sandbox deletion is awaiting', async (t) => {
+  const { core, cleanup } = openCoreDatabase();
+  try {
+    const id = seedPlacementVisit(core);
+    const session = core.resolvePatientSession(core.getTicketCodeByVisitId(id));
+    const doc = core.intakePatientDocument(session.sessionToken, {
+      fileName: 'race.pdf',
+      mimeType: 'application/pdf',
+      sizeBytes: 20,
+      status: 'scan_clean',
+    });
+    core.placeVisitInRoom(id, 'labor', 'Labor');
+    t.mock.method(getSandboxClient(), 'deleteDocument', async () => {
+      for (const transition of [
+        () => core.returnToWaiting(id),
+        () => core.cancelQueueVisit(id),
+        () => core.reassignRoom(id, 'labor', 'Labor'),
+        () => core.continueJourney(id),
+        () => core.supersedeVisit(id, 'blut'),
+      ]) {
+        assert.throws(transition, /INVALID_TRANSITION/);
+      }
+      await assert.rejects(() => core.checkOutRoom(id), /INVALID_TRANSITION/);
+    });
+    assert.equal((await core.checkOutRoom(id, 'labor')).toStatus, 'done');
+    assert.equal(core.getDocumentById(doc.id).status, 'discarded_by_mfa');
+  } finally {
+    cleanup();
+  }
+});
+test('different visits can be discharged concurrently', async () => {
+  const { core, cleanup } = openCoreDatabase();
+  try {
+    const a = seedPlacementVisit(core);
+    const b = core.createTicket({
+      topicId: 'blut',
+      authPath: 'phone_dob',
+      identityRef: 'Other',
+      needsAssistance: true,
+    }).visitId;
+    const otherRoom = core
+      .getOpsSettings()
+      .rooms.find((room) => room.enabled && room.roomId !== 'labor')!;
+    core.placeVisitInRoom(a, 'labor', 'Labor');
+    core.placeVisitInRoom(b, otherRoom.roomId, otherRoom.roomLabel);
+    const results = await Promise.all([core.checkOutRoom(a), core.checkOutRoom(b)]);
+    assert.deepEqual(
+      results.map((result) => result.toStatus),
+      ['done', 'done'],
+    );
   } finally {
     cleanup();
   }

@@ -11,7 +11,7 @@ import {
   resetDevicePresenceForTests,
   WAITING_ROOM_DEVICE_ID,
 } from '../shared/ops/device-presence-registry.js';
-import { createInMemoryDeviceGrantStore } from '../shared/db/in-memory-device-grant-store.js';
+import { createInMemoryDeviceGrantStore } from '../test-helpers/in-memory-device-grant-store.js';
 import { registerQueueStreamRoutes } from './queue-stream-routes.js';
 
 const ENV_KEYS = ['AUTH_ENABLED', 'AUTH_KEY_CAPTIVE', 'NODE_ENV', 'PRAXIS_SSE_PING_MS'] as const;

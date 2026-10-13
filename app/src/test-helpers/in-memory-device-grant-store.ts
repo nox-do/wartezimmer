@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
-import type { DeviceSessionRole } from '../../auth/session-grant-types.js';
-import type { RoomPanelPlacement } from './db-types.js';
+import type { DeviceSessionRole } from '../auth/session-grant-types.js';
+import type { RoomPanelPlacement } from '../shared/db/db-types.js';
 import {
   authenticateDeviceAuthorization,
   createDeviceAuthorizationDeps,
@@ -16,7 +16,7 @@ import {
   touchDeviceAuthorization,
   type DeviceAuthorizationRow,
   type DeviceSlotRole,
-} from './database-device-authorizations.js';
+} from '../shared/db/database-device-authorizations.js';
 
 export type InMemoryDeviceGrantStore = {
   authenticateDeviceAuthorization(token: string): DeviceAuthorizationRow | null;

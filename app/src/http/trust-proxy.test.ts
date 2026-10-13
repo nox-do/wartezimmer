@@ -17,7 +17,7 @@ async function withProxyTrust<T>(enabled: boolean, action: () => Promise<T>): Pr
 
 test('single-hop proxy trust uses Caddy client address and ignores farther spoofed entries', async () => {
   await withProxyTrust(true, async () => {
-    const app = Fastify({ trustProxy: resolveAppTrustProxy() });
+    const app = Fastify({ trustProxy: resolveAppTrustProxy(new Set(['172.20.0.3'])) });
     app.get('/ip', (request) => ({ ip: request.ip }));
     try {
       const response = await app.inject({
@@ -38,7 +38,7 @@ test('single-hop proxy trust uses Caddy client address and ignores farther spoof
 
 test('single-hop proxy trust keeps separate client rate-limit buckets', async () => {
   await withProxyTrust(true, async () => {
-    const app = Fastify({ trustProxy: resolveAppTrustProxy() });
+    const app = Fastify({ trustProxy: resolveAppTrustProxy(new Set(['172.20.0.3'])) });
     const allow = createRateLimiter({ maxRequests: 1, windowMs: 60_000 });
     app.get('/limited', (request, reply) => {
       if (!allow(request.ip)) return reply.code(429).send();
@@ -63,7 +63,7 @@ test('single-hop proxy trust keeps separate client rate-limit buckets', async ()
 
 test('direct mode ignores forwarded client addresses', async () => {
   await withProxyTrust(false, async () => {
-    const app = Fastify({ trustProxy: resolveAppTrustProxy() });
+    const app = Fastify({ trustProxy: resolveAppTrustProxy(new Set(['172.20.0.3'])) });
     app.get('/ip', (request) => ({ ip: request.ip }));
     try {
       for (const forwardedFor of ['198.51.100.10', '203.0.113.20']) {
@@ -75,6 +75,23 @@ test('direct mode ignores forwarded client addresses', async () => {
         });
         assert.deepEqual(response.json(), { ip: '192.168.1.55' });
       }
+    } finally {
+      await app.close();
+    }
+  });
+});
+
+test('proxy mode rejects forwarded identity from an untrusted immediate peer', async () => {
+  await withProxyTrust(true, async () => {
+    const app = Fastify({ trustProxy: resolveAppTrustProxy(new Set(['172.20.0.3'])) });
+    app.get('/ip', (request) => ({ ip: request.ip }));
+    try {
+      const response = await app.inject({
+        url: '/ip',
+        remoteAddress: '172.20.0.9',
+        headers: { 'x-forwarded-for': '203.0.113.7' },
+      });
+      assert.deepEqual(response.json(), { ip: '172.20.0.9' });
     } finally {
       await app.close();
     }

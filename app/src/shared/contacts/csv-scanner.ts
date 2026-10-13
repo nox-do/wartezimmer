@@ -1,5 +1,5 @@
 import { parse } from 'csv-parse';
-import fg from 'fast-glob';
+import { scanImportDirectory } from './scan-import-directory.js';
 import { openCsvReadStream, readCsvTextLines } from './csv-encoding.js';
 import {
   delimiterModeToChar,
@@ -78,13 +78,7 @@ async function detectDelimiterForFolder(
 
 export async function findCsvFilesInFolder(folderPath: string): Promise<string[]> {
   const normalizedFolder = await normalizeContactLookupFolderPath(folderPath);
-  const entries = await fg('**/*.csv', {
-    cwd: normalizedFolder,
-    absolute: true,
-    onlyFiles: true,
-    caseSensitiveMatch: false,
-  });
-  return entries.sort((a, b) => a.localeCompare(b));
+  return (await scanImportDirectory(normalizedFolder)).files;
 }
 
 export async function parseRecordsFromFile(

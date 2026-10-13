@@ -1,6 +1,6 @@
+import { checkoutCompletesVisit } from '../flow-core/visit-queue-bridge.js';
 import { explainVisibility } from '@wartezimmer/flow-core';
 import { visitTargetsRoom } from '@wartezimmer/domain';
-import type { Runtime } from '@wartezimmer/flow-core/server';
 import type {
   QueueVisitRow,
   RoomPanelMode,
@@ -10,7 +10,7 @@ import type {
 import type { CoreDatabase } from '../db/database.js';
 import type { RoomPanelGrant } from '../../auth/session-grants.js';
 import { getBusinessDay } from '../db/database-time.js';
-import { emptyFlowCoreRuntimeForMocks } from '../flow-core/test-runtime-mocks.js';
+import { resolveQueueReadRuntime, type QueueReadRuntime } from '../flow-core/queue-read-runtime.js';
 import { getFlowCoreRuntime } from '../flow-core/flow-core-runtime.js';
 import { panelFlowSurfaceId } from '../flow-core/sync-catalog-from-ops-settings.js';
 import { visitToQueueVisitRow } from '../flow-core/visit-queue-bridge.js';
@@ -51,6 +51,8 @@ export type RoomPanelQueueSnapshot = {
     laneCode: string;
     number: number;
     status: 'called' | 'in_room' | 'directed';
+    documentCount?: number;
+    dischargeDocumentCount?: number;
     calledAt?: string;
     roomId: string;
     roomLabel: string;
@@ -75,7 +77,7 @@ type RoomPanelCallCandidate = NonNullable<RoomPanelQueueSnapshot['callCandidates
 
 export type BuildRoomPanelQueueSnapshotInput = {
   db: CoreDatabase;
-  runtime: Runtime;
+  runtime: QueueReadRuntime;
   businessDay: string;
   revision: number;
   session: Pick<RoomPanelGrant, 'roomId' | 'placement'>;
@@ -217,6 +219,15 @@ export function buildRoomPanelQueueSnapshotFromFlowCore(
       resolveRoomPanelItemActions(row.status, capabilities),
     );
     if (item) {
+      if (capabilities.canCheckOut) {
+        item.documentCount =
+          typeof db.listDocumentsForVisit === 'function'
+            ? db.listDocumentsForVisit(row.id).length
+            : 0;
+        item.dischargeDocumentCount = checkoutCompletesVisit(visit, catalog)
+          ? item.documentCount
+          : 0;
+      }
       scored.push({ item, sortRow: row });
     }
   }
@@ -266,13 +277,6 @@ export function buildRoomPanelQueueSnapshotFromFlowCore(
   return snapshot;
 }
 
-function resolveFlowCoreRuntime(db: CoreDatabase): Runtime {
-  if (typeof db.getFlowCoreRuntimeInstance === 'function') {
-    return db.getFlowCoreRuntimeInstance();
-  }
-  return emptyFlowCoreRuntimeForMocks();
-}
-
 export function buildRoomPanelQueueSnapshot(
   db: CoreDatabase,
   revision: number,
@@ -280,7 +284,7 @@ export function buildRoomPanelQueueSnapshot(
 ): RoomPanelQueueSnapshot {
   return buildRoomPanelQueueSnapshotFromFlowCore({
     db,
-    runtime: resolveFlowCoreRuntime(db),
+    runtime: resolveQueueReadRuntime(db),
     businessDay: getBusinessDay(),
     revision,
     session,

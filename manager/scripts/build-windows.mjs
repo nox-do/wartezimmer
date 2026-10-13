@@ -6,6 +6,7 @@ import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import { build, Platform, Arch } from 'electron-builder';
 import { inspectNsis, reconstructUninstaller } from './nsis-integrity.mjs';
+import { verifyPackagedFiles } from './check-packaged-files.mjs';
 import { publishReleaseArtifacts } from '../../scripts/release-output.mjs';
 
 const require = createRequire(import.meta.url);
@@ -28,9 +29,12 @@ const artifacts = await build({
   projectDir: root,
   targets: Platform.WINDOWS.createTarget('nsis', Arch.x64),
   publish: 'never',
-  ...(process.env.WARTEZIMMER_ELECTRON_DIST
-    ? { config: { electronDist: process.env.WARTEZIMMER_ELECTRON_DIST } }
-    : {}),
+  config: {
+    ...(process.env.WARTEZIMMER_ELECTRON_DIST
+      ? { electronDist: process.env.WARTEZIMMER_ELECTRON_DIST }
+      : {}),
+    afterPack: ({ appOutDir }) => verifyPackagedFiles(path.join(appOutDir, 'resources')),
+  },
 });
 const installers = artifacts.filter((file) => file.endsWith('-setup.exe'));
 if (installers.length !== 1) throw new Error('Expected exactly one Windows installer');

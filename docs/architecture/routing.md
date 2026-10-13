@@ -51,6 +51,11 @@ Fachliche Autorität: **Ops Settings** — nicht MFA. Manager/Setup dürfen den 
 
 ### Lizenz & Capabilities
 
+Die folgenden Lizenzbezeichner sind technische Capability-Schalter. Sie erteilen
+keine Nutzungs- oder Weitergaberechte und ändern die
+[Wartezimmer-Lizenz](../../LICENSE) nicht. Complex Routing ist standardmäßig
+freigegeben; daraus entsteht keine gesonderte Lizenzgebühr.
+
 `resolveRoutingCapabilities` (`app/src/shared/ops/routing-capabilities.ts`):
 
 - `complexRouting` / `journeyDesigner` = Mode `complex` **und** `isComplexRoutingLicensed()`

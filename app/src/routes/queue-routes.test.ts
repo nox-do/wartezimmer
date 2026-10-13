@@ -1192,3 +1192,26 @@ test('absence API accepts the dashboard phone and consent payload', async () => 
     await app.close();
   }
 });
+
+test('check_out_room awaits document cleanup and reports sandbox failure as 502', async () => {
+  const app = Fastify({ logger: false });
+  registerQueueRoutes(
+    app,
+    buildQueueRouteDb({
+      checkOutRoom: async () => {
+        throw new Error('SANDBOX_DELETE_UNREACHABLE');
+      },
+    }),
+  );
+  try {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/queue/A-001/transition',
+      payload: { type: 'check_out_room' },
+    });
+    assert.equal(response.statusCode, 502);
+    assert.equal(response.json().code, 'SANDBOX_UNAVAILABLE');
+  } finally {
+    await app.close();
+  }
+});

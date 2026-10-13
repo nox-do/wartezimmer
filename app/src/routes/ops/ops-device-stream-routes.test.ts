@@ -9,7 +9,7 @@ import {
   resetDevicePresenceForTests,
   TERMINAL_DEVICE_ID,
 } from '../../shared/ops/device-presence-registry.js';
-import { createInMemoryDeviceGrantStore } from '../../shared/db/in-memory-device-grant-store.js';
+import { createInMemoryDeviceGrantStore } from '../../test-helpers/in-memory-device-grant-store.js';
 import type { CoreDatabase } from '../../shared/db/database.js';
 import { registerOpsDeviceStreamRoutes } from './ops-device-stream-routes.js';
 

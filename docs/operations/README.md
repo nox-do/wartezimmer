@@ -5,7 +5,7 @@ operative Oberfläche; CLI und manuelle Compose-Aufrufe sind Support-Fallback.
 
 | Aufgabe                                                      | Verbindliches Dokument                              |
 | ------------------------------------------------------------ | --------------------------------------------------- |
-| Pakete bauen, ausliefern und Software aktualisieren          | [Delivery](delivery.md)                             |
+| Pakete bauen, ausliefern und Software aktualisieren          | [Manager](../../manager/README.md)                  |
 | Erst-/Neuinstallation, Backup-Übernahme und Recovery         | [Installation und Recovery](reinstall-recovery.md)  |
 | Tagesbetrieb, Compose, Ports und Volumes                     | [Runtime](runtime.md)                               |
 | Bestehenden Betrieb ohne Neuinstallation wiederaufbauen      | [Betrieb wiederherstellen](rebuild.md)              |
@@ -18,6 +18,13 @@ operative Oberfläche; CLI und manuelle Compose-Aufrufe sind Support-Fallback.
 Noch fehlende Produkt-/Plattformnachweise: [Offene Abnahmen](../open-items.md).
 Betriebsvertrag und Abnahmestatus sind getrennt; eine beschriebene Funktion ist
 kein Nachweis ihrer Freigabe auf jeder Plattform.
+
+## Lizenz
+
+Nutzungsrechte und erlaubte beauftragte IT-Leistungen stehen in der
+[Wartezimmer-Lizenz, Version 1.1](../../LICENSE). Die Bereitstellung als fremdes Softwareprodukt
+oder Softwaredienst benötigt eine gesonderte Erlaubnis, auch bei kostenlosen
+Angeboten. GitHub-Ausnahme und nichtöffentliche Weitergabe regelt Abschnitt 3. Die Projektlizenz liegt in den Manager-Ressourcen sowie unter `/app/LICENSE` in App und Sandbox.
 
 ## Andere Leser
 

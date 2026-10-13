@@ -84,7 +84,28 @@ Datenschutz: Consent-Text + Template `datenschutz-einwilligung` → zweites PDF 
 
 Menü `/portal/menu` wählt aktuell ein Default-Template fest. Nicht in `templates/`: Sandbox-Renderer, OpenAPI, MFA-Dokumentenliste.
 
-## 4. Abgrenzung
+## 4. Entlassung
+
+Bei der endgültigen Entlassung (`check_out_room` → `done`) warnt der MFA-Dialog vor
+noch unbearbeiteten Dokumenten. Die bestätigte Entlassung wartet auf laufende
+Dokumentvorgänge desselben Besuchs, löscht alle noch offenen Intake-Dateien und Vorschauen in der
+Sandbox und setzt ihre Status auf `discarded_by_mfa`. Die Statusnachweise bleiben
+bis zum Tagesreset erhalten. Bereits exportierte Dateien bleiben im Exportordner.
+Aktive Patient-Sessions werden bei der endgültigen Entlassung widerrufen.
+
+Die Sperre gilt pro Besuch: andere Besuche können Dokumente verarbeiten und parallel
+entlassen werden. Zustandsänderungen des gesperrten Besuchs werden bis zum Ende der
+Entlassung abgewiesen. Der globale Tagesreset wartet auch auf laufende Entlassungen.
+`dischargeDocumentCount` enthält nur bei endgültiger Entlassung die Zahl der zu
+löschenden Dokumente; bei Journey-Zwischenschritten ist sie null und der Dialog
+zeigt keine Löschwarnung.
+
+Ungültige Transitions und der Abschluss eines Journey-Zwischenschritts löschen
+keine Dokumente. Schlägt eine Sandbox-Löschung fehl, wird die Entlassung nicht
+abgeschlossen; bereits erfolgreich gelöschte Dokumente bleiben verworfen und der
+Vorgang kann für die übrigen Dokumente wiederholt werden.
+
+## 5. Abgrenzung
 
 | Nicht hier                          | Wohin                                                   |
 | ----------------------------------- | ------------------------------------------------------- |

@@ -1,6 +1,6 @@
 import { terminalAuthFetch } from '$lib/api/cookie-auth-fetch';
 import { t } from '$lib/i18n/i18nStore.svelte';
-import type { EmergencyRaiseResponse, OpsHeartbeatResponse } from '$lib/ops/openapi-types';
+import type { OpsHeartbeatResponse } from '$lib/ops/openapi-types';
 import type {
   TerminalAuthPath,
   TerminalTopic,
@@ -58,13 +58,6 @@ export async function createAssistanceCheckin(patientLocale?: string) {
   return terminalAuthFetch<CheckinCreated>('/api/v1/checkins/assistance', {
     method: 'POST',
     headers,
-    body: JSON.stringify({}),
-  });
-}
-
-export async function raiseTerminalEmergency() {
-  return terminalAuthFetch<EmergencyRaiseResponse>('/api/v1/ops/emergency/raise', {
-    method: 'POST',
     body: JSON.stringify({}),
   });
 }

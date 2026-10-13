@@ -1,11 +1,11 @@
 {
   "name": "@wartezimmer/ui",
   "private": true,
-  "version": "6.1.1",
+  "version": "6.1.3",
   "type": "module",
   "scripts": {
     "dev": "vite dev --port 5180",
-    "build": "vite build",
+    "build": "vite build && node ../scripts/check-production-artifacts.mjs build",
     "preview": "vite preview --port 5180",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "typecheck": "npm run check",

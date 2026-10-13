@@ -179,6 +179,7 @@ test('buildRoomPanelQueueSnapshot filters to session room and hides names by def
   assert.equal(snapshot.capabilities.canCall, false);
   assert.equal(snapshot.items[0]?.actions.canArrive, true);
   assert.equal('callCandidates' in snapshot, false);
+  assert.equal('documentCount' in snapshot.items[0]!, false);
 });
 
 test('buildRoomPanelQueueSnapshot includes identityRef only when room setting allows names', () => {
@@ -246,6 +247,10 @@ test('buildRoomPanelQueueSnapshot includes identityRef only when room setting al
   const db = {
     getOpsSettings: () => settings,
     getFlowCoreRuntimeInstance: () => runtime,
+    listDocumentsForVisit: (visitId: string) => {
+      assert.equal(visitId, created.visitId);
+      return [{ id: 'doc-1' }, { id: 'doc-2' }];
+    },
   } as unknown as CoreDatabase;
 
   callVisit(sqlite, runtime, settings, listQueue, created.visitId, 'labor', 'Labor');
@@ -256,6 +261,7 @@ test('buildRoomPanelQueueSnapshot includes identityRef only when room setting al
   });
 
   assert.equal(snapshot.items[0]?.identityRef, 'Panel Test');
+  assert.equal(snapshot.items[0]?.documentCount, 2);
   assert.equal(snapshot.capabilities.mayShowPatientNames, true);
 });
 

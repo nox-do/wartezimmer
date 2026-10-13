@@ -7,7 +7,7 @@ import {
   getStaffSessionCookieName,
   type StaffSessionManager,
 } from './session-grants.js';
-import { createInMemoryDeviceGrantStore } from '../shared/db/in-memory-device-grant-store.js';
+import { createInMemoryDeviceGrantStore } from '../test-helpers/in-memory-device-grant-store.js';
 
 const ENV_KEYS = [
   'AUTH_ENABLED',

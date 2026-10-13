@@ -5,7 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { executeMaintenanceRollback } from './maintenance-rollback.js';
 import { managerStatePath } from './manager-state.js';
-import { testSetupContext } from './test-setup-context.js';
+import { testSetupContext } from './test-helpers/test-setup-context.js';
 
 test('maintenance rollback fails when probes pass but an expected service is unhealthy', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-rollback-health-'));
@@ -62,7 +62,7 @@ for (const fault of [
   test(`rollback audits restored contract and closes unverified runtime: ${fault ?? 'success'}`, async () => {
     const { DEFAULT_PORTAL_PROXY_CONTRACT } = await import('@wartezimmer/server-shared');
     const { runtimeAuditEnv, runtimeAuditCompose } =
-      await import('./runtime-postcondition-test-fixtures.js');
+      await import('./test-helpers/runtime-postcondition-test-fixtures.js');
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-rollback-audit-'));
     const rollbackDir = path.join(root, 'rollback');
     const oldContract = structuredClone(DEFAULT_PORTAL_PROXY_CONTRACT);

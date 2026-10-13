@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { assertProductionTree } from '../../scripts/production-artifacts.mjs';
 
 const managerRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = path.resolve(managerRoot, '..');
@@ -153,5 +154,6 @@ if (!Array.isArray(deliveryBootstrapFiles) || deliveryBootstrapFiles.length === 
 for (const relativePath of deliveryBootstrapFiles) {
   copyFile(relativePath);
 }
+assertProductionTree(outputRoot);
 
 console.log(`Packaged resources prepared in ${outputRoot}`);

@@ -18,6 +18,18 @@ Kein öffentliches Store-Release. Auslieferung über versionierte Images, Manage
 
 LAN-TLS: [`operations/tls.md`](operations/tls.md).
 
+## Lizenz
+
+Die eigene [Wartezimmer-Lizenz, Version 1.1](../LICENSE) erlaubt kostenlose Nutzung
+und interne Anpassung für den eigenen Betrieb sowie beauftragte IT-Leistungen.
+Öffentliche Softwareangebote bleiben den offiziellen Bezugsquellen vorbehalten,
+mit der geregelten Ausnahme für GitHub-Plattformrechte, Forks, Quellcodearchive und
+Projektbeiträge. Unveränderte Fassungen dürfen kostenlos und nichtöffentlich
+unmittelbar an einzelne Empfänger weitergegeben werden. Weitere Downloadangebote,
+sonstige Weitergabe angepasster Fassungen und fremde Softwareprodukte oder
+Softwaredienste benötigen eine gesonderte Erlaubnis, auch bei kostenlosen Angeboten.
+Details und Ausnahmen regelt die Lizenz. Das Projekt ist Source-available.
+
 ## Produkt & Abläufe
 
 | Datei                      | Inhalt                                     |
@@ -42,8 +54,8 @@ gemeinsamen Frontend- und App-Stack. Die Sicherheitsgrenze bilden die
 Restricted-Proxy-Positivliste und die serverseitige API-Autorisierung.
 
 Plattformfreigaben und noch fehlende praktische Nachweise stehen zentral in
-[Offene Abnahmen und Entscheidungen](open-items.md). Windows ist weiterhin nicht
-freigegeben. Entwicklung und aktive Labs: [Entwicklerwerkzeuge](development/README.md).
+[Offene Abnahmen und Entscheidungen](open-items.md). Die praktischen macOS-Abnahmen und der Windows-Test sind bestätigt. Die
+NIC-Trennung ist nach jeder Installation vor Ort zu validieren. Entwicklung und aktive Labs: [Entwicklerwerkzeuge](development/README.md).
 
 ## API-Vertrag
 

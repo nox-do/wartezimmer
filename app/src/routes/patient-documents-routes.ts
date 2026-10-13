@@ -356,6 +356,7 @@ export function registerPatientDocumentRoutes(app: FastifyInstance, db: CoreData
             return reply.code(201).send({ items: created });
           },
           () => db.isSandboxResetPending(),
+          db.getPatientSession(token).visitId,
         );
       } catch (error) {
         if (isSessionUnauthorizedError(error)) {
@@ -449,13 +450,14 @@ export function registerPatientDocumentRoutes(app: FastifyInstance, db: CoreData
             }
           },
           () => db.isSandboxResetPending(),
+          db.getPatientSession(token).visitId,
         );
       } catch (error) {
         if (
           sendResolvedDomainError(reply, error, {
             byApiCode: {
               SANDBOX_UNAVAILABLE: 'Document intake service is currently unavailable.',
-              CHECKIN_LOCKED: 'Document intake is paused while the new day is started.',
+              CHECKIN_LOCKED: 'Document intake is temporarily paused. Please try again.',
             },
           })
         ) {
@@ -538,6 +540,7 @@ export function registerPatientDocumentRoutes(app: FastifyInstance, db: CoreData
             return discarded;
           },
           () => db.isSandboxResetPending(),
+          db.getPatientSession(token).visitId,
         );
       } catch (error) {
         if (isSessionUnauthorizedError(error)) {

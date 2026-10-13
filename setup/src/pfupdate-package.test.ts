@@ -15,7 +15,7 @@ import {
   validateExtractedPfupdate,
   validateTarArchiveEntries,
 } from './pfupdate-package.js';
-import { buildTestPfupdateArchive } from './pfupdate-test-fixtures.js';
+import { buildTestPfupdateArchive } from './test-helpers/pfupdate-test-fixtures.js';
 
 const releaseVersion = '2026.08.0';
 

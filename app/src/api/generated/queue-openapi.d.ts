@@ -237,6 +237,15 @@ export interface paths {
             'application/json': components['schemas']['Error'];
           };
         };
+        /** @description Document deletion failed; discharge was not completed */
+        502: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Error'];
+          };
+        };
       };
     };
     delete?: never;
@@ -560,6 +569,8 @@ export interface components {
       /** Format: date-time */
       arrivedAt: string;
       waitMs: number;
+      /** @description Documents deleted by final checkout; zero for intermediate journey steps. */
+      dischargeDocumentCount?: number;
       documentCount: number;
       hasMobilePhone: boolean;
       /** @description Terminal check-in phone (staff queue only, not on TV) */
@@ -718,6 +729,10 @@ export interface components {
        * @enum {string}
        */
       status: 'called' | 'in_room' | 'directed';
+      /** @description Documents deleted by final checkout; zero for intermediate journey steps. */
+      dischargeDocumentCount?: number;
+      /** @description Unprocessed documents; present for panels with discharge capability. */
+      documentCount?: number;
       /** Format: date-time */
       calledAt?: string;
       roomId: string;

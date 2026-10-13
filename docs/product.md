@@ -40,8 +40,8 @@ Lokales Praxis-System für Check-in, Warteschlange und Wartezimmer — **ohne Cl
 | **Betrieb**    | Docker-Stack (`app` + `sandbox`), **Manager** (Install, Status, Netzwerk, Updates), optional **Proxy** (Caddy Port 80), **Wildcard-LAN-TLS** (443) und `.pfbackup` v2 |
 
 **Routing:** praxisweit **Simple** (Default: Thema → Zielraum) oder **Complex**
-(Journeys; aktuell standardmäßig freigegeben, Capability für spätere
-Lizenzierung vorhanden). Eine Runtime, zwei Config-Modi —
+(Journeys; aktuell standardmäßig freigegeben, technischer Capability-Schalter
+vorhanden). Dieser Schalter ersetzt nicht die Projektlizenz. Eine Runtime, zwei Config-Modi —
 [`flows.md`](flows.md).
 
 ## Was wir nicht sind / nicht liefern
@@ -57,6 +57,28 @@ Lizenzierung vorhanden). Eine Runtime, zwei Config-Modi —
 | **Hardware-Verkauf**       | Hardware nur empfohlen, nicht verkauft                                                                                                               |
 | **Volles Internet-Expose** | Von außen nur Portal (Whitelist, geplant); MFA/Terminal/TV/Ops bleiben LAN                                                                           |
 
+## Lizenz und Nutzungsrechte
+
+Maßgeblich ist die eigene [Wartezimmer-Lizenz, Version 1.1](../LICENSE). Sie erlaubt
+kostenlose Nutzung und interne Anpassung im eigenen Betrieb, auch in wirtschaftlich
+tätigen Praxen und MVZ. Patienten dürfen Terminals, Anzeigen und Portale im Rahmen
+des Praxisablaufs mitbenutzen. Beauftragte IT-Dienstleister dürfen Installation,
+individuelle Anpassung und Betreuung berechnen.
+
+Öffentliche Softwareangebote bleiben den offiziellen Bezugsquellen vorbehalten.
+GitHub-Plattformrechte, Forks, automatisch bereitgestellte Quellcodearchive und
+Projektbeiträge sind gesondert berücksichtigt. Unveränderte Fassungen dürfen
+kostenlos und nichtöffentlich unmittelbar an einzelne Empfänger weitergegeben
+werden. Weitere öffentliche Angebote, sonstige Weitergabe angepasster Fassungen,
+fremde Softwareprodukte mit übernommenen geschützten Teilen und fremde Softwaredienste
+benötigen eine gesonderte Erlaubnis, auch bei kostenlosen Angeboten.
+
+Geschützte Teile des Routing-Cores sind einbezogen; abstrakte Ideen und eigenständige
+Implementierungen ohne Übernahme geschützter Ausdrucksformen werden nicht beschränkt.
+Details und Ausnahmen regelt der Lizenztext. Wartezimmer ist Source-available,
+keine Open-Source-Software im Sinne der Open Source Initiative. Sonstige Website-Inhalte
+sind nur bei ausdrücklicher Zuordnung einbezogen; Drittanbieter behalten ihre Lizenzen.
+
 ## Prinzipien
 
 - **Lokal zuerst** — Stack in der Praxis; Manager auf dem Host
@@ -70,10 +92,10 @@ Nach Start (Dev oft `:8080`, mit Proxy kanonisch Port 80, mit TLS `https://…`)
 
 ## Weiterlesen
 
-| Interesse                      | Dokument                                                                                |
-| ------------------------------ | --------------------------------------------------------------------------------------- |
-| Abläufe & UX                   | [`flows.md`](flows.md)                                                                  |
-| Nummernkreise / Themen / Räume | [`domain.md`](architecture/domain.md)                                                   |
-| Install & Updates              | [`delivery.md`](operations/delivery.md), [`../manager/README.md`](../manager/README.md) |
-| LAN-TLS                        | [`operations/tls.md`](operations/tls.md)                                                |
-| Backup und Wiederherstellung   | [`operations/backup.md`](operations/backup.md)                                          |
+| Interesse                      | Dokument                                                                                       |
+| ------------------------------ | ---------------------------------------------------------------------------------------------- |
+| Abläufe & UX                   | [`flows.md`](flows.md)                                                                         |
+| Nummernkreise / Themen / Räume | [`domain.md`](architecture/domain.md)                                                          |
+| Install & Updates              | [Installation und Recovery](operations/reinstall-recovery.md), [Manager](../manager/README.md) |
+| LAN-TLS                        | [`operations/tls.md`](operations/tls.md)                                                       |
+| Backup und Wiederherstellung   | [`operations/backup.md`](operations/backup.md)                                                 |

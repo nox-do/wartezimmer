@@ -2,6 +2,23 @@
 
 Electron-Hülle für Host-Setup, Status und Wartung. Docker-Stack steuern (Start/Stop/Neustart), Container/Logs, `.pfbackup`, Erreichbarkeit (Poll) — alles über Setup-API + IPC.
 
+## Lizenz
+
+Für Manager und Setup gilt die [Wartezimmer-Lizenz, Version 1.1](../LICENSE). Installation,
+individuelle Anpassung und Betreuung im konkreten Auftrag eines Nutzers dürfen
+berechnet werden. Die Software selbst darf dabei nicht mit Lizenz- oder
+Nutzungsgebühren versehen oder vom Fortbestand eines Supportvertrags abhängig
+gemacht werden. Sonstige Weitergabe angepasster Fassungen, eigene oder fremde
+Softwareprodukte mit übernommenen geschützten Teilen und fremde Softwaredienste
+benötigen eine gesonderte Erlaubnis, auch bei kostenlosen Angeboten.
+Details und Ausnahmen regelt der vollständige Lizenztext.
+
+Öffentliche Downloadangebote bleiben den offiziellen Bezugsquellen vorbehalten;
+GitHub-Plattformrechte, Forks, automatische Quellcodearchive und Projektbeiträge
+sind in Abschnitt 3 der Lizenz gesondert berücksichtigt. Unveränderte Fassungen
+dürfen kostenlos und nichtöffentlich unmittelbar an einzelne Empfänger weitergegeben
+werden. Weitere öffentliche Angebote benötigen eine gesonderte Erlaubnis.
+
 ## Dev starten
 
 Vom Repo-Root:
@@ -156,7 +173,7 @@ Setup-API (Manager-Child auf Loopback; CLI-Default `127.0.0.1:9190`):
 
 Vollständiger Install-Reset bleibt CLI: `npm run setup:reset`.
 
-Build, Release-Pakete und Versionierung: **[`docs/operations/delivery.md`](../docs/operations/delivery.md)**.
+Release-Pakete erzeugen: [`build-release-images.mjs`](../scripts/build-release-images.mjs) und [`build-pfupdate.mjs`](../scripts/build-pfupdate.mjs).
 
 ## Internen macOS-Build erstellen
 
@@ -209,7 +226,76 @@ npm run -w @wartezimmer/setup test
 
 LAN-TLS (Produkt): [`docs/operations/tls.md`](../docs/operations/tls.md).
 
-## Windows (vorbereitet, Abnahme offen)
+## macOS — separate DMGs für Apple Silicon und Intel
+
+```bash
+npm run dist:manager:mac
+```
+
+Der Build auf macOS verwendet electron-builder **26.15.3** mit
+`Platform.MAC.createTarget('dmg', Arch.arm64, Arch.x64)`. Auch
+`build.mac.target` legt ARM64 und x64 explizit fest. Der Universal-Build ist
+stillgelegt; beide Apps werden separat verpackt und geprüft.
+Grundlage: [electron-builder v26](https://www.electron.build/v26/docs/architecture/).
+
+Setup, vendortes `server-shared`, Main/Preload/Renderer, Schrift und Templates
+sind architekturunabhängig. Setup startet über `process.execPath` mit der
+jeweils eingebauten Electron-Node-Laufzeit; ein separates Node-Binary wird
+nicht mitgeliefert. Es sind keine nativen `.node`-Module oder zusätzlichen
+architekturspezifischen Programme erforderlich. Neue native Ressourcen müssen
+für die jeweilige Zielarchitektur bereitgestellt werden.
+
+Vor der DMG-Erstellung prüft `scripts/verify-macos-architecture.mjs` im
+`afterPack`-Hook mit `lipo` die Zielarchitektur: Hauptprogramm, Electron
+Framework, alle vier Helper und sämtliche weiteren Mach-O-/`.node`-Dateien
+in der App, ihren Ressourcen und dem entpackten ASAR. ARM64 muss ausschließlich
+`arm64`, Intel ausschließlich `x86_64` enthalten. Ein Fehler stoppt den Build;
+beide DMGs müssen vorliegen, bevor sie in den Release-Ordner kopiert werden.
+Manuell wiederholbar:
+
+```bash
+node manager/scripts/verify-macos-architecture.mjs ".tmp/build/manager/mac-arm64/Wartezimmer Manager.app" arm64
+node manager/scripts/verify-macos-architecture.mjs ".tmp/build/manager/mac/Wartezimmer Manager.app" x64
+node manager/scripts/smoke-packaged-setup.mjs ".tmp/build/manager/mac-arm64/Wartezimmer Manager.app/Contents/MacOS/Wartezimmer Manager" ".tmp/build/manager/mac-arm64/Wartezimmer Manager.app/Contents/Resources"
+node manager/scripts/smoke-electron.mjs ".tmp/build/manager/mac-arm64/Wartezimmer Manager.app/Contents/MacOS/Wartezimmer Manager"
+```
+
+Downloads unter `dist/releases/<releaseVersion>/`:
+
+- Apple Silicon: `WartezimmerManager-<managerVersion>-arm64.dmg`
+- Intel: `WartezimmerManager-<managerVersion>-x64.dmg`
+
+Manager-Version und Release-Version behalten ihre bisherigen Quellen;
+`WARTEZIMMER_RELEASE_VERSION` überschreibt weiterhin nur das Release-Verzeichnis.
+Build-Zwischenstände liegen unter `.tmp/build/manager/`. Der bisherige
+Universal-Download wurde nach `.tmp/build/manager/retired-universal/` verschoben.
+
+Ohne Override lädt der Builder die Electron-Distributionen für beide
+Architekturen. `WARTEZIMMER_ELECTRON_DIST` muss bei Verwendung auf einen Ordner
+mit **beiden** unveränderten ZIPs zeigen:
+`electron-v<electronVersion>-darwin-x64.zip` und
+`electron-v<electronVersion>-darwin-arm64.zip`. Ein einzelnes ARM64-ZIP oder
+die lokale ARM64-`node_modules/electron/dist` reicht für beide Builds nicht aus.
+
+Die Apps bleiben wie bisher unsigned und nicht notarisiert. Ein nativer
+Intel-GUI-/Docker-Abnahmelauf muss auf einem Intel-Mac erfolgen.
+
+Build-Nachweis vom 2026-10-11: Manager **6.1.2**, Electron **44.4.3**,
+Release-Verzeichnis **6.1.1**. ARM64-DMG **113,3 MiB**, Intel-DMG **117,1 MiB**.
+Beide enthalten die kompakte Navigation mit Logo links vor „Status“. Je App
+wurden alle **13** Mach-O-Dateien auf die einzelne Zielarchitektur geprüft;
+ASAR und zusätzliche Ressourcen enthalten keine nativen Module. Setup-Smoke
+(Health, Token, Templates, Neustart, IPC-Disconnect) und GUI-Smoke bestanden
+für ARM64 nativ und für x64 unter Rosetta auf Apple Silicon. Die alte
+Universal-App wurde von der Prüfung für einzelne Architekturen zurückgewiesen.
+
+Build-Nachweis vom 2026-10-12: Manager **6.1.3** für ARM64 und x64 gebaut und auf
+jeweils 13 native Mach-O-Dateien der Zielarchitektur geprüft. Beide Apps enthalten
+`Contents/Resources/LICENSE`. Paketierter Setup-Smoke bestanden: ARM64 nativ,
+x64 unter Rosetta. ARM64-GUI-Smoke bestanden. Artefakte und Prüfsummen liegen in
+`dist/releases/6.1.3/`.
+
+## Windows (Test abgeschlossen)
 
 `npm run dist:manager:win` erzeugt einen internen NSIS-Installer für x64.
 Ziel: Windows 11, lokaler Docker Desktop mit WSL2/Linux-Containern und Compose
@@ -220,8 +306,8 @@ Neue Daten liegen unter `%LOCALAPPDATA%\Wartezimmer`, außerhalb von Programm
 und ASAR.
 Das Betriebskonto bleibt über Installation, Docker-Betrieb und Updates gleich.
 Deinstallation darf Praxisdaten nicht entfernen. Windows-Pfadgrenzen,
-Signierung, Audit und Nachweise: [Delivery §8](../docs/operations/delivery.md#8-windows-vorbereitung-2026-09-30-noch-keine-plattformfreigabe).
-Der separate Patientenzugang bleibt unter Windows gesperrt.
+Signierung, Audit und Nachweise: [Plattformabnahmen](../docs/open-items.md).
+Der separate Patientenzugang ist unter Windows unterstützt. Die NIC-Trennung zeigte sich im Test stabil und ist nach jeder Installation im konkreten Netz zu validieren.
 
 Isolierter Runtime-Smoke nach `prepare:packaged`:
 
@@ -258,11 +344,13 @@ trotz bestandener Dateiprüfung erforderlich.
 ## Marke und App-Icons
 
 Der Manager heißt **Wartezimmer Manager**. Das Logo basiert auf den drei Balken
-aus `mockups/wartezimmer/index.html`: Grün `#2d5941`, Orange `#eea978`.
+aus `website/index.html`: Grün `#2d5941`, Orange `#eea978`.
 Die Vektorvorlage liegt unter `build/icons/logo.svg`; die abgerundete helle
 Fläche bildet das App-Icon. `icon.icns` wird für macOS verwendet, `icon.ico`
 für die Windows-App sowie Installation und Deinstallation. `icon.png` dient
-als Fenster-Icon. Der Manager zeigt dieselbe Vorlage in seiner Kopfzeile.
+als Fenster-Icon. Der Manager zeigt dieselbe Vorlage kompakt links vor „Status“
+in der Navigation. Der Produktname steht in der nativen Fensterleiste; eine
+zusätzliche Titelzeile im Inhalt entfällt.
 
 Bei Änderungen an der Vorlage: `python3 scripts/generate-icons.py` aus dem
 Manager-Verzeichnis ausführen (Python mit Pillow; in Codex über

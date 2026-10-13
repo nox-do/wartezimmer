@@ -250,7 +250,7 @@ Optionale Terminal-Anzeigen und Voraussetzungen für den SMS-Rollout: [offene fa
 
 1. (Optional) Gast-WLAN / Captive der Praxis → Redirect auf Portal-URL
 2. Portal: **Wartenummer** → Menü: Upload / Erstanamnese
-3. Session endet mit Formular-Absenden (serverseitig `sessions/submit`), Upload-Ablauf (TTL, Standard 30 Min), oder Tagesreset — kein Wiederaufnehmen der alten Upload-Liste
+3. Session endet mit endgültiger Entlassung, Formular-Absenden (serverseitig `sessions/submit`), Upload-Ablauf (TTL, Standard 30 Min), oder Tagesreset — kein Wiederaufnehmen der alten Upload-Liste
 
 ### Portal-Session-Lebensdauer — bewusste Entscheidung (v1)
 
@@ -258,6 +258,7 @@ Optionale Terminal-Anzeigen und Voraussetzungen für den SMS-Rollout: [offene fa
 
 | Auslöser                                                | Verhalten                                                                                                         | Begründung                                                                                                         |
 | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| **Endgültig entlassen** (`check_out_room` → `done`)     | Offene Dokumente werden nach Warnung im Entlassen-Dialog gelöscht; aktive Sessions werden widerrufen              | Nach der Entlassung sind keine weiteren Uploads möglich; exportierte Dateien bleiben erhalten                      |
 | **Formular absenden** (`POST /patient-documents/forms`) | Session wird serverseitig revoked (`submitPatientSession` → Outbox `PatientSessionClosed`)                        | Formular ist ein klarer Abschluss-Schritt; Patient soll danach nicht weiter im Portal navigieren                   |
 | **Datei-Upload**                                        | Session bleibt `active` bis TTL, Browser-Schließen (Client-Token weg), erneuter `resolve-ticket`, oder Tagesreset | Mehrere Dateien in einer Sitzung; „Danke — Seite schließen“ ist UX-Hinweis, kein technischer Session-Ende          |
 | **Browser schließen** (Upload-Pfad)                     | `sessionStorage` leer; serverseitig Token noch bis TTL gültig                                                     | Akzeptiert: Patient ist fachlich fertig; Daten liegen am Ticket; MFA sieht Dokumente unabhängig vom Session-Status |
@@ -300,7 +301,7 @@ Kein Patienten-Flow — Rahmen für Installation und Erreichbarkeit. Fachliche S
 
 | Baustein                         | Rolle                                                                                                                                          |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Manager** (Electron)           | Host-Setup, Status, Netzwerk, Wartung, Updates — [`../manager/README.md`](../manager/README.md), [`delivery.md`](operations/delivery.md)       |
+| **Manager** (Electron)           | Host-Setup, Status, Netzwerk, Wartung, Updates — [`../manager/README.md`](../manager/README.md)                                                |
 | **Proxy / TLS** (optional Caddy) | Port 80 HTTP und/oder LAN-HTTPS 443 — [`operations/tls.md`](operations/tls.md); Internet-Portal weiterhin nicht Produkt                        |
 | **Gateway** (openNDS)            | **Nicht** Produktkern — Lab-Referenz; Delivery-Default ohne Gateway — [`archive/gateway-captive-portal.md`](archive/gateway-captive-portal.md) |
 

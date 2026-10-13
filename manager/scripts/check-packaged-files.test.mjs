@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import test from 'node:test';
+import { asar, verifyPackagedFiles } from './check-packaged-files.mjs';
+
+test('checks real Manager ASAR contents and detects leaked dependency maps', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'pf-manager-files-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const app = path.join(root, 'app');
+  const resources = path.join(root, 'resources');
+  await fs.mkdir(app);
+  await fs.mkdir(path.join(resources, 'setup/dist'), { recursive: true });
+  await fs.mkdir(path.join(resources, 'templates'), { recursive: true });
+  await fs.writeFile(path.join(resources, 'setup/dist/server.js'), 'export {};');
+  const license = await fs.readFile(new URL('../../LICENSE', import.meta.url));
+  await fs.writeFile(path.join(resources, 'LICENSE'), license);
+  await fs.writeFile(path.join(app, 'main.js'), 'export {};');
+  await asar.createPackage(app, path.join(resources, 'app.asar'));
+  verifyPackagedFiles(resources);
+  await fs.writeFile(path.join(resources, 'LICENSE'), 'old license');
+  assert.throws(() => verifyPackagedFiles(resources), /differs from the canonical LICENSE/);
+  await fs.writeFile(path.join(resources, 'LICENSE'), license);
+  await fs.mkdir(path.join(app, 'node_modules/dependency'), { recursive: true });
+  await fs.writeFile(path.join(app, 'node_modules/dependency/index.js.map'), '{}');
+  await asar.createPackage(app, path.join(resources, 'app.asar'));
+  asar.uncache(path.join(resources, 'app.asar'));
+  assert.throws(() => verifyPackagedFiles(resources), /index.js.map/);
+});

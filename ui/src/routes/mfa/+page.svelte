@@ -215,6 +215,9 @@
 
   <CheckOutConfirmModal
     ticket={mfaQueueActions.checkOutVisit}
+    documentCount={
+      mfaQueueDisplay.queue?.items.find((item) => item.visitId === mfaQueueActions.checkOutVisit?.visitId)?.dischargeDocumentCount ?? 0
+    }
     busy={mfaQueueActions.checkOutVisit != null && mfaQueueActions.busyVisitId === mfaQueueActions.checkOutVisit.visitId}
     onConfirm={() => void confirmMfaCheckOut()}
     onCancel={cancelMfaCheckOut}

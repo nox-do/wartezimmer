@@ -1,7 +1,7 @@
 {
   "name": "wartezimmer",
   "private": true,
-  "version": "6.1.1",
+  "version": "6.1.3",
   "workspaces": [
     "app",
     "sandbox",
@@ -27,11 +27,11 @@
     "lint:css": "stylelint \"manager/src/renderer/**/*.css\" \"ui/src/**/*.css\" && node ./scripts/check-unused-css.mjs",
     "test": "npm run build:deps && npm run test:workspaces",
     "test:workspaces": "npm run test:scripts && npm run test -w @wartezimmer/domain && npm run test -w @wartezimmer/server-shared && npm run test -w @wartezimmer/setup && npm run test -w @wartezimmer/sandbox && npm run test -w @wartezimmer/manager && npm run test -w @wartezimmer/flow-core && npm run test -w @wartezimmer/app && npm run test:network -w @wartezimmer/app && npm run test -w @wartezimmer/ui",
-    "test:scripts": "node --test --test-reporter=dot 'scripts/*.test.mjs'",
+    "test:scripts": "node --test --test-concurrency=1 --test-reporter=dot 'scripts/*.test.mjs'",
     "check:drift": "node ./scripts/check-topic-icon-ids.mjs && node ./scripts/check-openapi-types-sync.mjs && node ./scripts/check-app-openapi-types-sync.mjs && node ./scripts/check-bundle-sync.mjs && node ./scripts/check-fastify-schemas-sync.mjs && node ./scripts/check-openapi-route-sync.mjs && node ./scripts/check-auth-route-rules.mjs",
     "typecheck": "npm run build:deps && npm run typecheck:workspaces",
     "typecheck:workspaces": "npm run -ws typecheck && npm run check:drift",
-    "verify": "npm run lint && npm run format:check && npm run build:deps && npm run typecheck:workspaces && npm run test:workspaces && node scripts/build-ui.mjs && node scripts/copy-ui-static.mjs && npm run check:ui-bundle-secrets",
+    "verify": "npm run check:repository && npm run lint && npm run format:check && npm run build:deps && npm run typecheck:workspaces && npm run test:workspaces && node scripts/build-ui.mjs && node scripts/copy-ui-static.mjs && npm run check:ui-bundle-secrets",
     "bundle:openapi": "node ./scripts/bundle-openapi.mjs",
     "check:ui-bundle-secrets": "node ./scripts/check-ui-bundle-secrets.mjs",
     "generate:api-schemas": "node ./scripts/generate-fastify-schemas.mjs",
@@ -76,7 +76,8 @@
     "dev:seed": "node scripts/dev-seed.mjs",
     "lint:website": "eslint website/site.js scripts/build-pages.mjs scripts/check-pages.mjs && stylelint website/styles.css && node scripts/check-unused-css.mjs website",
     "build:website": "node scripts/build-pages.mjs",
-    "preview:website": "node scripts/build-pages.mjs --preview"
+    "preview:website": "node scripts/build-pages.mjs --preview",
+    "check:repository": "node scripts/check-repository-hygiene.mjs"
   },
   "devDependencies": {
     "@apidevtools/swagger-parser": "^12.1.0",

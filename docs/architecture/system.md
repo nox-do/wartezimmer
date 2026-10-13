@@ -11,7 +11,7 @@ Nicht: Domänendetail → [`domain.md`](domain.md) · SSE → [`realtime.md`](re
 
 - Frontend: Svelte + TypeScript + Vite (`ui/` → statisch in `app`)
 - Backend: TypeScript-Monolith (Node LTS) im `app`-Container
-- Runtime: Docker, kein Kubernetes — Auslieferung [`../operations/delivery.md`](../operations/delivery.md)
+- Runtime: Docker, kein Kubernetes — Betrieb [`../operations/runtime.md`](../operations/runtime.md)
 - Portal (`/portal/*`) + Session-API im `app`; Captive-/WLAN-Hardware liefert Wartezimmer **nicht** ([`../operations/integrations.md`](../operations/integrations.md))
 - SMS-Rückruf: Provider `seven` / `mock` (Ops)
 

@@ -1,4 +1,4 @@
-import type { SetupContext } from './setup-context.js';
+import type { SetupContext } from '../setup-context.js';
 
 /** Minimal SetupContext for setup package unit tests. */
 export function testSetupContext(home: string): SetupContext {

@@ -8,6 +8,22 @@ Host-Architektur (Modi, Sync, Guards): [`docs/architecture/routing.md`](../../do
 
 Standalone-Referenz (HTTP + UI): `../new_flow_core` (Sibling-Repo neben diesem Monorepo).
 
+## Lizenz
+
+Für dieses Paket gilt die [Wartezimmer-Lizenz, Version 1.1](../../LICENSE), einschließlich
+urheberrechtlich geschützter einzelner Module und Komponenten. Interne Integration
+und Anpassung für den eigenen Betrieb sind erlaubt. Die Übernahme geschützter Teile
+in andere für Dritte bestimmte Softwareprodukte benötigt eine gesonderte Erlaubnis,
+auch bei kostenlosen Angeboten. Eine eigenständige Schnittstellenanbindung ohne
+Übernahme solcher Teile ist davon zu unterscheiden. Details und Ausnahmen regelt
+der vollständige Lizenztext.
+
+Öffentliche Downloadangebote bleiben den offiziellen Bezugsquellen vorbehalten;
+GitHub-Plattformrechte, Forks, automatische Quellcodearchive und Projektbeiträge
+sind in Abschnitt 3.2 der Lizenz gesondert berücksichtigt. Unveränderte Fassungen
+dürfen kostenlos und nichtöffentlich unmittelbar an einzelne Empfänger weitergegeben
+werden. Weitere öffentliche Angebote benötigen eine gesonderte Erlaubnis.
+
 ## Domain-Modell
 
 | Begriff             | Rolle                                                                                                                        |

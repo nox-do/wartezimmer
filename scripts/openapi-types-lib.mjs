@@ -93,9 +93,14 @@ export async function generateOpenApiTypes({ group, label }) {
 }
 
 export async function checkOpenApiTypesSync({ group, label, generateHint }) {
-  await generateOpenApiTypes({ group, label });
-
   const generatedFiles = listOpenApiTypeOutputs(group);
+  const before = new Map(
+    generatedFiles.map((file) => [
+      file,
+      fs.existsSync(path.join(root, file)) ? fs.readFileSync(path.join(root, file)) : null,
+    ]),
+  );
+  await generateOpenApiTypes({ group, label });
   let failed = false;
   for (const relativePath of generatedFiles) {
     if (!fs.existsSync(path.join(root, relativePath))) {
@@ -103,11 +108,8 @@ export async function checkOpenApiTypesSync({ group, label, generateHint }) {
       failed = true;
       continue;
     }
-    const diff = spawnSync('git', ['diff', '--exit-code', '--', relativePath], {
-      cwd: root,
-      stdio: 'inherit',
-    });
-    if (diff.status !== 0) {
+    const previous = before.get(relativePath);
+    if (!previous || !previous.equals(fs.readFileSync(path.join(root, relativePath)))) {
       failed = true;
       console.error(`${label}: ${relativePath} is out of date — run ${generateHint} and commit.`);
     }

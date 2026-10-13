@@ -56,7 +56,7 @@ import {
   writeGeneratedTlsCaddyfile,
   writeSecretFileAtomically,
 } from './proxy-tls.js';
-import { testSetupContext } from './test-setup-context.js';
+import { testSetupContext } from './test-helpers/test-setup-context.js';
 
 const certificate: TlsCertificateStatus = {
   issuer: "Let's Encrypt",

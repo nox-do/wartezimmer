@@ -168,8 +168,8 @@ function buildReleaseImages(version, platform) {
   return { appImage, sandboxImage };
 }
 
-function copyThirdPartyNotices(outputDir) {
-  const relativePaths = ['THIRD_PARTY_NOTICES.txt', 'licenses/caddy/LICENSE.txt'];
+function copyLicenseNotices(outputDir) {
+  const relativePaths = ['LICENSE', 'THIRD_PARTY_NOTICES.txt', 'licenses/caddy/LICENSE.txt'];
   for (const relativePath of relativePaths) {
     const targetPath = path.join(outputDir, relativePath);
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });
@@ -221,7 +221,7 @@ async function packReleaseBundle(archivePath, imageRefs, metadata) {
       fs.copyFileSync(path.join(root, relativePath), targetPath);
     }
 
-    copyThirdPartyNotices(stagingRoot);
+    copyLicenseNotices(stagingRoot);
     writeInstallManifest(stagingRoot, metadata);
 
     packReleaseArchive(archivePath, stagingRoot);

@@ -187,7 +187,7 @@ function installSmokeCheck(window: BrowserWindow): void {
         if (document.title !== ${JSON.stringify(MANAGER_WINDOW_TITLE)}) {
           throw new Error('Manager title missing');
         }
-        const logo = document.querySelector('.manager-brand img');
+        const logo = document.querySelector('.main-nav-logo');
         if (!(logo instanceof HTMLImageElement)) throw new Error('Manager logo missing');
         await logo.decode();
         return { installationKind: status?.installation?.kind ?? null, title: document.title };

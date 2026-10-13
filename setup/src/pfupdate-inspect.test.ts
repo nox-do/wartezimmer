@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { buildTestPfupdateArchive } from './pfupdate-test-fixtures.js';
+import { buildTestPfupdateArchive } from './test-helpers/pfupdate-test-fixtures.js';
 import { inspectPfupdate } from './pfupdate-inspect.js';
 import type { SetupContext } from './setup-context.js';
 

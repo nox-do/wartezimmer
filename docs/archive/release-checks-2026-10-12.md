@@ -1,4 +1,47 @@
-# Offene Abnahmen und Entscheidungen
+> Historischer Stand vor der Rückmeldung des Projektverantwortlichen am 12. Oktober 2026. Die darin als offen bezeichneten Plattformtests sind keine aktuelle Aufgabenliste. Aktueller Stand: [Offene Punkte](../open-items.md).
+
+# Historische Release-Abnahmen und Entscheidungen
+
+## Veröffentlichungsumfang (2026-10-12)
+
+Nach Einschätzung des Projektverantwortlichen ist die Software auf macOS gut
+nutzbar. Für Windows wird vor einem Einsatz im Praxisbetrieb zunächst ein
+interner Test empfohlen. Diese Einordnung ergänzt die vorhandenen Teilnachweise;
+sie schließt die unten aufgeführten Update-, Recovery- und Netzwerkprüfungen
+nicht pauschal ab.
+
+Die älteren Windows-Abnahmeprotokolle enthalten Erwartungen aus der Zeit vor
+den dokumentierten Praxistests und der Aufhebung der Portal-Sperre. Aussagen
+wie „kein Windows-Host-Lauf“ oder „Windows bleibt gesperrt“ beschreiben diesen
+früheren Stand und gelten nicht als aktuelle Gesamtaussage. Maßgeblich sind
+die neueren Nachweise und ihre jeweils genannten Grenzen.
+
+## Lizenzentscheidung (2026-10-12)
+
+Übernommen ist die vom Projektverantwortlichen gelieferte
+[Wartezimmer-Lizenz, Version 1.1](../../LICENSE). Auf seinen Wunsch wurde
+die Zeile mit der Arbeitsfassungskennzeichnung entfernt. Eine juristische Prüfung
+ist von ihm noch vorgesehen; eine abgeschlossene Prüfung wird nicht behauptet.
+
+Die Lizenz erlaubt kostenlose Nutzung und interne Anpassung im eigenen Betrieb
+sowie bezahlte IT-Leistungen im konkreten Auftrag. Öffentliche Softwareangebote
+bleiben den offiziellen Bezugsquellen vorbehalten, mit der geregelten Ausnahme
+für GitHub-Plattformrechte, Forks, automatische Quellcodearchive und Projektbeiträge.
+Unveränderte Fassungen dürfen kostenlos und nichtöffentlich unmittelbar an einzelne
+Empfänger weitergegeben werden. Weitere öffentliche Angebote, sonstige Weitergabe
+angepasster Fassungen und fremde Softwareprodukte oder Softwaredienste benötigen
+eine gesonderte Erlaubnis, auch bei kostenlosen Angeboten.
+
+Geschützte Teile des Routing-Cores sind einbezogen; eigenständige Implementierungen
+ohne Übernahme geschützter Ausdrucksformen werden nicht beschränkt. Das Projekt
+wird als Source-available bezeichnet. Sonstige Website-Inhalte sind nur bei
+ausdrücklicher Zuordnung einbezogen. Details und Ausnahmen regelt die Lizenz.
+
+Vor Übernahme fremder Beiträge die erforderlichen Rechte für Aufnahme ins offizielle
+Projekt und mögliche spätere Sonderlizenzierung klären; Abschnitt 3.4 weist auf
+diese gesonderte Rechteklärung hin.
+
+## Nachweise und bisheriger Prüfstand
 
 Release 6.1.2: Beta-Kennzeichnung und zusätzliches JSONL-Logging entfernt.
 Windows-Portal-Unterstützung und Sicherheitsprüfungen bleiben bestehen.
@@ -7,14 +50,14 @@ Die folgenden Beta-Protokolle sind historische Nachweise.
 Windows-Praxistest (2026-10-05): Aktivierung, Portalzugriff, Neustarts laut Anwender
 und Wiederherstellung nach WLAN-Ausfall erfolgreich erprobt. Zwei Aktivierungen
 mit insgesamt 208 erfolgreichen Listenerproben protokolliert. Details und Grenzen:
-[Windows-Portal-Beta](operations/windows-portal-beta.md#windows-praxistest-vom-2026-10-05).
+[Windows-Portal-Beta](../operations/windows-portal-beta.md#windows-praxistest-vom-2026-10-05).
 
 Windows-Portal-Beta (2026-10-05): Auf dem Branch
 `codex/windows-patient-portal-beta` hebt Manager `6.1.2-beta.1` die pauschale
 Windows-Sperre auf. TLS-/DNS-/Binding-/Listenerprüfungen bleiben aktiv.
 Die bisherige Erwartung „Windows bleibt gesperrt“ in der Abnahmematrix gilt
 für diese Beta nicht mehr. Stattdessen reale Zwei-NIC-Abnahme mit
-[Diagnoseprotokollen](operations/windows-portal-beta.md) durchführen.
+[Diagnoseprotokollen](../operations/windows-portal-beta.md) durchführen.
 
 Konsolidiert am 2026-09-30 aus den bisherigen Reviews und Betriebsdokumenten.
 „Offen“ bedeutet hier: Ein abschließender Nachweis beziehungsweise eine Entscheidung
@@ -24,7 +67,7 @@ keine Abnahme der konkreten Host-/Netzwerkkombination.
 Abgleich am 2026-10-04: Die früher als P0/P1 bestätigten Windows-Codebefunde
 sind überwiegend umgesetzt; ihre historischen Prioritäten sind keine Liste
 heutiger offener Defekte. Aktuelle Einstufung und Fundstellen stehen in
-[Delivery](operations/delivery.md#aktuelle-code-bestandsaufnahme-abgleich-2026-10-04).
+der damaligen Auslieferungsdokumentation (Git-Historie).
 Für Produktionsfreigabe stehen insbesondere reale Update-/Recovery-/Datenerhalt-/HTTPS-
 und ACL-Nachweise aus; explizite Architekturwahl für Updatepakete ist umgesetzt.
 Direkte UNC-CSV-Quellen und Restricted auf Windows bleiben Grenzen
@@ -32,14 +75,21 @@ des unterstützten Umfangs; gemappte Laufwerke sind jetzt für Import/Export zug
 
 ## Release- und Plattformabnahmen
 
-| Thema                              | Noch zu dokumentierender Nachweis                                                                                                                                                                                                             | Aktueller Vertrag                                              |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| Windows                            | NSIS x64 und Windows-CI vorbereitet; tatsächlichen CI-/Installerlauf, Versionsmatrix, Docker-/GUI-/Recovery-Abnahme und separate Restricted-Netzfreigabe nachweisen (Protokoll unten)                                                         | [Netzwerkisolation](operations/praxis-it-network-isolation.md) |
-| Restricted-Zugang in realen Netzen | Zwei-NIC-Matrix: erlaubte Zugriffe sowie gekreuzte Host-/SNI-Werte, globale Bindings und IPv6 negativ prüfen; DHCP-/Adressverlust, Docker-/Host-/Router-Neustart und Stromausfall einschließlich Fail-closed-Verhalten prüfen                 | [Restricted-Lifecycle](operations/restricted-lifecycle.md)     |
-| Portal-Auslieferung                | Frische Installation und Upgrade einer älteren TLS-Installation aus dem DMG; vorbereitetes/aktives Binding über Update und Restore; Apply/Remove bei laufenden und gestoppten Diensten; genaue macOS-/Docker-Desktop-Versionen protokollieren | [TLS](operations/tls.md)                                       |
-| Neuinstallation mit Recovery       | Abschließender Manager-E2E-Durchlauf mit echtem Docker-Stack, Backup-Übernahme, Fehlerfall und Wiedereinstieg                                                                                                                                 | [Recovery](operations/reinstall-recovery.md)                   |
-| Proxy-Reparatur                    | Praktischer Repair-Smoke mit bestehender TLS-Identität; automatisierte Identitätserhaltung allein beweist keinen erfolgreichen Container-Neustart ohne neue ACME-Ausstellung                                                                  | [TLS](operations/tls.md)                                       |
-| Manager-Zugänglichkeit             | Native Tastaturbedienung, Fokus nach aufklappender Diagnose und Fehlerankündigungen im Electron-Manager prüfen                                                                                                                                | [Manager](../manager/README.md)                                |
+- Lizenzbeigabe in `.pfinstall` und `.pfupdate` umgesetzt: Die Builder kopieren
+  `LICENSE` neben die bisherigen Drittanbieterhinweise und die Caddy-Lizenz und
+  erfassen sie in den Prüfsummen. Noch prüfen: Verfügbarkeit im ausgelieferten
+  Manager und in den Images. Für neue Updatepakete einen Manager mit aktualisiertem
+  Reader verwenden; ältere Reader mit strikter Dateipositivliste kennen den neuen
+  Eintrag nicht. Details: damalige Auslieferungsdokumentation (Git-Historie).
+
+| Thema                              | Noch zu dokumentierender Nachweis                                                                                                                                                                                                             | Aktueller Vertrag                                                 |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Windows                            | NSIS x64 und Windows-CI vorbereitet; tatsächlichen CI-/Installerlauf, Versionsmatrix, Docker-/GUI-/Recovery-Abnahme und separate Restricted-Netzfreigabe nachweisen (Protokoll unten)                                                         | [Netzwerkisolation](../operations/praxis-it-network-isolation.md) |
+| Restricted-Zugang in realen Netzen | Zwei-NIC-Matrix: erlaubte Zugriffe sowie gekreuzte Host-/SNI-Werte, globale Bindings und IPv6 negativ prüfen; DHCP-/Adressverlust, Docker-/Host-/Router-Neustart und Stromausfall einschließlich Fail-closed-Verhalten prüfen                 | [Restricted-Lifecycle](../operations/restricted-lifecycle.md)     |
+| Portal-Auslieferung                | Frische Installation und Upgrade einer älteren TLS-Installation aus dem DMG; vorbereitetes/aktives Binding über Update und Restore; Apply/Remove bei laufenden und gestoppten Diensten; genaue macOS-/Docker-Desktop-Versionen protokollieren | [TLS](../operations/tls.md)                                       |
+| Neuinstallation mit Recovery       | Abschließender Manager-E2E-Durchlauf mit echtem Docker-Stack, Backup-Übernahme, Fehlerfall und Wiedereinstieg                                                                                                                                 | [Recovery](../operations/reinstall-recovery.md)                   |
+| Proxy-Reparatur                    | Praktischer Repair-Smoke mit bestehender TLS-Identität; automatisierte Identitätserhaltung allein beweist keinen erfolgreichen Container-Neustart ohne neue ACME-Ausstellung                                                                  | [TLS](../operations/tls.md)                                       |
+| Manager-Zugänglichkeit             | Native Tastaturbedienung, Fokus nach aufklappender Diagnose und Fehlerankündigungen im Electron-Manager prüfen                                                                                                                                | [Manager ](../../manager/README.md)                               |
 
 Erster positiver Windows-Praxistest am 2026-10-01: Rückmeldung des Anwenders
 „unter Windows sieht es erstmal gut aus“ nach den Paket- und Architekturkorrekturen.
@@ -50,14 +100,14 @@ Recovery- oder Netzwerkabnahme.
 Windows-TLS-Teilnachweis am 2026-10-01: Anwender bestätigt erfolgreiche
 Wildcard-Zertifikatsausstellung nach explizitem ACME-Resolver `1.1.1.1:53`.
 Generator-Fix und Regressionstests übernommen; HTTPS-Cutover, Browserzugriff,
-Erneuerung und Restricted-Abnahme bleiben separat offen. Details: [TLS](operations/tls.md#windows-dns-teilnachweis-vom-2026-10-01).
+Erneuerung und Restricted-Abnahme bleiben separat offen. Details: [TLS](../operations/tls.md#windows-dns-teilnachweis-vom-2026-10-01).
 
 Nachweise jeweils mit Datum, Plattformversionen, Szenario und Ergebnis ergänzen.
 Ein erledigter Teiltest schließt nicht automatisch die gesamte Zeile.
 
 Bereits dokumentierter Teilnachweis: Eigene ACME-Domain mit Pebble/Caddy am
 2026-09-28 erfolgreich geprüft (Wildcard, DNS, Bindings, HTTPS-Cutover,
-HTTP-Redirect, HTTP/2 und SSE); siehe [TLS-Prüfstand](operations/tls.md#review-und-regressionstests-für-eigene-domains).
+HTTP-Redirect, HTTP/2 und SSE); siehe [TLS-Prüfstand](../operations/tls.md#review-und-regressionstests-für-eigene-domains).
 Das ersetzt weder Windows- noch reale Zwei-NIC-Abnahme.
 
 Ein-Datei-Installation (`.pfinstall`, Format 2): Builder-/Reader-Regressionen prüfen
@@ -81,25 +131,25 @@ Auf Apple Silicon analog ARM64 erfolgreich, AMD64 abgelehnt. Updatepakete besitz
 
 ## UI- und technische Folgeentscheidungen (keine Release-Zusage)
 
-- Mehrfach-Check-in zum selben Thema (2026-10-07): Terminal und MFA können derzeit weitere Visits mit neuen Wartenummern für denselben Patienten und dasselbe Thema anlegen. Bekanntes Verhalten, kein Showstopper und kein Release-Gate; Umsetzung später. Empfohlen sind eine stabile Kontaktidentität und ein gemeinsamer serverseitiger Guard mit Hinweis auf die bestehende Wartenummer. Details zu Einbaupunkt, Themenwechsel und Grenzen anonymer Anmeldungen: [Check-in-Guards](architecture/apis.md#bekanntes-verhalten-mehrfach-check-in-zum-selben-thema).
+- Mehrfach-Check-in zum selben Thema (2026-10-07): Terminal und MFA können derzeit weitere Visits mit neuen Wartenummern für denselben Patienten und dasselbe Thema anlegen. Bekanntes Verhalten, kein Showstopper und kein Release-Gate; Umsetzung später. Empfohlen sind eine stabile Kontaktidentität und ein gemeinsamer serverseitiger Guard mit Hinweis auf die bestehende Wartenummer. Details zu Einbaupunkt, Themenwechsel und Grenzen anonymer Anmeldungen: [Check-in-Guards](../architecture/apis.md#bekanntes-verhalten-mehrfach-check-in-zum-selben-thema).
 - Manager-Buttonfarben: Grün für Hauptaktionen und hellgraue Sekundärbuttons wurden vorgeschlagen, aber noch nicht bestätigt oder umgesetzt. Die lokale Anzeige der Übernehmen-Buttons je geändertem Netzwerkbereich ist bereits umgesetzt.
 - Erweiterte Domain-/PEM-Einrichtung: weitere Vereinfachung bei Bedarf. HTTPS lebt bereits ausschließlich unter Netzwerk; kein zusätzlicher Wizard-HTTPS-Schritt.
-- Multi-Tab-SSE: vor einer BroadcastChannel-/Leader-Lösung Browserlimit, Verbindungen und REST-Verzögerung messen. Keine rollenübergreifende Koordination oder Weitergabe von Auth-Tokens. Direkte SSE-Verbindungen müssen als Fallback möglich bleiben; siehe [Echtzeit](architecture/realtime.md).
+- Multi-Tab-SSE: vor einer BroadcastChannel-/Leader-Lösung Browserlimit, Verbindungen und REST-Verzögerung messen. Keine rollenübergreifende Koordination oder Weitergabe von Auth-Tokens. Direkte SSE-Verbindungen müssen als Fallback möglich bleiben; siehe [Echtzeit](../architecture/realtime.md).
 
 ## Fachliche Fragen und optionale Produktideen
 
 Diese Punkte stammen aus den bisherigen Flow-Notizen; sie sind keine zugesagte Roadmap.
 
 - Erstanamnese-Fragenkatalog mit der Praxis abschließen.
-- Klinische Zuständigkeit für Dokumentzugriff (Arzt/MFA), Zielsystem der Übernahme und Aufbewahrung exportierter Dateien klären. Aktuell verarbeitet die MFA Dokumente; temporärer Intake und Tagesreset sind beschrieben unter [Dokumente](architecture/documents.md).
+- Klinische Zuständigkeit für Dokumentzugriff (Arzt/MFA), Zielsystem der Übernahme und Aufbewahrung exportierter Dateien klären. Aktuell verarbeitet die MFA Dokumente; temporärer Intake und Tagesreset sind beschrieben unter [Dokumente](../architecture/documents.md).
 - Upload-/Ticketcode-Limits fachlich bewerten. Ticketcode-Auflösung besitzt bereits einen Rate-Limiter; dieser Punkt behauptet keine generell fehlende technische Begrenzung.
-- PVS-Vendor-Anbindung und eGK bleiben Discovery; Captive-Adapter sind nicht Portal-v1. Grenzen: [Integrationen](operations/integrations.md).
+- PVS-Vendor-Anbindung und eGK bleiben Discovery; Captive-Adapter sind nicht Portal-v1. Grenzen: [Integrationen](../operations/integrations.md).
 - Terminal-Ideen: optionaler Idle-/Bannerzustand und explizite Anzeige bei geschlossener offener Sprechstunde. Aktuelle Flows verwenden die vorhandenen Themen-/Betriebsguards.
 - Für einen realen SMS-Rollout Zuständigkeit für Anbietervereinbarung, Zweckbindung und Speicherdauer festhalten; keine Implementierungszusage aus alten Flow-Notizen ableiten.
 
 ## Windows-Abnahmeprotokoll
 
-Implementierung/Audit: [Delivery §8](operations/delivery.md#8-windows-vorbereitung-2026-09-30-noch-keine-plattformfreigabe).
+Implementierung/Audit: damalige Auslieferungsdokumentation, Abschnitt 8 (Git-Historie).
 Noch **kein Windows-Host-Lauf**, kein NSIS-Installationsnachweis und keine
 Windows-Docker-/GUI-Abnahme dokumentiert. Windows-CI ist ergänzt, hier nicht
 ausgeführt. Nachweise nur in einer isolierten Testinstallation mit synthetischen
@@ -135,7 +185,7 @@ Betriebskonto gemapptes Netzlaufwerk ist für Import/Export zugelassen. Die Prax
 verantwortet Verbindung und Zugangsdaten. Docker-Mount, CSV-Wechsel, Export,
 Verbindungsverlust und Wiederverbindung nach Host-Neustart real testen.
 Hostordner → `/imports` → App-Vorschau/Suche einschließlich Dateiwechsel und
-Neustart nach [Runtime-Vertrag](operations/runtime.md) tatsächlich prüfen.
+Neustart nach [Runtime-Vertrag](../operations/runtime.md) tatsächlich prüfen.
 
 Der P1 aus dem lokalen Windows-Review (anders geschriebene geerbte Bind-Variablen)
 ist durch case-insensitive Bereinigung vor Docker-Normalisierung korrigiert.
@@ -169,7 +219,7 @@ ihre Ursache ist durch die CRC-Korrektur nicht nachgewiesen oder behoben.
 
 ### Windows ARM64 / Snapdragon: Recherche abgeschlossen, Umsetzung offen
 
-Siehe [konkrete Befunde und Prüfpfad](operations/delivery.md#recherche-windows-arm64--snapdragon-2026-09-30).
+Konkrete Befunde und Prüfpfad standen in der damaligen Auslieferungsdokumentation (Git-Historie).
 Native ARM64-Images für App, Sandbox und Proxy sind lokal vorhanden. Noch nötig:
 ARM64-Manager/NSIS/CI und reale Snapdragon-Abnahme. Updatepakete haben explizite
 Architekturauswahl und verwenden bei der Prüfung die Docker-Daemon-Architektur.

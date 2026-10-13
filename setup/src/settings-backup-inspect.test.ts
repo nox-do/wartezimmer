@@ -13,7 +13,7 @@ import {
   providerCredentialsIncludedInSnapshot,
 } from './settings-backup-inspect.js';
 import { parseTlsSidecarManifestFromBytes } from './tls-backup-sidecar.js';
-import { testSetupContext } from './test-setup-context.js';
+import { testSetupContext } from './test-helpers/test-setup-context.js';
 
 const sampleSettings = {
   settingsFormatVersion: 1,

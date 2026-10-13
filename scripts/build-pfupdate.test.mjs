@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import test from 'node:test';
 
 test(
@@ -77,6 +78,16 @@ if(args[0]==='save') process.stdout.write('fake docker payload for '+platform);
         const parsed = JSON.parse(manifest.stdout);
         assert.equal(parsed.imageDigests.proxy.platform, platform);
         assert.ok(parsed.files.some((entry) => entry.path === 'images/wartezimmer-images.tar'));
+        const license = spawnSync('tar', ['-xOf', archive, './LICENSE']);
+        assert.equal(license.status, 0, license.stderr.toString());
+        assert.deepEqual(license.stdout, fs.readFileSync('LICENSE'));
+        const licenseEntry = parsed.files.find((entry) => entry.path === 'LICENSE');
+        const licenseHash = createHash('sha256').update(license.stdout).digest('hex');
+        assert.equal(licenseEntry.sha256, licenseHash);
+        assert.equal(licenseEntry.byteLength, license.stdout.length);
+        const sums = spawnSync('tar', ['-xOf', archive, './SHA256SUMS.txt'], { encoding: 'utf8' });
+        assert.equal(sums.status, 0, sums.stderr);
+        assert.ok(sums.stdout.includes(`${licenseHash}  LICENSE`));
       }
       fs.writeFileSync(log, '');
       const dedicated = invoke(['--no-build', '--platform', 'amd64']);

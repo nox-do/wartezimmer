@@ -365,40 +365,6 @@
   color: var(--zinc-650);
 }
 
-.alert--icon-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.alert--icon-row svg {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.alert--emergency {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  border-color: var(--error-border-alpha);
-  background: var(--destructive-alpha);
-  color: var(--red-error-ink);
-}
-
-.alert--emergency strong {
-  display: block;
-  font-size: var(--text-md);
-}
-
-.alert--emergency p {
-  margin-top: 0.35rem;
-  font-size: var(--text-md);
-}
-
 .alert--assist {
   display: flex;
   flex-wrap: wrap;

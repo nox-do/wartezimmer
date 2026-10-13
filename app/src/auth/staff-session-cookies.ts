@@ -1,7 +1,7 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { CookieSlotRole } from './cookie-slot-role.js';
 import type { DeviceSessionRole, StaffRole } from './session-grant-types.js';
-import { trustProxyHeaders } from '../http/trusted-proxy.js';
+import { isTrustedProxyPeer } from '../http/trusted-proxy.js';
 
 const STAFF_SESSION_COOKIE_BY_ROLE: Record<StaffRole, string> = {
   mfa: 'pf_mfa_session',
@@ -19,7 +19,7 @@ function tokenCookieOptions(request: FastifyRequest, maxAgeSeconds: number): str
   const forwardedProto = request.headers['x-forwarded-proto'];
   const isHttps =
     request.protocol === 'https' ||
-    (trustProxyHeaders() &&
+    (isTrustedProxyPeer(request.raw?.socket?.remoteAddress) &&
       typeof forwardedProto === 'string' &&
       forwardedProto.split(',')[0]?.trim() === 'https');
   const secure = isHttps ? '; Secure' : '';

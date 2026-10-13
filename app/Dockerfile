@@ -18,9 +18,12 @@ COPY packages/server-shared/package.json ./packages/server-shared/package.json
 COPY packages/flow-core/package.json ./packages/flow-core/package.json
 
 # Serial lifecycle scripts avoid esbuild ETXTBSY races in Docker/BuildKit.
-RUN npm ci --foreground-scripts
+RUN npm ci --foreground-scripts --no-audit
 
 COPY scripts/copy-ui-static.mjs ./scripts/copy-ui-static.mjs
+COPY scripts/build-typescript.mjs ./scripts/build-typescript.mjs
+COPY scripts/production-artifacts.mjs ./scripts/production-artifacts.mjs
+COPY scripts/check-production-artifacts.mjs ./scripts/check-production-artifacts.mjs
 COPY scripts/strip-production-artifacts.mjs ./scripts/strip-production-artifacts.mjs
 COPY scripts/bundle-openapi.mjs ./scripts/bundle-openapi.mjs
 COPY scripts/generate-fastify-schemas.mjs ./scripts/generate-fastify-schemas.mjs
@@ -62,7 +65,19 @@ RUN node scripts/strip-production-artifacts.mjs \
   packages/server-shared \
   packages/flow-core \
   dist:app/dist
-RUN npm prune --omit=dev --foreground-scripts
+FROM build AS production-dependencies
+COPY scripts/strip-dependency-artifacts.mjs ./scripts/strip-dependency-artifacts.mjs
+# Install only the runtime dependency graph of this service, not UI/Manager/Setup.
+RUN npm ci --omit=dev --ignore-scripts --no-audit \
+  --workspace @wartezimmer/app \
+  --workspace @wartezimmer/domain \
+  --workspace @wartezimmer/server-shared \
+  --workspace @wartezimmer/flow-core
+RUN node scripts/strip-dependency-artifacts.mjs
+RUN set -eu; for workspace in app packages/domain packages/server-shared packages/flow-core; do \
+  mkdir -p "$workspace/node_modules"; \
+  node scripts/strip-dependency-artifacts.mjs "$workspace/node_modules"; \
+  done
 
 FROM node:22-alpine AS runtime
 WORKDIR /app
@@ -75,8 +90,13 @@ RUN rm -rf /usr/local/lib/node_modules/npm \
   && rm -f /usr/local/bin/npm /usr/local/bin/npx
 
 COPY package.json ./
+COPY LICENSE ./LICENSE
 COPY app/package.json ./app/package.json
-COPY --from=build /app/node_modules ./node_modules
+COPY --from=production-dependencies /app/node_modules ./node_modules
+COPY --from=production-dependencies /app/app/node_modules ./app/node_modules
+COPY --from=production-dependencies /app/packages/domain/node_modules ./packages/domain/node_modules
+COPY --from=production-dependencies /app/packages/server-shared/node_modules ./packages/server-shared/node_modules
+COPY --from=production-dependencies /app/packages/flow-core/node_modules ./packages/flow-core/node_modules
 COPY --from=build /app/packages/domain/package.json ./packages/domain/package.json
 COPY --from=build /app/packages/domain/dist ./packages/domain/dist
 COPY --from=build /app/packages/server-shared/package.json ./packages/server-shared/package.json

@@ -35,6 +35,7 @@ export const PROXY_RUNTIME_ENV_KEYS = [
   'PROXY_HTTP_PORT',
   'APP_BIND_ADDRESS',
   'TRUST_PROXY_HEADERS',
+  'TRUST_PROXY_HOST',
 ] as const;
 
 export type ProxyConfig = {

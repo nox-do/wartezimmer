@@ -22,7 +22,7 @@ import {
   previewInstallRecovery,
   type RecoveryDeps,
 } from './install-recovery.js';
-import { testSetupContext } from './test-setup-context.js';
+import { testSetupContext } from './test-helpers/test-setup-context.js';
 import { packTlsSidecarArchive } from './tls-backup-sidecar.js';
 
 function fixture(t: TestContext) {

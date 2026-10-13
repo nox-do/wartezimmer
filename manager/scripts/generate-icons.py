@@ -1,7 +1,7 @@
 """Render the rectangle-based SVG master to app and installer icons (requires Pillow).
 
 Run with the bundled workspace Python from load_workspace_dependencies.
-The bar proportions and colors follow mockups/wartezimmer/styles.css.
+The bar proportions and colors follow website/styles.css.
 """
 
 from pathlib import Path

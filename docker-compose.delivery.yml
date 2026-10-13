@@ -28,6 +28,7 @@ services:
       SANDBOX_DOCS_BASE_PATH: ${SANDBOX_DOCS_BASE_PATH:-/var/lib/wartezimmer/docs}
       CONTACT_LOOKUP_BASE_PATH: ${CONTACT_LOOKUP_BASE_PATH:-/imports}
       TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-false}
+      TRUST_PROXY_HOST: ${TRUST_PROXY_HOST:-proxy}
     ports:
       - '${APP_BIND_ADDRESS:-0.0.0.0}:8080:8080'
       # LAN boundary: publish maintenance only on host loopback (container listens 0.0.0.0:8082).

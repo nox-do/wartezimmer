@@ -15,11 +15,12 @@
   interface Props {
     ticket?: TicketRef | null;
     busy?: boolean;
+    documentCount?: number;
     onConfirm?: () => void;
     onCancel?: () => void;
   }
 
-  let { ticket = null, busy = false, onConfirm, onCancel }: Props = $props();
+  let { ticket = null, busy = false, documentCount = 0, onConfirm, onCancel }: Props = $props();
 
   const open = $derived(ticket != null);
   const purpose = $derived(ticket?.purpose === 'cancel' ? 'cancel' : 'checkout');
@@ -63,6 +64,12 @@
       </div>
     </div>
   {/snippet}
+
+  {#if purpose === 'checkout' && documentCount > 0}
+    <div class="alert alert--warn" role="alert">
+      <strong>{tf('mfa.checkOutDocumentsWarning', { count: documentCount })}</strong>
+    </div>
+  {/if}
 
   <div class="form-actions">
     <Button type="button" variant="outline" disabled={busy} onclick={handleClose}>

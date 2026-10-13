@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DEFAULT_PORTAL_PROXY_CONTRACT } from '@wartezimmer/server-shared';
 import { createRuntimePostcondition, auditRuntimePostcondition } from './runtime-postcondition.js';
-import { runtimeAuditEnv, runtimeAuditCompose } from './runtime-postcondition-test-fixtures.js';
+import {
+  runtimeAuditEnv,
+  runtimeAuditCompose,
+} from './test-helpers/runtime-postcondition-test-fixtures.js';
 
 test('audit keeps candidate identity and contract independent of later env/contract mutations', async () => {
   const env = new Map(Object.entries(runtimeAuditEnv));

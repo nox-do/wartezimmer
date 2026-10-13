@@ -12,6 +12,8 @@ import {
 } from './visit-recall-consent.js';
 import { isRegistrationLaneBlocked } from '../queue/registration-number-limit.js';
 import { resolveTicketLaneCodeFromSettings } from '../checkin-topic-settings.js';
+import { purgeDocumentArtifacts } from '../documents/sandbox-document-cleanup.js';
+import { withVisitDocumentWorkPaused } from '../sandbox/sandbox-intake-gate.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
@@ -141,6 +143,7 @@ import type { TriageLevel } from '../queue/queue-triage.js';
 import {
   completeDocumentExportInDb,
   discardDocumentByMfaInDb,
+  discardDocumentOnDischargeInDb,
   renameDocumentFileNameInDb,
   discardDocumentAfterMalwareInDb,
   assertPatientDocumentDiscardableInDb,
@@ -285,6 +288,7 @@ const log = createModuleLogger('db.core');
 export class CoreDatabase {
   private readonly boundEmitOutboxEvent: EmitOutboxEventFn;
   private readonly db: DatabaseSync;
+  private readonly dischargingVisits = new Set<string>();
   private readonly findTicketByCodeStmt: StatementSync;
   private readonly checkinLockStmt: StatementSync;
   private readonly dayCloseStateStmt: StatementSync;
@@ -875,6 +879,7 @@ export class CoreDatabase {
     roomLabel?: string,
     actorId?: string,
   ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
+    if (this.dischargingVisits.has(visitId)) throw domainError('INVALID_TRANSITION');
     return this.withTransaction('callVisit', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
@@ -905,6 +910,7 @@ export class CoreDatabase {
     actingRoomId?: string,
     actorId?: string,
   ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
+    if (this.dischargingVisits.has(visitId)) throw domainError('INVALID_TRANSITION');
     return this.withTransaction('checkInRoom', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
@@ -935,6 +941,7 @@ export class CoreDatabase {
     actingRoomId?: string,
     actorId?: string,
   ): PlacementTransition {
+    if (this.dischargingVisits.has(visitId)) throw domainError('INVALID_TRANSITION');
     const result = this.withTransaction('placeVisitInRoom', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
@@ -975,6 +982,7 @@ export class CoreDatabase {
     actingRoomId?: string,
     actorId?: string,
   ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
+    if (this.dischargingVisits.has(visitId)) throw domainError('INVALID_TRANSITION');
     return this.withTransaction('startTreatment', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
@@ -1000,6 +1008,7 @@ export class CoreDatabase {
     fromStatus: QueueDisplayStatus;
     toStatus: QueueDisplayStatus;
   } {
+    if (this.dischargingVisits.has(visitId)) throw domainError('INVALID_TRANSITION');
     return this.withTransaction('continueJourney', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
@@ -1029,6 +1038,7 @@ export class CoreDatabase {
     roomLabel?: string,
     actorId?: string,
   ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
+    if (this.dischargingVisits.has(visitId)) throw domainError('INVALID_TRANSITION');
     return this.withTransaction('reassignRoom', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
@@ -1054,7 +1064,51 @@ export class CoreDatabase {
     });
   }
 
-  checkOutRoom(
+  async checkOutRoom(
+    visitId: string,
+    actingRoomId?: string,
+    actorId?: string,
+  ): Promise<{ fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus }> {
+    if (this.dischargingVisits.has(visitId)) throw domainError('INVALID_TRANSITION');
+    // Drain uploads/forms and prevent new document work until discharge is complete.
+    this.dischargingVisits.add(visitId);
+    try {
+      return await withVisitDocumentWorkPaused(visitId, async () => {
+        if (this.isSandboxResetPending()) throw domainError('CHECKIN_LOCKED');
+        let planned: { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus };
+        // Exercise the real transition guards without committing visit or journey events.
+        // Invalid room scope and intermediate journey steps must never delete documents.
+        this.db.exec('BEGIN IMMEDIATE');
+        try {
+          planned = completeVisit(getFlowCoreRuntime(this.db), visitId, actingRoomId, actorId, {
+            settings: this.getOpsSettings(),
+            listQueue: () => this.listQueue(),
+          });
+        } finally {
+          this.db.exec('ROLLBACK');
+        }
+        if (planned.toStatus === 'done') {
+          const documents = this.db
+            .prepare(
+              `SELECT id FROM documents WHERE visit_id = ?
+          AND status NOT IN ('exported', 'discarded_by_mfa', 'discarded_by_patient')`,
+            )
+            .all(visitId) as Array<{ id: string }>;
+          for (const document of documents) {
+            await purgeDocumentArtifacts(document.id);
+            this.withTransaction('discardDocumentOnDischarge', () =>
+              discardDocumentOnDischargeInDb(this.documentDeps(), document.id),
+            );
+          }
+        }
+        return this.commitCheckOutRoom(visitId, actingRoomId, actorId);
+      });
+    } finally {
+      this.dischargingVisits.delete(visitId);
+    }
+  }
+
+  private commitCheckOutRoom(
     visitId: string,
     actingRoomId?: string,
     actorId?: string,
@@ -1072,6 +1126,9 @@ export class CoreDatabase {
           listQueue: () => this.listQueue(),
         },
       );
+      if (transition.toStatus === 'done') {
+        this.expireActiveSessionsByVisitStmt.run(updatedAt, visitId);
+      }
       this.emitOutboxEvent('QueueStatusChanged', visitId, {
         visitId: visitId,
         fromStatus: transition.fromStatus,
@@ -1091,6 +1148,7 @@ export class CoreDatabase {
     fromStatus: QueueDisplayStatus;
     toStatus: QueueDisplayStatus;
   } {
+    if (this.dischargingVisits.has(visitId)) throw domainError('INVALID_TRANSITION');
     return this.withTransaction('cancelQueueVisit', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
@@ -1114,6 +1172,7 @@ export class CoreDatabase {
     fromStatus: QueueDisplayStatus;
     toStatus: QueueDisplayStatus;
   } {
+    if (this.dischargingVisits.has(visitId)) throw domainError('INVALID_TRANSITION');
     const transition = this.withTransaction('returnToWaiting', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
@@ -1142,6 +1201,7 @@ export class CoreDatabase {
     mode: AbsenceMode,
     notification?: { callbackPhone: string; recallConsentConfirmed: boolean; actorId?: string },
   ): { fromStatus: QueueDisplayStatus; toStatus: QueueDisplayStatus } {
+    if (this.dischargingVisits.has(visitId)) throw domainError('INVALID_TRANSITION');
     return this.withTransaction('setAbsence', () => {
       requireVisitExistsInDb(this.db, visitId);
       const updatedAt = this.commonHelperDeps().nowIso();
@@ -1263,6 +1323,7 @@ export class CoreDatabase {
     checkedInAt: string;
     documentsRebound: number;
   } {
+    if (this.dischargingVisits.has(visitId)) throw domainError('INVALID_TRANSITION');
     return this.withTransaction('supersedeVisit', () => {
       requireVisitExistsInDb(this.db, visitId);
       const result = supersedeVisitTopic({
@@ -1332,6 +1393,7 @@ export class CoreDatabase {
     callbackPhone: string | null;
     checkinLocale: string | null;
   } {
+    if (this.dischargingVisits.has(visitId)) throw domainError('INVALID_TRANSITION');
     const result = this.withTransaction('recallVisit', () => {
       requireVisitExistsInDb(this.db, visitId);
       const settings = this.getOpsSettings();

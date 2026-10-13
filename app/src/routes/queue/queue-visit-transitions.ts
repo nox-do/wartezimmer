@@ -9,7 +9,7 @@ import type {
 import { dispatchRecallNotifyAndPersist } from '../../shared/messaging/recall-notify-persist.js';
 import type { MessageDispatchResult } from '../../shared/messaging/sms-sender.js';
 import { assertQueueCallAnnouncementReachable } from '../../shared/queue/call-announcement-guard.js';
-import { sendApiError } from '../../http/domain-error-mapper.js';
+import { sendApiError, resolveDomainError } from '../../http/domain-error-mapper.js';
 import type { AuthSession, RoomPanelGrant } from '../../auth/session-grants.js';
 import { resolveRoomPanelForSession } from '../../shared/room-panel/room-panel-policy.js';
 import {
@@ -198,20 +198,31 @@ function runCheckInRoomTransition(
   });
 }
 
-function runCheckOutRoomTransition(
+async function runCheckOutRoomTransition(
   ctx: TransitionRunnerContext,
   input: { actingRoomId?: string },
-): QueueVisitTransitionResponse | undefined {
-  return runVisitTransition({
-    reply: ctx.reply,
-    visitId: ctx.visitId,
-    execute: () => ctx.db.checkOutRoom(ctx.visitId, input.actingRoomId, ctx.actorId),
-    mapSuccess: (transition) => transitionBody(transition, ctx.visitId),
-    errorOptions: {
-      invalidTransitionMessage: `Ticket ${ctx.visitId} kann nicht aus Behandlung ausgecheckt werden.`,
-      roomScopeMismatchMessage: checkOutRoomScopeMismatchMessage,
-    },
-  });
+): Promise<QueueVisitTransitionResponse | undefined> {
+  try {
+    const transition = await ctx.db.checkOutRoom(ctx.visitId, input.actingRoomId, ctx.actorId);
+    return transitionBody(transition, ctx.visitId);
+  } catch (error) {
+    if (resolveDomainError(error)?.code === 'SANDBOX_UNAVAILABLE') {
+      sendApiError(ctx.reply, 502, {
+        code: 'SANDBOX_UNAVAILABLE',
+        message:
+          'Dokumente konnten nicht vollständig gelöscht werden. Der Patient wurde nicht entlassen. Bitte erneut versuchen.',
+      });
+      return undefined;
+    }
+    if (
+      handleQueueRouteError(ctx.reply, ctx.visitId, error, {
+        invalidTransitionMessage: `Ticket ${ctx.visitId} kann nicht aus Behandlung ausgecheckt werden.`,
+        roomScopeMismatchMessage: checkOutRoomScopeMismatchMessage,
+      })
+    )
+      return undefined;
+    throw error;
+  }
 }
 
 function handleCall(ctx: TransitionContext): QueueVisitTransitionResponse | undefined {
@@ -301,7 +312,9 @@ function handleReassignRoom(ctx: TransitionContext): QueueVisitTransitionRespons
   });
 }
 
-function handleCheckOutRoom(ctx: TransitionContext): QueueVisitTransitionResponse | undefined {
+function handleCheckOutRoom(
+  ctx: TransitionContext,
+): Promise<QueueVisitTransitionResponse | undefined> {
   const actingRoomId = ctx.body.actingRoomId?.trim();
   return runCheckOutRoomTransition(ctx, { actingRoomId });
 }

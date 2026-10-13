@@ -4,7 +4,7 @@ Stand: 2026-09-29 · am Code geprüft (`settings-backup*.ts`, `tls-backup*.ts`, 
 
 **Scope:** Was in `.pfbackup` liegt, Restore, eingebettete HTTPS-Daten, gemeinsames Fresh-DB-Muster mit Update.
 
-Nicht: `.pfupdate`-Paketformat → [`delivery.md`](delivery.md) · LAN-TLS Betrieb → [`tls.md`](tls.md)
+Nicht: `.pfupdate`-Paketformat → [Formatvertrag](../../packages/server-shared/src/pfupdate.ts) · LAN-TLS Betrieb → [`tls.md`](tls.md)
 
 ## 1. Prinzip
 
@@ -133,7 +133,8 @@ Setup erhält `content`, Restore optional `skipProviderCredentials`.
 
 Restore und `.pfupdate`-Settings-Import teilen dasselbe Muster: alte Runtime-DB beiseite → App mit Ziel-Image → Settings importieren → verifizieren → Full-Stack + Health (`fresh-db-settings-cutover.ts`). Nur der Update-Caller setzt den Copy-Hook für aktive `device_authorizations`.
 
-Update-Phasen (Backup **vor** Stop über `:8082`, dann Cutover/Rollback): [`delivery.md`](delivery.md) §5.  
+Update-Phasen: Backup **vor** Stop über `:8082`, dann Cutover/Rollback.
+
 Pre-Update-`.pfbackup` bleibt als Datei; bei Fehler nach Rollback-Artefakten: `executeUpdateRollback()`.
 
 `manager-state` / Image-Tags am Ziel: Deployment bleibt auf dem **installierten** Release (Restore überschreibt Tags nicht; Update setzt Tags aus dem `.pfupdate`).

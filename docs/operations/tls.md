@@ -121,7 +121,7 @@ verweigert Start oder Recreate, wenn diese Adresse fehlt oder nicht lokal ist.
 
 Compose-Stacking (`setup/src/docker.ts`): Base → `docker-compose.proxy(.delivery).yml` wenn `PROXY_ENABLED` + aktiver Mode → optional `proxy-tls(.delivery).yml` → Lab nur bei `TLS_ACME_DIRECTORY=pebble`.
 
-Image: `WARTEZIMMER_PROXY_IMAGE` (Delivery: `wartezimmer-proxy:…-acmedns`, sonst Default `caddy:2.11.4`); Delivery `pull_policy: never` (app/sandbox/proxy) — siehe [`delivery.md`](delivery.md) §3.
+Image: `WARTEZIMMER_PROXY_IMAGE` (Delivery: `wartezimmer-proxy:…-acmedns`, sonst Default `caddy:2.11.4`); Delivery `pull_policy: never` (app/sandbox/proxy).
 
 ### Env (Auszug)
 
@@ -261,7 +261,7 @@ und ersetzt keine erfolgreiche LAN-Erreichbarkeitsprüfung.
 
 ## 6. Compose, Image, State auf dem Host
 
-Ein `proxy`-Service, gestapelte Compose-Dateien. Setup wählt Overlays über `.env` (`resolveComposeFiles` / `resolveComposeFileList` in `setup/src/docker.ts`). Genereller Stacking-Überblick: [`runtime.md`](runtime.md) § Compose (Skelett); Artefakt/Image-Bau: [`delivery.md`](delivery.md) §3.
+Ein `proxy`-Service, gestapelte Compose-Dateien. Setup wählt Overlays über `.env` (`resolveComposeFiles` / `resolveComposeFileList` in `setup/src/docker.ts`). Genereller Stacking-Überblick: [`runtime.md`](runtime.md) § Compose (Skelett); Artefakt/Image-Bau: [`build-release-images.mjs`](../../scripts/build-release-images.mjs).
 
 ### 6.1 Dateien
 
@@ -363,12 +363,12 @@ TLS-Status-Felder und Mode liegen parallel in `.env` (`TLS_*`, siehe §5). Overl
 
 ### 6.6 Fallstricke
 
-| Symptom                                        | Ursache                                                                                                       |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Port 443 zu, obwohl prepared                   | Overlay fehlt / Compose ohne `proxy-tls` neu gestartet; `TLS_STATE`/`PROXY_*_HOST_PATH` prüfen                |
-| Managed Obtain: unknown module `acmedns`       | falsches Image (Stock-Caddy statt `…-acmedns`)                                                                |
-| Docker legt `acme-dns.json` als Verzeichnis an | Datei fehlte vor dem ersten `up` — Setup legt leeres JSON an; manuell nicht löschen ohne Ersatzdatei          |
-| Delivery pull-Fehler für Proxy                 | erwartet bei `pull_policy: never` ohne geladenes Image — Image aus Paket laden ([`delivery.md`](delivery.md)) |
+| Symptom                                        | Ursache                                                                                                              |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Port 443 zu, obwohl prepared                   | Overlay fehlt / Compose ohne `proxy-tls` neu gestartet; `TLS_STATE`/`PROXY_*_HOST_PATH` prüfen                       |
+| Managed Obtain: unknown module `acmedns`       | falsches Image (Stock-Caddy statt `…-acmedns`)                                                                       |
+| Docker legt `acme-dns.json` als Verzeichnis an | Datei fehlte vor dem ersten `up` — Setup legt leeres JSON an; manuell nicht löschen ohne Ersatzdatei                 |
+| Delivery pull-Fehler für Proxy                 | erwartet bei `pull_policy: never` ohne geladenes Image — Image aus dem Erstinstallationspaket über den Manager laden |
 
 ## 7. Nach dem Cutover (Betrieb)
 

@@ -6,9 +6,16 @@ const toastError = vi.fn();
 const setAbsenceVisit = vi.fn();
 const setCallbackPhoneVisit = vi.fn();
 const retryRecallNotifyVisit = vi.fn();
+const checkOutVisit = vi.fn();
 const mfaQueueActions = {
   busyVisitId: null as string | null,
   assistancePlacementVisit: null,
+  checkOutVisit: null as null | {
+    visitId: string;
+    laneCode: string;
+    number: number;
+    purpose: 'checkout' | 'cancel';
+  },
   phoneCorrectionVisit: null as null | {
     visitId: string;
     laneCode: string;
@@ -33,7 +40,7 @@ vi.mock('$lib/mfa/queue-stream', () => ({ fetchMfaQueue }));
 vi.mock('$lib/queue/queue-actions', () => ({
   callVisit: vi.fn(),
   checkInVisit: vi.fn(),
-  checkOutVisit: vi.fn(),
+  checkOutVisit,
   cancelQueueVisit: vi.fn(),
   continueJourneyVisit: vi.fn(),
   cycleTriageVisit: vi.fn(),
@@ -68,8 +75,12 @@ vi.mock('$lib/stores/toastStore', () => ({
   },
 }));
 
-const { runMfaQueueAction, confirmMfaPhoneCorrection, handleMfaRetryRecallNotify } =
-  await import('./mfa-queue-commands.svelte');
+const {
+  runMfaQueueAction,
+  confirmMfaCheckOut,
+  confirmMfaPhoneCorrection,
+  handleMfaRetryRecallNotify,
+} = await import('./mfa-queue-commands.svelte');
 
 describe('runMfaQueueAction', () => {
   beforeEach(() => {
@@ -174,4 +185,36 @@ test('direct retry reuses saved consent and number without opening a correction 
   expect(retryRecallNotifyVisit).toHaveBeenCalledWith('M-018');
   expect(setCallbackPhoneVisit).not.toHaveBeenCalled();
   expect(setAbsenceVisit).not.toHaveBeenCalled();
+});
+
+describe('discharge confirmation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mfaQueueActions.busyVisitId = null;
+    mfaQueueActions.checkOutVisit = {
+      visitId: 'M-018',
+      laneCode: 'M',
+      number: 18,
+      purpose: 'checkout',
+    };
+  });
+
+  test('keeps the confirmation open after document deletion fails', async () => {
+    checkOutVisit.mockResolvedValue({
+      ok: false,
+      error: { message: 'Dokumente konnten nicht gelöscht werden.' },
+    });
+    await confirmMfaCheckOut();
+    expect(mfaQueueActions.checkOutVisit?.visitId).toBe('M-018');
+    expect(toastError).toHaveBeenCalledWith('Dokumente konnten nicht gelöscht werden.');
+    expect(fetchMfaQueue).not.toHaveBeenCalled();
+  });
+
+  test('closes the confirmation after successful discharge', async () => {
+    checkOutVisit.mockResolvedValue({ ok: true, data: { toStatus: 'done' } });
+    fetchMfaQueue.mockResolvedValue({ ok: true, data: { items: [] } });
+    await confirmMfaCheckOut();
+    expect(mfaQueueActions.checkOutVisit).toBeNull();
+    expect(checkOutVisit).toHaveBeenCalledWith('M-018');
+  });
 });

@@ -17,7 +17,7 @@ import {
   type StaffSessionManager,
 } from './session-grants.js';
 import type { DeviceAuthorizationRow } from '../shared/db/database-device-authorizations.js';
-import { trustProxyHeaders } from '../http/trusted-proxy.js';
+import { isTrustedProxyPeer } from '../http/trusted-proxy.js';
 
 export type ClientRole = 'terminal' | 'mfa' | 'tv' | 'captive' | 'ops' | 'room-panel';
 
@@ -251,7 +251,7 @@ function readRequestOrigin(request: FastifyRequest): string | null {
 function requestHost(request: FastifyRequest): string | null {
   const forwardedHost = request.headers['x-forwarded-host'];
   return (
-    (trustProxyHeaders() && typeof forwardedHost === 'string'
+    (isTrustedProxyPeer(request.raw?.socket?.remoteAddress) && typeof forwardedHost === 'string'
       ? forwardedHost
       : request.headers.host
     )

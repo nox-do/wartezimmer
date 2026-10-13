@@ -19,6 +19,7 @@ export type MfaQueueSnapshot = {
     arrivedAt: string;
     waitMs: number;
     documentCount: number;
+    dischargeDocumentCount?: number;
     hasMobilePhone: boolean;
     checkinPhone: string | null;
     callbackPhone: string | null;
@@ -76,6 +77,7 @@ export function buildMfaQueueSnapshot(
       arrivedAt: item.createdAt,
       waitMs,
       documentCount: item.documentCount,
+      dischargeDocumentCount: item.dischargeDocumentCount,
       hasMobilePhone: callbackPhone != null || checkinPhone != null,
       checkinPhone,
       callbackPhone,

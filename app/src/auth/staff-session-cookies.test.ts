@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { setStaffSessionCookie } from './staff-session-cookies.js';
+import { trustedProxyAddresses } from '../http/trusted-proxy.js';
 
 type HeaderSink = {
   values: string[];
@@ -96,17 +97,23 @@ test('setStaffSessionCookie ignores forwarded proto unless proxy headers are tru
 test('setStaffSessionCookie marks Secure behind trusted HTTPS proxy', () => {
   const previousTrustProxyHeaders = process.env.TRUST_PROXY_HEADERS;
   process.env.TRUST_PROXY_HEADERS = 'true';
+  trustedProxyAddresses.add('172.20.0.3');
   try {
     const reply = createReply();
     setStaffSessionCookie(
       reply as never,
-      { protocol: 'http', headers: { 'x-forwarded-proto': 'https' } } as never,
+      {
+        protocol: 'http',
+        headers: { 'x-forwarded-proto': 'https' },
+        raw: { socket: { remoteAddress: '172.20.0.3' } },
+      } as never,
       'mfa',
       'token',
       60_000,
     );
     assert.equal(sessionCookieHeader(reply).includes('; Secure'), true);
   } finally {
+    trustedProxyAddresses.delete('172.20.0.3');
     if (previousTrustProxyHeaders === undefined) {
       delete process.env.TRUST_PROXY_HEADERS;
     } else {

@@ -287,6 +287,27 @@ export function discardDocumentByMfaInDb(deps: DocumentDeps, documentId: string)
   if (!allowedMfaDiscard.has(document.status)) {
     throw domainError('INVALID_TRANSITION');
   }
+  return markDocumentDiscardedByMfa(deps, document);
+}
+
+/** Called only after discharge has drained document work and purged the sandbox source. */
+export function discardDocumentOnDischargeInDb(
+  deps: DocumentDeps,
+  documentId: string,
+): MfaDocumentRow {
+  const document = requireDocumentByIdFromDb(deps, documentId);
+  if (
+    document.status === 'exported' ||
+    document.status === 'discarded_by_mfa' ||
+    document.status === 'discarded_by_patient'
+  ) {
+    return document;
+  }
+  return markDocumentDiscardedByMfa(deps, document);
+}
+
+function markDocumentDiscardedByMfa(deps: DocumentDeps, document: MfaDocumentRow): MfaDocumentRow {
+  const documentId = document.id;
   const updatedAt = deps.nowIso();
   applyDocumentStatusTransition(deps, {
     documentId,

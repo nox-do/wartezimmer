@@ -7,6 +7,9 @@ import { repoRootFromImportMeta } from './openapi-lib.mjs';
 
 const root = repoRootFromImportMeta(import.meta.url);
 const bundlePath = 'openapi/bundle.json';
+const previous = fs.existsSync(path.join(root, bundlePath))
+  ? fs.readFileSync(path.join(root, bundlePath))
+  : null;
 
 const generate = spawnSync(process.execPath, [path.join(root, 'scripts/bundle-openapi.mjs')], {
   cwd: root,
@@ -22,11 +25,7 @@ if (!fs.existsSync(path.join(root, bundlePath))) {
   process.exit(1);
 }
 
-const diff = spawnSync('git', ['diff', '--exit-code', '--', bundlePath], {
-  cwd: root,
-  stdio: 'inherit',
-});
-if (diff.status !== 0) {
+if (!previous || !previous.equals(fs.readFileSync(path.join(root, bundlePath)))) {
   console.error(`check-bundle-sync: ${bundlePath} out of date — run npm run bundle:openapi`);
   process.exit(1);
 }

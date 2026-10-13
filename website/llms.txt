@@ -24,9 +24,10 @@ SMS als optionaler externer Dienst. Kein Cloud-Backend als Betriebsvoraussetzung
 
 ## Verfügbarkeit
 Die Website wird für die Veröffentlichung vorbereitet. Öffentliche Download-
-und Quellcode-URLs sind noch zu ergänzen. Die eigene Wartezimmer-Lizenz Version 1.1
+und Quellcode-URLs sind noch zu ergänzen. Die eigene Wartezimmer-Lizenz Version 1.1 vom 13. Oktober 2026
 erlaubt kostenlose Nutzung und interne Anpassung für den eigenen Betrieb sowie
-beauftragte bezahlte Installation, Anpassung und Betreuung. Öffentliche Angebote
+beauftragte bezahlte Installation, Anpassung und Betreuung. Gemeinsame Installationen
+sind bei tatsächlicher betrieblicher Zusammenarbeit nach Abschnitt 2 erlaubt. Öffentliche Angebote
 bleiben den offiziellen Bezugsquellen vorbehalten, mit der geregelten Ausnahme
 für GitHub-Plattformrechte, Forks, automatische Quellcodearchive und Projektbeiträge.
 Unveränderte Fassungen dürfen kostenlos und nichtöffentlich unmittelbar an einzelne

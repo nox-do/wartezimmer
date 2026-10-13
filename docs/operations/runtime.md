@@ -3,7 +3,7 @@
 Stand: 2026-09-14 · am Code geprüft (`setup/src/docker.ts`, Compose Delivery/Dev)
 
 **Scope:** Was nach der Installation läuft — Services, Compose-Stacking, Ports/Volumes, Alltag.  
-Nicht: Release-Bau → [`delivery.md`](delivery.md) · LAN-TLS → [`tls.md`](tls.md) · Backup → [`backup.md`](backup.md) · Anbindungen → [`integrations.md`](integrations.md)
+Nicht: Manager-Bau → [Manager](../../manager/README.md) · LAN-TLS → [`tls.md`](tls.md) · Backup → [`backup.md`](backup.md) · Anbindungen → [`integrations.md`](integrations.md)
 
 ## 1. Zielbild
 
@@ -85,7 +85,7 @@ Staff-IP und prüft nach dem Apply die tatsächlichen Docker-Publishes.
 | Start / Stop / Neustart | Compose up / **stop** (Volumes bleiben) / kontrolliertes Recreate; gestoppter Stack → Start |
 | Logs                    | pro Service über Setup-API                                                                  |
 | Health                  | `GET /api/v1/ops/health` (Compose-Healthcheck + Support)                                    |
-| Update                  | Wartung → `.pfupdate` ([`delivery.md`](delivery.md) §5)                                     |
+| Update                  | Wartung → `.pfupdate` ([Manager](../../manager/README.md#wartung))                          |
 | Backup                  | Wartung → `.pfbackup` ([`backup.md`](backup.md))                                            |
 | Staff-PIN               | Standard nach Install **`0000`**; Reset in Manager-Wartung                                  |
 

@@ -49,7 +49,7 @@ aktive Website nach `dist/pages/`. Der reguläre Build bleibt gesperrt, solange
   gemeinsam aktualisieren; deaktivierte Buttons durch Downloadlinks ersetzen.
 - `lizenzen.html`: öffentlichen Quellcode-Link ergänzen. Der Build erzeugt
   `licenses/wartezimmer-LICENSE.txt` ausschließlich aus der Root-Datei `LICENSE`.
-  Maßgeblich ist Version 1.1
+  Maßgeblich ist Version 1.1 vom 13. Oktober 2026
   ohne Entwurfs- oder Arbeitsfassungskennzeichnung. Die Übersicht erklärt erlaubte
   Praxisnutzung, Anpassung und beauftragte IT-Leistungen sowie erlaubnispflichtige
   Download-, Produkt- und Softwaredienstangebote. GitHub-Forks, automatische

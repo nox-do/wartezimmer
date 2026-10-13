@@ -67,6 +67,7 @@ export type QueueVisitRow = {
   returnUntil: string | null;
   triageLevel: string | null;
   documentCount: number;
+  dischargeDocumentCount?: number;
   needsAssistance: boolean;
   terminalAssistancePending: boolean;
   escortTransferPending: boolean;

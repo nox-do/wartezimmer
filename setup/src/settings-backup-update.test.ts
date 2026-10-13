@@ -13,7 +13,7 @@ import {
 import { APP_DB_BASENAME, createLocalAppDataAccess } from './app-data-volume.js';
 import { readEnvMap } from './env-file.js';
 import { readManagerState } from './manager-state.js';
-import { buildTestPfupdateArchive } from './pfupdate-test-fixtures.js';
+import { buildTestPfupdateArchive } from './test-helpers/pfupdate-test-fixtures.js';
 import { applyPfupdate, UPDATE_PHASES } from './settings-backup-update.js';
 import type { SetupContext } from './setup-context.js';
 

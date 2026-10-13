@@ -585,6 +585,7 @@
         lifecycleGeneration,
         sessionGeneration,
       );
+      return result.ok;
     } finally {
       if (isSessionOperationCurrent(lifecycleGeneration, sessionGeneration)) {
         busyVisitId = null;
@@ -603,8 +604,8 @@
     }
     const lifecycleGeneration = lifecycle.captureLifecycle();
     const sessionGeneration = lifecycle.captureSession();
-    await runVisitAction(item.visitId, 'check_out');
-    if (isSessionOperationCurrent(lifecycleGeneration, sessionGeneration)) {
+    const succeeded = await runVisitAction(item.visitId, 'check_out');
+    if (succeeded && isSessionOperationCurrent(lifecycleGeneration, sessionGeneration)) {
       checkOutVisit = null;
     }
   }
@@ -659,6 +660,9 @@
     />
     <CheckOutConfirmModal
       ticket={checkOutVisit}
+      documentCount={
+        snapshot?.items.find((item) => item.visitId === checkOutVisit?.visitId)?.dischargeDocumentCount ?? 0
+      }
       busy={checkOutVisit !== null && busyVisitId === checkOutVisit.visitId}
       onConfirm={() => void confirmCheckOut()}
       onCancel={cancelCheckOut}

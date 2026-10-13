@@ -3887,6 +3887,11 @@
                               "waitMs": {
                                 "type": "integer"
                               },
+                              "dischargeDocumentCount": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "description": "Documents deleted by final checkout; zero for intermediate journey steps."
+                              },
                               "documentCount": {
                                 "type": "integer"
                               },
@@ -4185,6 +4190,16 @@
                                 "type": "string",
                                 "enum": ["called", "in_room", "directed"],
                                 "description": "called/in_room as today. directed = self_go underwegs zum Panel-Raum (Patient kann „Ich bin da“ / Angekommen quittieren)."
+                              },
+                              "dischargeDocumentCount": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "description": "Documents deleted by final checkout; zero for intermediate journey steps."
+                              },
+                              "documentCount": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "description": "Unprocessed documents; present for panels with discharge capability."
                               },
                               "calledAt": {
                                 "type": "string",
@@ -5300,6 +5315,88 @@
           },
           "409": {
             "description": "Invalid transition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["code", "message"],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Machine-readable API error code returned in Error responses.",
+                      "enum": [
+                        "INVALID_ARGUMENT",
+                        "INTERNAL_ERROR",
+                        "NOT_FOUND",
+                        "AUTH_UNAUTHORIZED",
+                        "AUTH_FORBIDDEN",
+                        "RATE_LIMITED",
+                        "VISIT_NOT_FOUND",
+                        "DOCUMENT_NOT_FOUND",
+                        "DOCUMENT_FORBIDDEN",
+                        "INVALID_TRANSITION",
+                        "ROOM_REQUIRED",
+                        "MISSING_CALLBACK_PHONE",
+                        "CHECKIN_LOCK_REQUIRED",
+                        "DAY_CLOSE_IN_PROGRESS",
+                        "INVALID_DAY_CLOSE_PHASE",
+                        "DAY_CLOSE_NOT_STARTED",
+                        "UNKNOWN_MESSAGING_PROVIDER",
+                        "REGISTRATION_LIMIT_REACHED",
+                        "CHECKIN_LOCKED",
+                        "CHECKIN_AUTH_PATH_DISABLED",
+                        "CHECKIN_CLOSED",
+                        "TOPIC_DISABLED",
+                        "TOPIC_CLOSED",
+                        "DOCUMENT_NOT_SCANNED",
+                        "EXPORT_BLOCKED_MALWARE",
+                        "OPS_SETTINGS_INVALID",
+                        "OPS_SETTINGS_STALE",
+                        "EMERGENCY_DISABLED",
+                        "EMERGENCY_NOT_FOUND",
+                        "SETUP_INCOMPLETE",
+                        "SETUP_ALREADY_COMPLETED",
+                        "SESSION_INVALID_TICKET",
+                        "SESSION_TICKET_NOT_ACTIVE",
+                        "SESSION_ALREADY_ACTIVE",
+                        "SESSION_UNAUTHORIZED",
+                        "SESSION_EXPIRED",
+                        "FORM_TEMPLATE_NOT_FOUND",
+                        "DOCUMENT_INTAKE_BLOCKED",
+                        "DOCUMENT_TEMPLATE_METADATA_INVALID",
+                        "DOCUMENT_SCHEMA_OUTDATED",
+                        "SANDBOX_UNAVAILABLE",
+                        "CAPTIVE_CLIENT_MISSING",
+                        "CAPTIVE_AUTH_FAILED",
+                        "CALL_ANNOUNCEMENT_OFFLINE",
+                        "ROOM_AT_CAPACITY",
+                        "ROOM_BLOCKED_TOPICS",
+                        "ROOM_BLOCKED_QUEUE",
+                        "ROOM_BLOCKED_CAPACITY",
+                        "RECALL_NOTIFY_RETRY_NOT_ALLOWED",
+                        "RECALL_WINDOW_EXPIRED",
+                        "UNKNOWN_TOPIC",
+                        "TERMINAL_OFFLINE",
+                        "TERMINAL_PHONE_INVALID",
+                        "TERMINAL_BIRTH_DATE_INVALID",
+                        "TERMINAL_LAST_NAME_INVALID"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "description": "Optional extra context for debugging."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Document deletion failed; discharge was not completed",
             "content": {
               "application/json": {
                 "schema": {
@@ -19395,6 +19492,11 @@
           "waitMs": {
             "type": "integer"
           },
+          "dischargeDocumentCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Documents deleted by final checkout; zero for intermediate journey steps."
+          },
           "documentCount": {
             "type": "integer"
           },
@@ -19774,6 +19876,11 @@
                 "waitMs": {
                   "type": "integer"
                 },
+                "dischargeDocumentCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Documents deleted by final checkout; zero for intermediate journey steps."
+                },
                 "documentCount": {
                   "type": "integer"
                 },
@@ -20029,6 +20136,16 @@
             "enum": ["called", "in_room", "directed"],
             "description": "called/in_room as today. directed = self_go underwegs zum Panel-Raum (Patient kann „Ich bin da“ / Angekommen quittieren)."
           },
+          "dischargeDocumentCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Documents deleted by final checkout; zero for intermediate journey steps."
+          },
+          "documentCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unprocessed documents; present for panels with discharge capability."
+          },
           "calledAt": {
             "type": "string",
             "format": "date-time"
@@ -20255,6 +20372,16 @@
                   "enum": ["called", "in_room", "directed"],
                   "description": "called/in_room as today. directed = self_go underwegs zum Panel-Raum (Patient kann „Ich bin da“ / Angekommen quittieren)."
                 },
+                "dischargeDocumentCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Documents deleted by final checkout; zero for intermediate journey steps."
+                },
+                "documentCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Unprocessed documents; present for panels with discharge capability."
+                },
                 "calledAt": {
                   "type": "string",
                   "format": "date-time"
@@ -20446,6 +20573,11 @@
                     },
                     "waitMs": {
                       "type": "integer"
+                    },
+                    "dischargeDocumentCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Documents deleted by final checkout; zero for intermediate journey steps."
                     },
                     "documentCount": {
                       "type": "integer"
@@ -20745,6 +20877,16 @@
                       "type": "string",
                       "enum": ["called", "in_room", "directed"],
                       "description": "called/in_room as today. directed = self_go underwegs zum Panel-Raum (Patient kann „Ich bin da“ / Angekommen quittieren)."
+                    },
+                    "dischargeDocumentCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Documents deleted by final checkout; zero for intermediate journey steps."
+                    },
+                    "documentCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Unprocessed documents; present for panels with discharge capability."
                     },
                     "calledAt": {
                       "type": "string",

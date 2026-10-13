@@ -17,7 +17,7 @@ import {
   listDevicePresence,
   resetDevicePresenceForTests,
 } from '../shared/ops/device-presence-registry.js';
-import { createInMemoryDeviceGrantStore } from '../shared/db/in-memory-device-grant-store.js';
+import { createInMemoryDeviceGrantStore } from '../test-helpers/in-memory-device-grant-store.js';
 import { registerAuthRoutes } from './auth-routes.js';
 import { registerOpsDeviceRoutes } from './ops/ops-device-routes.js';
 import type { AuthPinTarget } from '../api/auth-openapi-types.js';

@@ -65,6 +65,8 @@ export const PFUPDATE_REQUIRED_FILE_PATHS = [
 
 export const PFUPDATE_ALLOWED_FILE_PATHS = [
   ...PFUPDATE_REQUIRED_FILE_PATHS,
+  // New builders include the project license; older packages remain readable without it.
+  'LICENSE',
   ...PFUPDATE_OPTIONAL_GATEWAY_TEMPLATE_PATHS,
   ...PFUPDATE_OPTIONAL_PROXY_TEMPLATE_PATHS,
   ...PFUPDATE_OPTIONAL_PROXY_NOTICE_PATHS,

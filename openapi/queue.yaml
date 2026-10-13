@@ -80,6 +80,10 @@ components:
           format: date-time
         waitMs:
           type: integer
+        dischargeDocumentCount:
+          type: integer
+          minimum: 0
+          description: Documents deleted by final checkout; zero for intermediate journey steps.
         documentCount:
           type: integer
         hasMobilePhone:
@@ -440,6 +444,14 @@ components:
           description: >-
             called/in_room as today. directed = self_go underwegs zum Panel-Raum
             (Patient kann „Ich bin da“ / Angekommen quittieren).
+        dischargeDocumentCount:
+          type: integer
+          minimum: 0
+          description: Documents deleted by final checkout; zero for intermediate journey steps.
+        documentCount:
+          type: integer
+          minimum: 0
+          description: Unprocessed documents; present for panels with discharge capability.
         calledAt:
           type: string
           format: date-time
@@ -917,6 +929,12 @@ paths:
                 $ref: './common.yaml#/components/schemas/Error'
         '409':
           description: Invalid transition
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/Error'
+        '502':
+          description: Document deletion failed; discharge was not completed
           content:
             application/json:
               schema:

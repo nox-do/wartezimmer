@@ -16,6 +16,13 @@ const generatedFiles = [
   'app/src/api/generated/ops.fastify-schemas.ts',
 ];
 
+const before = new Map(
+  generatedFiles.map((file) => [
+    file,
+    fs.existsSync(path.join(root, file)) ? fs.readFileSync(path.join(root, file)) : null,
+  ]),
+);
+
 const generate = spawnSync(
   process.execPath,
   [path.join(root, 'scripts/generate-fastify-schemas.mjs')],
@@ -36,11 +43,8 @@ for (const relativePath of generatedFiles) {
     failed = true;
     continue;
   }
-  const diff = spawnSync('git', ['diff', '--exit-code', '--', relativePath], {
-    cwd: root,
-    stdio: 'inherit',
-  });
-  if (diff.status !== 0) {
+  const previous = before.get(relativePath);
+  if (!previous || !previous.equals(fs.readFileSync(path.join(root, relativePath)))) {
     failed = true;
     console.error(
       `check-fastify-schemas-sync: ${relativePath} out of date — run npm run generate:api-schemas`,

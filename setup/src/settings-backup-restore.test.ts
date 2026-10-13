@@ -27,7 +27,7 @@ import {
 } from './settings-backup-restore.js';
 import { packTlsSidecarArchive } from './tls-backup-sidecar.js';
 import { GENERATED_CADDYFILE_MARKER, resolveProxyTlsPaths } from './proxy-tls.js';
-import { testSetupContext } from './test-setup-context.js';
+import { testSetupContext } from './test-helpers/test-setup-context.js';
 
 const HEALTHY_COMPOSE = {
   running: true,
@@ -1153,7 +1153,7 @@ for (const failure of [null, 'listener', 'bindings'] as const)
   test(`restricted restore audits the installed release contract: ${failure ?? 'success'}`, async () => {
     const { DEFAULT_PORTAL_PROXY_CONTRACT } = await import('@wartezimmer/server-shared');
     const { runtimeAuditEnv, runtimeAuditCompose, runtimeAuditInterfaces } =
-      await import('./runtime-postcondition-test-fixtures.js');
+      await import('./test-helpers/runtime-postcondition-test-fixtures.js');
     const source = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-restore-audit-src-'));
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-restore-audit-dst-'));
     try {

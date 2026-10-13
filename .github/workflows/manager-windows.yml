@@ -24,6 +24,7 @@ jobs:
           cache: npm
       - run: node --test scripts/release-archive.test.mjs
       - run: npm ci
+      - run: npm run check:repository
       - run: npm run build:server-shared
       - run: npm run -w @wartezimmer/manager test:packaging
       - run: npm run -w @wartezimmer/setup typecheck

@@ -1,6 +1,11 @@
-# Things To Do Before Release
+# Migration und spätere Architekturarbeiten
 
 - [ ] Device-Authorizations-Cutover: TV, Terminal und alle Room-Panels **einmal** neu koppeln/enrollen; Außen-Panels brauchen einmal die gemeinsame Room-Panel-PIN (alte In-Memory-Sessions werden nicht übernommen)
+
+## Spätere Architekturarbeit (kein Release-Blocker)
+
+Verschachtelte Host-Transaktionen sind bereits durch Savepoints und einen Regressionstest abgesichert.
+
 - [ ] Flow-Core Transaktionsschnitt sauberziehen: `flow-core` mittelfristig transaktionsneutral machen oder zwei Modi anbieten
 - [ ] `checkIn()` innerhalb einer bestehenden Host-Transaktion sauber unterstützen
 - [ ] Optionalen Komfortpfad mit eigener Transaktion für Standalone-/PoC-Nutzung definieren

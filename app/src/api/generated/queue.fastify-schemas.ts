@@ -76,6 +76,10 @@ export const QueueItem = {
     waitMs: {
       type: 'integer',
     },
+    dischargeDocumentCount: {
+      type: 'integer',
+      minimum: 0,
+    },
     documentCount: {
       type: 'integer',
     },
@@ -423,6 +427,10 @@ export const QueueListMfaResponse = {
           waitMs: {
             type: 'integer',
           },
+          dischargeDocumentCount: {
+            type: 'integer',
+            minimum: 0,
+          },
           documentCount: {
             type: 'integer',
           },
@@ -645,6 +653,14 @@ export const RoomPanelItem = {
       type: 'string',
       enum: ['called', 'in_room', 'directed'],
     },
+    dischargeDocumentCount: {
+      type: 'integer',
+      minimum: 0,
+    },
+    documentCount: {
+      type: 'integer',
+      minimum: 0,
+    },
     calledAt: {
       type: 'string',
       format: 'date-time',
@@ -845,6 +861,14 @@ export const RoomPanelSnapshot = {
             type: 'string',
             enum: ['called', 'in_room', 'directed'],
           },
+          dischargeDocumentCount: {
+            type: 'integer',
+            minimum: 0,
+          },
+          documentCount: {
+            type: 'integer',
+            minimum: 0,
+          },
           calledAt: {
             type: 'string',
             format: 'date-time',
@@ -1015,6 +1039,10 @@ export const QueueListResponse = {
               },
               waitMs: {
                 type: 'integer',
+              },
+              dischargeDocumentCount: {
+                type: 'integer',
+                minimum: 0,
               },
               documentCount: {
                 type: 'integer',
@@ -1270,6 +1298,14 @@ export const QueueListResponse = {
               status: {
                 type: 'string',
                 enum: ['called', 'in_room', 'directed'],
+              },
+              dischargeDocumentCount: {
+                type: 'integer',
+                minimum: 0,
+              },
+              documentCount: {
+                type: 'integer',
+                minimum: 0,
               },
               calledAt: {
                 type: 'string',
@@ -2003,6 +2039,10 @@ export const GET_api_v1_queueResponse200 = {
               waitMs: {
                 type: 'integer',
               },
+              dischargeDocumentCount: {
+                type: 'integer',
+                minimum: 0,
+              },
               documentCount: {
                 type: 'integer',
               },
@@ -2257,6 +2297,14 @@ export const GET_api_v1_queueResponse200 = {
               status: {
                 type: 'string',
                 enum: ['called', 'in_room', 'directed'],
+              },
+              dischargeDocumentCount: {
+                type: 'integer',
+                minimum: 0,
+              },
+              documentCount: {
+                type: 'integer',
+                minimum: 0,
               },
               calledAt: {
                 type: 'string',
@@ -3196,6 +3244,80 @@ export const POST_api_v1_queue_visitId_transitionResponse404 = {
 } as const;
 
 export const POST_api_v1_queue_visitId_transitionResponse409 = {
+  type: 'object',
+  required: ['code', 'message'],
+  properties: {
+    code: {
+      type: 'string',
+      enum: [
+        'INVALID_ARGUMENT',
+        'INTERNAL_ERROR',
+        'NOT_FOUND',
+        'AUTH_UNAUTHORIZED',
+        'AUTH_FORBIDDEN',
+        'RATE_LIMITED',
+        'VISIT_NOT_FOUND',
+        'DOCUMENT_NOT_FOUND',
+        'DOCUMENT_FORBIDDEN',
+        'INVALID_TRANSITION',
+        'ROOM_REQUIRED',
+        'MISSING_CALLBACK_PHONE',
+        'CHECKIN_LOCK_REQUIRED',
+        'DAY_CLOSE_IN_PROGRESS',
+        'INVALID_DAY_CLOSE_PHASE',
+        'DAY_CLOSE_NOT_STARTED',
+        'UNKNOWN_MESSAGING_PROVIDER',
+        'REGISTRATION_LIMIT_REACHED',
+        'CHECKIN_LOCKED',
+        'CHECKIN_AUTH_PATH_DISABLED',
+        'CHECKIN_CLOSED',
+        'TOPIC_DISABLED',
+        'TOPIC_CLOSED',
+        'DOCUMENT_NOT_SCANNED',
+        'EXPORT_BLOCKED_MALWARE',
+        'OPS_SETTINGS_INVALID',
+        'OPS_SETTINGS_STALE',
+        'EMERGENCY_DISABLED',
+        'EMERGENCY_NOT_FOUND',
+        'SETUP_INCOMPLETE',
+        'SETUP_ALREADY_COMPLETED',
+        'SESSION_INVALID_TICKET',
+        'SESSION_TICKET_NOT_ACTIVE',
+        'SESSION_ALREADY_ACTIVE',
+        'SESSION_UNAUTHORIZED',
+        'SESSION_EXPIRED',
+        'FORM_TEMPLATE_NOT_FOUND',
+        'DOCUMENT_INTAKE_BLOCKED',
+        'DOCUMENT_TEMPLATE_METADATA_INVALID',
+        'DOCUMENT_SCHEMA_OUTDATED',
+        'SANDBOX_UNAVAILABLE',
+        'CAPTIVE_CLIENT_MISSING',
+        'CAPTIVE_AUTH_FAILED',
+        'CALL_ANNOUNCEMENT_OFFLINE',
+        'ROOM_AT_CAPACITY',
+        'ROOM_BLOCKED_TOPICS',
+        'ROOM_BLOCKED_QUEUE',
+        'ROOM_BLOCKED_CAPACITY',
+        'RECALL_NOTIFY_RETRY_NOT_ALLOWED',
+        'RECALL_WINDOW_EXPIRED',
+        'UNKNOWN_TOPIC',
+        'TERMINAL_OFFLINE',
+        'TERMINAL_PHONE_INVALID',
+        'TERMINAL_BIRTH_DATE_INVALID',
+        'TERMINAL_LAST_NAME_INVALID',
+      ],
+    },
+    message: {
+      type: 'string',
+    },
+    details: {
+      type: 'object',
+      additionalProperties: true,
+    },
+  },
+} as const;
+
+export const POST_api_v1_queue_visitId_transitionResponse502 = {
   type: 'object',
   required: ['code', 'message'],
   properties: {
@@ -4392,6 +4514,7 @@ export const queueSchemas = {
   POST_api_v1_queue_visitId_transitionResponse403,
   POST_api_v1_queue_visitId_transitionResponse404,
   POST_api_v1_queue_visitId_transitionResponse409,
+  POST_api_v1_queue_visitId_transitionResponse502,
   PUT_api_v1_queue_visitId_callback_phoneParams,
   PUT_api_v1_queue_visitId_callback_phoneRequestBody,
   PUT_api_v1_queue_visitId_callback_phoneResponse200,

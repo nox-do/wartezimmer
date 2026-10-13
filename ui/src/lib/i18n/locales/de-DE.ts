@@ -472,6 +472,8 @@ export const dict = {
     assistancePlacementSubmitting: 'Wird platziert…',
     checkOutModalTitle: 'Patient entlassen?',
     checkOutModalDesc: '{ticket} kann die Praxis verlassen?',
+    checkOutDocumentsWarning:
+      'Es sind noch {count} unbearbeitete Dokumente vorhanden. Beim Entlassen werden diese unwiderruflich gelöscht. Bitte benötigte Dokumente vorher speichern.',
     checkOutModalSubmit: 'Entlassen',
     checkOutModalSubmitting: 'Wird entlassen…',
     cancelVisitModalTitle: 'Wartenummer löschen?',

@@ -3,7 +3,7 @@ import type { Runtime } from '@wartezimmer/flow-core/server';
 import type { CoreDatabase } from '../db/database.js';
 import type { OpsSettings } from '../db/db-types.js';
 import { getBusinessDay } from '../db/database-time.js';
-import { emptyFlowCoreRuntimeForMocks } from '../flow-core/test-runtime-mocks.js';
+import { resolveQueueReadRuntime, type QueueReadRuntime } from '../flow-core/queue-read-runtime.js';
 import { getFlowCoreRuntime } from '../flow-core/flow-core-runtime.js';
 import { PF_FLOW_SURFACE_TV } from '../flow-core/sync-catalog-from-ops-settings.js';
 import { visitToQueueVisitRow } from '../flow-core/visit-queue-bridge.js';
@@ -25,7 +25,7 @@ export type TvQueueSnapshot = {
 type TvQueueItem = TvQueueSnapshot['items'][number];
 
 export type BuildTvQueueSnapshotInput = {
-  runtime: Runtime;
+  runtime: QueueReadRuntime;
   settings: OpsSettings;
   businessDay: string;
   checkinLocked: boolean;
@@ -80,16 +80,9 @@ export function buildTvQueueSnapshotFromFlowCore(
   };
 }
 
-function resolveFlowCoreRuntime(db: CoreDatabase): Runtime {
-  if (typeof db.getFlowCoreRuntimeInstance === 'function') {
-    return db.getFlowCoreRuntimeInstance();
-  }
-  return emptyFlowCoreRuntimeForMocks();
-}
-
 export function buildTvQueueSnapshot(db: CoreDatabase, revision: number): TvQueueSnapshot {
   return buildTvQueueSnapshotFromFlowCore({
-    runtime: resolveFlowCoreRuntime(db),
+    runtime: resolveQueueReadRuntime(db),
     settings: db.getOpsSettings(),
     businessDay: getBusinessDay(),
     checkinLocked: db.isCheckinLocked(),

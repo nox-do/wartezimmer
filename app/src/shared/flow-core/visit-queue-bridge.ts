@@ -2,7 +2,11 @@ import type { DatabaseSync } from 'node:sqlite';
 import type { Runtime } from '@wartezimmer/flow-core/server';
 import { runInTransaction } from '@wartezimmer/flow-core/server';
 import type { TransitionAction, VisitView, VisitStatus } from '@wartezimmer/flow-core';
-import { canTransition } from '@wartezimmer/flow-core';
+import {
+  canTransition,
+  completeJourneyStepPatch,
+  stepsForJourneyTemplate,
+} from '@wartezimmer/flow-core';
 import type {
   AbsenceMode,
   OpsSettings,
@@ -246,15 +250,20 @@ export function listVisitQueueRows(
       )
     : new Map();
 
+  const catalog = runtime.catalog();
   return visits
-    .map((visit) =>
-      visitToQueueVisitRow(
+    .map((visit) => {
+      const row = visitToQueueVisitRow(
         visit,
         settings,
         hostStates.get(visit.id),
         documentCounts.get(visit.id) ?? 0,
-      ),
-    )
+      );
+      return {
+        ...row,
+        dischargeDocumentCount: checkoutCompletesVisit(visit, catalog) ? row.documentCount : 0,
+      };
+    })
     .sort((left, right) => left.createdAt.localeCompare(right.createdAt));
 }
 
@@ -721,4 +730,17 @@ export function reassignVisitRoom(
   } catch (error) {
     mapFlowCoreTransitionError(error);
   }
+}
+
+export function checkoutCompletesVisit(
+  visit: VisitView,
+  catalog: ReturnType<Runtime['catalog']>,
+): boolean {
+  if (!visit.journeyTemplateId || visit.journeyStepIndex == null) return true;
+  const patch = completeJourneyStepPatch(
+    visit,
+    'done',
+    stepsForJourneyTemplate(visit.journeyTemplateId, catalog.journeySteps),
+  );
+  return !patch || ('journeyState' in patch && patch.journeyState === 'completed');
 }

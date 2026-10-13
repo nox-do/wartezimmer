@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import test from 'node:test';
 
 test(
@@ -70,7 +71,14 @@ if(args[0]==='save') process.stdout.write('fake docker payload for '+platform);
         const parsed = JSON.parse(manifest.stdout);
         assert.equal(parsed.platform, platform);
         assert.equal(parsed.imageDigests.proxy.platform, platform);
-        assert.equal(Object.keys(parsed.files).length, 9);
+        assert.equal(Object.keys(parsed.files).length, 10);
+        const license = spawnSync('tar', ['-xOf', archive, './LICENSE']);
+        assert.equal(license.status, 0, license.stderr.toString());
+        assert.deepEqual(license.stdout, fs.readFileSync('LICENSE'));
+        assert.equal(
+          parsed.files.LICENSE,
+          createHash('sha256').update(license.stdout).digest('hex'),
+        );
       }
       const updatePackage = path.join(output, 'test', 'existing.pfupdate');
       fs.writeFileSync(updatePackage, 'keep update package');

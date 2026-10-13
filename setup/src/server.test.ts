@@ -6,7 +6,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { createSetupRequestHandler, type SetupRequestHandlerOptions } from './server.js';
 import type { SetupContext } from './setup-context.js';
-import { testSetupContext } from './test-setup-context.js';
+import { testSetupContext } from './test-helpers/test-setup-context.js';
 import { SETUP_API_PROTOCOL_VERSION, SETUP_MANAGER_TOKEN_HEADER } from '@wartezimmer/server-shared';
 
 const testContext: SetupContext = {
