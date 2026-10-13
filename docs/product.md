@@ -7,26 +7,13 @@ Detailabläufe: [`flows.md`](flows.md) · Technik: [`architecture/system.md`](ar
 
 Lokales Praxis-System für Check-in, Warteschlange und Wartezimmer — **ohne Cloud-Pflicht**, Daten bleiben in der Praxis. Kein PVS-Ersatz.
 
-## Highlights
+## Eigenschaften
 
-- **Lokal** — Stack läuft in der Praxis; keine Cloud als Betriebsvoraussetzung
-- **Kein Lock-in am Kern** — Docker, OpenAPI, Host unter Kontrolle; Ausnahme nur bewusst gewählte Drittsysteme (SMS, später PVS/WLAN-Vendor) — das gilt für niemanden absolut
-- **Ein durchgängiger Flow** — Terminal, MFA-Warteliste, TV, Raum-Panel, optionales Portal (Upload/Anamnese) in einer Runtime
-- **Dokumente seriös** — Portal-Übergabe mit Sandbox (Scan/Vorschau/Form2PDF), nicht nur Wartenummern
-- **Günstiger Einstieg** — Ziel: preislich unter gebundenen PVS-/Kiosk-Paketen und unter/konkurrenzfähig zu Cloud-Aufrufern
-- **Mitwachsend** — Simple Routing default; Complex/Journeys optional für MVZ/mehrstufige Abläufe
-
-## Markt (Kurz)
-
-| Lager                   | Beispiele                                        | Typisch                                      |
-| ----------------------- | ------------------------------------------------ | -------------------------------------------- |
-| PVS-/TI-Kioske          | tomedo/docport, CGM, EVA, T2med-Partner          | eGK/VSDM, Hardware, tiefe PVS-Bindung, teuer |
-| Termin-Cloud + Check-in | samedi/mediDOK, dubidoc                          | Cloud-Kalender, Terminal/App als Add-on      |
-| Aufruf-/Queue-SaaS      | wartenmitAdana (~40–100 €/Monat), digitalSIGNAGE | Nummer + TV; oft Cloud, teils Gerätezwang    |
-
-**Wir dagegen:** mehr Flow als ein reines Aufrufsystem, weniger Bindung und Ballast als ein PVS-Terminal — lokal, ohne Hardware-Verkauf, ohne Captive-/Router-Produkt.
-
-**Noch schwächer als Kiosk-Marktführer:** produktives eGK/TI und tiefe PVS-Anbindung (bei uns Adapter/Phase 3). Das ist bewusst Abgrenzung, kein Feature-Versprechen.
+- **Lokaler Betrieb:** Docker-Stack in der Praxis, ohne Cloud-Backend als Voraussetzung.
+- **Gemeinsamer Ablauf:** Terminal, MFA-Warteliste, TV, Raum-Panel und Patientenportal.
+- **Dokumentverarbeitung:** Upload, Virenscan, Vorschau und Erstanamnese-PDF über die Sandbox.
+- **Kostenlose Nutzung im eigenen Betrieb:** nach der [Projektlizenz](../LICENSE).
+- **Routing nach Bedarf:** einfache Zuordnung von Thema zu Raum oder mehrstufige Journeys.
 
 ## Was wir haben (Kern)
 
@@ -46,16 +33,16 @@ vorhanden). Dieser Schalter ersetzt nicht die Projektlizenz. Eine Runtime, zwei 
 
 ## Was wir nicht sind / nicht liefern
 
-| Thema                      | Abgrenzung                                                                                                                                           |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Cloud als Pflicht**      | Kein Cloud-Backend als Produktkern                                                                                                                   |
-| **Patient-App**            | Kein App-Store-Download für Patienten (Portal im Browser; Abgrenzung, kein USP)                                                                      |
-| **PVS / KIS**              | Kein Praxisverwaltungssystem — Anbindung später per Adapter; heute CSV-Import-Ordner                                                                 |
-| **eGK-Hardware**           | Kein Kartenterminal-Produkt — eGK-Check-in ist Discovery/Adapter                                                                                     |
-| **WLAN / Captive**         | Keine Router, APs, Captive-Hardware, kein eigener Captive-Datenpfad — Portal + Wartenummer; später erweiterbare schlanke Adapter mit Manager-Auswahl |
-| **Gateway (openNDS)**      | Lab-Referenz, **nicht** Produktkern / Delivery-Default                                                                                               |
-| **Hardware-Verkauf**       | Hardware nur empfohlen, nicht verkauft                                                                                                               |
-| **Volles Internet-Expose** | Von außen nur Portal (Whitelist, geplant); MFA/Terminal/TV/Ops bleiben LAN                                                                           |
+| Thema                      | Abgrenzung                                                                                          |
+| -------------------------- | --------------------------------------------------------------------------------------------------- |
+| **Cloud als Pflicht**      | Kein Cloud-Backend als Produktkern                                                                  |
+| **Patient-App**            | Kein App-Store-Download für Patienten (Portal im Browser; Abgrenzung, kein USP)                     |
+| **PVS / KIS**              | Kein Praxisverwaltungssystem und kein Vendor-Adapter; Kontaktabgleich über CSV-Import-Ordner        |
+| **eGK-Hardware**           | Kein Kartenterminal-Produkt und kein produktiver TI-/eGK-Adapter                                    |
+| **WLAN / Captive**         | Keine Router, APs, Captive-Hardware oder Captive-Adapter; lokales Portal mit Wartenummer            |
+| **Gateway (openNDS)**      | Lab-Referenz, **nicht** Produktkern / Delivery-Default                                              |
+| **Hardware-Verkauf**       | Hardware nur empfohlen, nicht verkauft                                                              |
+| **Volles Internet-Expose** | Kein öffentliches Internet-Portal; die Oberflächen bleiben im Praxis- beziehungsweise Patientennetz |
 
 ## Lizenz und Nutzungsrechte
 

@@ -1,7 +1,5 @@
 # Neuinstallation und Recovery
 
-Stand: 2026-09-30. Diese Betriebsbeschreibung ist der aktuelle Vertrag für Erstinstallation, Neuinstallation und Recovery.
-
 ## Einstieg im Manager
 
 Der Manager verwendet `HostStatus.installation` vom Setup-Backend:
@@ -78,7 +76,7 @@ Der Status-Poll führt keinen Reset aus. Ein erneuter Commit mit denselben Paket
 verlangt auch bei ursprünglich `fresh` eine neue Bestätigung und setzt den Teilstand
 zurück. Der Vorgangsordner und `backups/` bleiben dabei erhalten.
 
-Entscheidung vom 2026-09-21: Ist eine interne oder vom Benutzer ausgewählte
+Ist eine interne oder vom Benutzer ausgewählte
 Sicherung unbrauchbar, bricht der betroffene Recovery-/Restore-Versuch mit einer
 verständlichen Ursache ab. Dafür gibt es keinen zusätzlichen Reparatur- oder
 Umgehungsablauf. Eine fehlende oder veränderte vorbereitete Sicherung wird nicht
@@ -109,7 +107,7 @@ Provider-Zugangsdaten und die TLS-Identität sind dagegen wiederherstellbare Pra
 Mutierende Aufrufe sowie die Recovery-Vorschau verwenden denselben Backend-Mutex.
 Das Backend prüft den Zustand erneut; ein Renderer-Flag ersetzt kein Gate.
 
-## Review-Nacharbeit (2026-09-21)
+## Prüfungen und Fehlerbehandlung
 
 Backup-Prüfung und Restore verwenden dieselbe HTTPS-Prüfung. Bleibt bestehendes
 HTTPS erhalten, bleibt auch dessen LAN-Adresse erhalten. Recovery-Restore hat
@@ -117,12 +115,9 @@ im Manager dasselbe Zeitlimit wie manueller Restore (zehn Minuten).
 
 Dateiauswahl- und Prüffehler beenden den Vorgang mit einer Meldung. Wiederholen
 wird nur nach erfolgreichem Rollback angeboten. Das eingebettete TLS-Manifest
-akzeptiert ausschließlich Version 2; eigene chmod-/ACL-Sonderbehandlung entfällt.
+akzeptiert ausschließlich Version 2.
 
-Automatisierte Tests, Typprüfung, Lint und Manager-Build sind geprüft.
-Der verbleibende E2E-Nachweis wird unter [offene Abnahmen](../open-items.md) geführt.
-
-## Windows-Vorbereitung
+## Windows
 
 Manager-Installer-Upgrade/-Deinstallation und fachliche Neuinstallation sind
 getrennte Vorgänge. NSIS entfernt keine Praxisdaten und führt keinen Setup-Reset
@@ -131,5 +126,5 @@ Journale bleiben maßgeblich. Beim Schließen oder Absturz des Managers endet
 seine Setup-API über den IPC-Lebenszyklus; bereits an Docker übergebene Aufträge
 sind damit nicht garantiert abgebrochen. Nach Wiederstart Zustand erneut lesen
 und die vorhandene Recovery verwenden. Kein Löschen ungeklärter Journale.
-Windows-Dateisperren und Recovery mit echten Containern sind noch abzunehmen:
-[Protokoll](../open-items.md#windows-abnahmeprotokoll).
+Bei blockierten Dateien den sperrenden Prozess beenden und den Zustand im Manager
+erneut prüfen, bevor Recovery wiederholt wird.

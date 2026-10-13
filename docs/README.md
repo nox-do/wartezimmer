@@ -45,17 +45,18 @@ Details und Ausnahmen regelt die Lizenz. Das Projekt ist Source-available.
 | [`operations/`](operations/)                   | IT / Release — Install, Compose, TLS, Backup   | [`operations/README.md`](operations/README.md)     |
 | [`../manager/README.md`](../manager/README.md) | Manager (Electron): Wizard, Setup-API, Wartung | —                                                  |
 
-## Plattformstatus und offene Abnahme
+## Betrieb und Entwicklung
 
-Der aktuelle Betriebsvertrag steht unter [`operations/`](operations/);
-historische Nicht-Produkt-Entwürfe liegen im
-[`Archiv`](archive/README.md); abgeschlossene Implementierungspläne sind über Git nachvollziehbar. Für das Portal bleibt es bewusst bei einem
-gemeinsamen Frontend- und App-Stack. Die Sicherheitsgrenze bilden die
-Restricted-Proxy-Positivliste und die serverseitige API-Autorisierung.
+Installation, Netzwerk, TLS und Wiederherstellung beschreibt die
+[Betriebsdokumentation](operations/README.md). Plattformvoraussetzungen und
+Paketformate stehen in der [Manager-Dokumentation](../manager/README.md).
+Die Netztrennung ist nach jeder Installation im konkreten Praxisnetz zu prüfen.
 
-Plattformfreigaben und noch fehlende praktische Nachweise stehen zentral in
-[Offene Abnahmen und Entscheidungen](open-items.md). Die praktischen macOS-Abnahmen und der Windows-Test sind bestätigt. Die
-NIC-Trennung ist nach jeder Installation vor Ort zu validieren. Entwicklung und aktive Labs: [Entwicklerwerkzeuge](development/README.md).
+Portal und Staff verwenden denselben Frontend- und App-Stack. Die Zugangsgrenze
+bilden die Restricted-Proxy-Positivliste und die serverseitige API-Autorisierung.
+
+Für lokale Tests stehen [Entwicklerwerkzeuge](development/README.md) bereit.
+Frühere Entwürfe und Website-Stände liegen im [Archiv](archive/README.md).
 
 ## API-Vertrag
 

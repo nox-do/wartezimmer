@@ -2,14 +2,14 @@
 
 > **Archiv (2026-09-04).** Nicht fortschreiben. Geltende Produktgrenze:
 > [`../operations/integrations.md`](../operations/integrations.md).
-> Portal-v1 / Netzisolation: [`../operations/praxis-it-network-isolation.md`](../operations/praxis-it-network-isolation.md).
+> Portal-v1 / Netzisolation: [`../operations/restricted-lifecycle.md`](../operations/restricted-lifecycle.md).
 > Zielrichtung (kurz): später eine **von uns erweiterbare** Liste schlanker
 > Captive-Adapter mit Auswahl im Manager — Details hier nur als Entwurf.
 
 Stand: 2026-09-03 · historisch · **nicht Teil von Portal-v1**
 
 Grundlage:
-[Praxis-IT-Hinweise zur Netzwerkisolation](../operations/praxis-it-network-isolation.md)
+[Patientenzugang und Netzwerkgrenzen](../operations/restricted-lifecycle.md)
 
 ## 1. Zielbild und Grenze
 

@@ -1,7 +1,5 @@
 # Dokumente — Sandbox & Anamnese-Vorlagen
 
-Stand: 2026-09-28 · Ist (Sandbox-Client, Compose-Volumes, `app/src/shared/forms/`)
-
 **Scope:** App↔Sandbox-Vertrag, Container/Pipeline, Formular-Template-Konvention.  
 Nicht: Compose-Ports allgemein → [`../operations/runtime.md`](../operations/runtime.md) · API-Rollen → [`apis.md`](apis.md)
 

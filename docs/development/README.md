@@ -1,11 +1,9 @@
-# Entwicklung und Review-Werkzeuge
+# Entwicklung und Testwerkzeuge
 
-- [Demo-Belegung](demo-data.md): wiederholbar Räume und fiktive Patienten im lokalen Docker-Stack anlegen.
+- [Demo-Belegung](demo-data.md): Räume und fiktive Patienten im lokalen Docker-Stack anlegen.
 - [TLS-Lab](tls-lab.md): isolierte Pebble-/acme-dns-/Caddy-Umgebung für TLS-Smokes.
-- [Core-Stack-Review-Prompt](./core-stack-review.md): optionale Vorlage für einen Review eines Quelldumps; kein Produktvertrag.
-- [Architektur](../architecture/README.md): aktueller Systemaufbau und Regeln.
-- [Offene Abnahmen und Entscheidungen](../open-items.md): noch nicht bestätigte Release-Gates und optionale Folgearbeiten.
+- [Architektur](../architecture/README.md): Systemaufbau und technische Regeln.
+- [Manager](../../manager/README.md): Entwicklung, Paketbau und Prüfungen der Installer.
 
-Historische Implementierungsschritte sind über Git nachvollziehbar. Neue Reviews
-werden nach Abschluss in aktuelle Verträge und gegebenenfalls offene Aufgaben
-überführt; sie bilden keine zweite dauerhafte Systembeschreibung.
+Die aktuelle Dokumentation beschreibt das Verhalten und die Grenzen der Software.
+Implementierungsschritte und frühere Prüfberichte sind über die Git-Historie nachvollziehbar.

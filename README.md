@@ -56,9 +56,14 @@ Die Auslieferung erfolgt über den **Wartezimmer Manager**, Erstinstallationspak
 - [Laufzeit, Konfiguration und Docker-Betrieb](docs/operations/runtime.md)
 - [HTTPS im Praxisnetz](docs/operations/tls.md)
 - [Backup und Wiederherstellung](docs/operations/backup.md)
-- [Netztrennung und Portalzugang](docs/operations/praxis-it-network-isolation.md)
+- [Netztrennung und Portalzugang](docs/operations/restricted-lifecycle.md)
 
-Das Projekt wird für die öffentliche Veröffentlichung vorbereitet. **macOS:** Die Software ist nutzbar. **Windows:** Der Test ist abgeschlossen; die NIC-Trennung zeigte sich stabil und sollte nach jeder Installation vor Ort validiert werden. Dokumentierte Plattformnachweise, ihre Grenzen und noch offene Prüfungen stehen unter [Offene Abnahmen und Entscheidungen](docs/open-items.md).
+Der Manager wird für macOS (Apple Silicon und Intel) sowie Windows 11 x64
+ausgeliefert. Der separate Patientenzugang benötigt eine Prüfung der Netztrennung
+im konkreten Praxisnetz. Plattformvoraussetzungen stehen in der
+[Manager-Dokumentation](manager/README.md), Einrichtung und Zugangsgrenzen unter
+[TLS](docs/operations/tls.md) und
+[Restricted-Lifecycle](docs/operations/restricted-lifecycle.md).
 
 ## Lokale Entwicklung
 

@@ -124,7 +124,6 @@ ohne Lifecycle-Feld behalten die bisherige Einstiegslogik.
 - Erfolgreiche Binding-Prüfungen sind aufklappbar, Abweichungen direkt sichtbar.
 - Übernehmen/Verwerfen nur im jeweils geänderten Bereich (Praxisadresse oder Proxy). Beide nutzen weiterhin denselben Entwurf und gemeinsamen Save/Discard. Sind beide geändert, verschwinden nach erfolgreichem Speichern beide Leisten. HTTPS und Patientenfreigabe haben getrennte Aktionen.
 - IP-Risiken stehen direkt am Kandidaten; leere Patienten-IP-Auswahl erklärt den nächsten Schritt. Netztrennung bleibt Aufgabe der Praxis-IT.
-- Button-Farbhierarchie ist noch nicht abschließend abgestimmt; [offene Entscheidung](../docs/open-items.md).
 
 ### Wartung
 
@@ -175,7 +174,7 @@ Vollständiger Install-Reset bleibt CLI: `npm run setup:reset`.
 
 Release-Pakete erzeugen: [`build-release-images.mjs`](../scripts/build-release-images.mjs) und [`build-pfupdate.mjs`](../scripts/build-pfupdate.mjs).
 
-## Internen macOS-Build erstellen
+## macOS-Build erstellen
 
 Vom Repo-Root:
 
@@ -189,7 +188,6 @@ Der gemeinsame Release-Ordner wird über `WARTEZIMMER_RELEASE_VERSION` gewählt
 Version im Dateinamen. Entpackte Apps und Builder-Dateien liegen ausschließlich
 unter `.tmp/build/manager/`.
 
-Dieser erste Phase-4a-Build ist bewusst unsigned/notarisiert **nicht**; er ist für interne Tests.
 Beim Packaging werden der kompilierte Setup-Server und die Delivery-Templates in die App-Ressourcen gelegt.
 Im gepackten Modus startet der Manager die Setup-API aus diesen Ressourcen und nutzt standardmäßig
 `~/Library/Application Support/Wartezimmer` als Install-Home.
@@ -215,7 +213,7 @@ Attach prüft denselben Handshake (Protokoll, Build-ID, Install-Home). Passt die
 
 **LAN rot nach DHCP-Wechsel:** Unter **Netzwerk** aktuelle WLAN-IP wählen und übernehmen (oder Assistent erneut).
 
-**LAN rot, lokal grün (Dev):** Shell-`HTTP_PROXY` leitet auch `192.168.*` um, wenn `NO_PROXY` nur `localhost` enthält. `proxy-toggle` muss RFC1918 ausschließen (`192.168.0.0/16`, `10.0.0.0/8`, …) oder Proxy für Praxis-Tests aus. Setup-Probes umgehen den Proxy seit 2026-06-26 direkt (`setup/src/probes.ts`).
+**LAN rot, lokal grün (Dev):** Shell-`HTTP_PROXY` leitet auch `192.168.*` um, wenn `NO_PROXY` nur `localhost` enthält. `proxy-toggle` muss RFC1918 ausschließen (`192.168.0.0/16`, `10.0.0.0/8`, …) oder Proxy für Praxis-Tests aus. Setup-Probes umgehen den Proxy direkt (`setup/src/probes.ts`).
 
 ## Typecheck
 
@@ -267,8 +265,7 @@ Downloads unter `dist/releases/<releaseVersion>/`:
 
 Manager-Version und Release-Version behalten ihre bisherigen Quellen;
 `WARTEZIMMER_RELEASE_VERSION` überschreibt weiterhin nur das Release-Verzeichnis.
-Build-Zwischenstände liegen unter `.tmp/build/manager/`. Der bisherige
-Universal-Download wurde nach `.tmp/build/manager/retired-universal/` verschoben.
+Build-Zwischenstände liegen unter `.tmp/build/manager/`.
 
 Ohne Override lädt der Builder die Electron-Distributionen für beide
 Architekturen. `WARTEZIMMER_ELECTRON_DIST` muss bei Verwendung auf einen Ordner
@@ -277,25 +274,14 @@ mit **beiden** unveränderten ZIPs zeigen:
 `electron-v<electronVersion>-darwin-arm64.zip`. Ein einzelnes ARM64-ZIP oder
 die lokale ARM64-`node_modules/electron/dist` reicht für beide Builds nicht aus.
 
-Die Apps bleiben wie bisher unsigned und nicht notarisiert. Ein nativer
-Intel-GUI-/Docker-Abnahmelauf muss auf einem Intel-Mac erfolgen.
+Die macOS-Apps werden ohne Signierung und Notarisierung ausgeliefert.
+Native Intel-GUI-/Docker-Tests erfolgen auf einem Intel-Mac.
 
-Build-Nachweis vom 2026-10-11: Manager **6.1.2**, Electron **44.4.3**,
-Release-Verzeichnis **6.1.1**. ARM64-DMG **113,3 MiB**, Intel-DMG **117,1 MiB**.
-Beide enthalten die kompakte Navigation mit Logo links vor „Status“. Je App
-wurden alle **13** Mach-O-Dateien auf die einzelne Zielarchitektur geprüft;
-ASAR und zusätzliche Ressourcen enthalten keine nativen Module. Setup-Smoke
-(Health, Token, Templates, Neustart, IPC-Disconnect) und GUI-Smoke bestanden
-für ARM64 nativ und für x64 unter Rosetta auf Apple Silicon. Die alte
-Universal-App wurde von der Prüfung für einzelne Architekturen zurückgewiesen.
+Die Projektlizenz liegt in `Contents/Resources/LICENSE`. Der Paketbau prüft,
+dass sie mit der kanonischen `LICENSE` übereinstimmt. Artefakte und Prüfsummen
+liegen unter `dist/releases/<releaseVersion>/`.
 
-Build-Nachweis vom 2026-10-12: Manager **6.1.3** für ARM64 und x64 gebaut und auf
-jeweils 13 native Mach-O-Dateien der Zielarchitektur geprüft. Beide Apps enthalten
-`Contents/Resources/LICENSE`. Paketierter Setup-Smoke bestanden: ARM64 nativ,
-x64 unter Rosetta. ARM64-GUI-Smoke bestanden. Artefakte und Prüfsummen liegen in
-`dist/releases/6.1.3/`.
-
-## Windows (Test abgeschlossen)
+## Windows
 
 `npm run dist:manager:win` erzeugt einen internen NSIS-Installer für x64.
 Ziel: Windows 11, lokaler Docker Desktop mit WSL2/Linux-Containern und Compose
@@ -305,9 +291,11 @@ separates Node/npm und fordert keine Administratorrechte an.
 Neue Daten liegen unter `%LOCALAPPDATA%\Wartezimmer`, außerhalb von Programm
 und ASAR.
 Das Betriebskonto bleibt über Installation, Docker-Betrieb und Updates gleich.
-Deinstallation darf Praxisdaten nicht entfernen. Windows-Pfadgrenzen,
-Signierung, Audit und Nachweise: [Plattformabnahmen](../docs/open-items.md).
-Der separate Patientenzugang ist unter Windows unterstützt. Die NIC-Trennung zeigte sich im Test stabil und ist nach jeder Installation im konkreten Netz zu validieren.
+Deinstallation entfernt keine Praxisdaten. Windows-Pfadgrenzen beschreibt
+[Runtime](../docs/operations/runtime.md), Dateirechte und Wiederherstellung
+[Backup](../docs/operations/backup.md).
+Der separate Patientenzugang ist unter Windows unterstützt. Die Netztrennung
+ist nach jeder Installation im konkreten Praxisnetz zu prüfen.
 
 Isolierter Runtime-Smoke nach `prepare:packaged`:
 
@@ -317,8 +305,9 @@ node manager/scripts/smoke-packaged-setup.mjs
 node manager/scripts/smoke-packaged-setup.mjs ".tmp/build/manager/win-unpacked/WartezimmerManager.exe" .tmp/build/manager/win-unpacked/resources
 ```
 
-Der Smoke verändert keinen Docker-Stack. Die verbleibenden Installer-/Docker-/
-GUI-Tests stehen im [Windows-Abnahmeprotokoll](../docs/open-items.md#windows-abnahmeprotokoll).
+Der Smoke prüft den paketierten Setup-Prozess, ohne einen Docker-Stack zu verändern.
+Installation, Update und Deinstallation sind separat mit einer isolierten
+Windows-Testinstallation zu prüfen; Praxisdaten müssen dabei erhalten bleiben.
 
 Windows verwendet die technischen Namen `WartezimmerManager.exe`,
 `UninstallWartezimmerManager.exe` und

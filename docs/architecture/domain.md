@@ -1,7 +1,5 @@
 # Domäne — Nummernkreis, Thema, Raum & Catalog
 
-Stand: 2026-08-31 · Ist am Code (`lane-code.ts`, Ops-Settings, flow-core Sync)
-
 **Scope:** Fachregeln für `laneCode` / topics / rooms; `ops_settings` vs. Catalog-Projektion.  
 Nicht: Routing-Modi/Journeys → [`routing.md`](routing.md) · Patientenflows → [`../flows.md`](../flows.md) · API-Rollen → [`apis.md`](apis.md) · Backup → [`../operations/backup.md`](../operations/backup.md)
 

@@ -16,27 +16,21 @@ Betrieb: [`../operations/`](../operations/) · Produkt/Abläufe: [`../product.md
 8. Logging          Pino-Root, wer welchen Logger nutzt
 ```
 
-| Schritt | Dokument                       | Status        |
-| ------- | ------------------------------ | ------------- |
-| 1       | [`system.md`](system.md)       | ausgearbeitet |
-| 2       | [`domain.md`](domain.md)       | ausgearbeitet |
-| 3       | [`routing.md`](routing.md)     | ausgearbeitet |
-| 4       | [`apis.md`](apis.md)           | ausgearbeitet |
-| 5       | [`realtime.md`](realtime.md)   | ausgearbeitet |
-| 6       | [`documents.md`](documents.md) | ausgearbeitet |
-| 7       | [`i18n.md`](i18n.md)           | ausgearbeitet |
-| 8       | [`logging.md`](logging.md)     | ausgearbeitet |
-
-**Stil:** Implementationsdokumente beschreiben den Ist-Stand. Verbindliche
-Architekturentscheidungen dürfen ein ausdrücklich gekennzeichnetes Zielmodell
-festlegen; sonstiger Ausblick bleibt Nicht-Produkt oder Discovery.
+| Thema         | Dokument                                       |
+| ------------- | ---------------------------------------------- |
+| System        | [Systemarchitektur](system.md)                 |
+| Domäne        | [Domänenmodell](domain.md)                     |
+| Routing       | [Routing](routing.md)                          |
+| API und Auth  | [API und Zugriffsregeln](apis.md)              |
+| Echtzeit      | [SSE und Presence](realtime.md)                |
+| Dokumente     | [Dokumentverarbeitung](documents.md)           |
+| Übersetzungen | [i18n](i18n.md)                                |
+| Logging       | [Logger und Datenschutz](logging.md)           |
+| Transaktionen | [Host und Flow-Core](transaction-ownership.md) |
 
 API-Vertrag (maschinenlesbar): `openapi/*.yaml` → `npm run generate:api` · Swagger Dev: `/api/docs`
 
 Manager: [Betriebsmodi und Action-Policy (Ist-Stand)](manager-operating-modes.md).
-
-Bewusste Abgrenzungen und Gründe gegen pauschale Zusammenlegungen:
-[Modulentscheidungen](design-decisions.md).
 
 ## Nicht hier
 
@@ -46,5 +40,3 @@ Bewusste Abgrenzungen und Gründe gegen pauschale Zusammenlegungen:
 | Patienten-/MFA-Abläufe        | [`../flows.md`](../flows.md)                                     |
 | Endpoint-Listen               | `openapi/`                                                       |
 | Captive/SMS/CSV-Grenzen       | [`../operations/integrations.md`](../operations/integrations.md) |
-
-- [Transaktions-Ownership und Migration](transaction-ownership.md): Host-/Flow-Core-Transaktionen und spätere Architekturarbeiten.

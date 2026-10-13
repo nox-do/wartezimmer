@@ -1,11 +1,9 @@
 # Logging
 
-Stand: 2026-09-04 · Ist am Code
-
 **Scope:** Welche Logger-Schicht wo gilt, Level/`LOG_LEVEL`, Abgrenzung CLI/UI.  
 Nicht: Container-Log-Rotation → [`../operations/runtime.md`](../operations/runtime.md)
 
-## 1. Entscheidung
+## 1. Logger pro Kontext
 
 Ein **gemeinsamer Pino-Root** pro Prozess (über `buildFastifyLoggerOptions` /
 `createModuleLogger` in `@wartezimmer/server-shared/logger`). Fastify und Hintergrundcode
@@ -51,15 +49,3 @@ dort (die kommen nur über `request.log`).
 Keine Klartext-PII (Name, Mobil, DOB), keine Secrets (`AUTH_KEY_*`, PINs,
 Tokens), keine vollständigen Dokument-/Upload-Inhalte. Fehlertexte und IDs
 (Visit/Document/Event) sind ok, wenn fachlich nötig.
-
-## 5. Abgleich (Review)
-
-| Stelle                                                      | Urteil                           |
-| ----------------------------------------------------------- | -------------------------------- |
-| Fastify `app` / Maintenance / Sandbox                       | Root-Pino — ok                   |
-| Outbox-Worker, DB-TX, Export, Sandbox-Cleanup, Praxiszeiten | Module-Logger — ok               |
-| Contact-Lookup Day-Refresh                                  | bekommt `FastifyBaseLogger` — ok |
-| `sandbox-log` nur Bootstrap                                 | ok (Policy §1)                   |
-| CLI / Smoke / Manager `console`                             | ok                               |
-| UI ohne Server-Logger                                       | ok                               |
-| Früherer App-`createLogger` (`console`-Wrapper)             | **entfernt** zugunsten Pino      |

@@ -1,7 +1,5 @@
 # Backup, Restore & Settings-Erhalt
 
-Stand: 2026-09-29 · am Code geprüft (`settings-backup*.ts`, `tls-backup*.ts`, Maintenance `:8082`)
-
 **Scope:** Was in `.pfbackup` liegt, Restore, eingebettete HTTPS-Daten, gemeinsames Fresh-DB-Muster mit Update.
 
 Nicht: `.pfupdate`-Paketformat → [Formatvertrag](../../packages/server-shared/src/pfupdate.ts) · LAN-TLS Betrieb → [`tls.md`](tls.md)
@@ -20,7 +18,7 @@ Eine Installation = **eine Praxis**, Stack lokal. Upgrade-/Restore-Vertrag: **Fr
 | **Projektion** (flow-core-Catalog)     | Nein                       | Neu generieren                                      |
 | **Runtime-DB**                         | Nein                       | Verwerfen; Gerätefreigaben nach Restore leer (§3.2) |
 
-**Sicherheitsmodell (Beta):** Keine anwendungsseitige Backup-Verschlüsselung, kein Cloud-KMS, keine MFA-PIN fürs Backup. Provider-API-Keys liegen in DB und `.pfbackup` im Klartext — Datei und Datenträger schützen. Ein Hinweis im Backup-Bereich vor Erstellen/Export erklärt dies sowie mögliche private HTTPS-Schlüssel. Kein zusätzlicher Dialog und keine Wiederholung in der Restore-Vorschau.
+**Sicherheitsmodell:** Keine anwendungsseitige Backup-Verschlüsselung, kein Cloud-KMS, keine MFA-PIN fürs Backup. Provider-API-Keys liegen in DB und `.pfbackup` im Klartext — Datei und Datenträger schützen. Ein Hinweis im Backup-Bereich vor Erstellen/Export erklärt dies sowie mögliche private HTTPS-Schlüssel. Kein zusätzlicher Dialog und keine Wiederholung in der Restore-Vorschau.
 
 ## 2. Artefakt `.pfbackup`
 
@@ -143,17 +141,15 @@ Recovery nach Neuinstallation: [Ablauf und Fehlerfälle](reinstall-recovery.md).
 
 ## Windows: Dateisicherheit und Wiederherstellung
 
-Die Windows-Vorbereitung ändert weder Backup-Format noch Löschgrenzen externer
-Import-/Exportordner. Vor Restore-Cutover werden übernommene Windows-Hostpfade
-auf unterstützte lokale Pfade geprüft. In der Windows-Beta ab Manager
-6.1.2-beta.1 wird ein aktiver Restricted-Zugang über die bestehenden lokalen
-Binding- und Runtime-Prüfungen validiert; die pauschale Windows-Sperre entfällt. Cross-OS-Backups mit macOS-/WSL-/UNC-
-Hostpfaden sind damit nicht still unverändert einspielbar.
+Unter Windows gelten dieselben Backup-Formate und Löschgrenzen externer
+Import-/Exportordner. Vor Restore-Cutover werden übernommene Hostpfade auf
+unterstützte Windows-Pfade geprüft. Ein aktiver Restricted-Zugang wird über
+Binding- und Runtime-Prüfungen validiert. Cross-OS-Backups mit macOS-/WSL-/UNC-
+Hostpfaden lassen sich nicht unverändert einspielen.
 
 TLS-Archive und Release-Archive verwerfen auch Windows-Gerätenamen,
 Laufwerkspräfixe, ADS-Doppelpunkte, Backslashes, Links und Namenskollisionen
-nach Groß-/Kleinschreibung. Unter Windows wird das System-`tar.exe` verwendet;
-sein echter Roundtrip ist Bestandteil der Windows-CI/Abnahme.
+nach Groß-/Kleinschreibung. Unter Windows wird das System-`tar.exe` verwendet.
 
 POSIX-Modi 0600/0700 beweisen unter Windows **keine** private ACL. Home,
 Rollback-Snapshots und temporäre TLS-Dateien müssen im geschützten Profil des
@@ -165,6 +161,6 @@ angelegt; Secret-Inhalte werden nicht in die API übernommen.
 Dateien werden vor Journal-Commit geflusht. Windows kann über diese Node-API
 kein POSIX-Directory-fsync leisten. Kurze Rename-Sperren werden begrenzt erneut
 versucht, ohne das alte Ziel vorher zu löschen. Dauerhafte Sperren brechen ab;
-Journale und Snapshots bleiben Grundlage des Wiederanlaufs. Ein bestandener
-Unit-Test ersetzt keinen NTFS-/Antivirus-/Stromausfallnachweis. Konkrete Schritte:
-[Windows-Abnahme](../open-items.md#windows-abnahmeprotokoll).
+Journale und Snapshots bleiben Grundlage des Wiederanlaufs. Bei Dateisperren
+den sperrenden Prozess ermitteln und den Vorgang nach Freigabe über die
+vorhandene Recovery wiederholen.

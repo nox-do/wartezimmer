@@ -1,7 +1,5 @@
 # Restricted-Lifecycle: Entwurf, Commit und Updatevertrag
 
-Stand: 17.09.2026.
-
 ## NIC-Auswahl
 
 Ein Refresh aktualisiert den beobachteten Zustand, erhält aber eine noch gültige
@@ -69,19 +67,16 @@ SHA-256-Hash. Der Hash identifiziert die erzeugte Policy; er ersetzt weder Caddy
 Validierung noch Listenerprüfung. Das neue Restricted-Journal betrifft Apply/Remove;
 es ist kein allgemeines crashfestes Journal für den gesamten Software-/DB-Updatepfad.
 
-## Nachweise und verbleibende Produktabnahme
+## Plattformen und Netzwerkgrenze
 
-Automatisierte Tests prüfen NIC-Drafts, SIGKILL mit anschließender Recovery,
-Trennung von vorläufigem und bestätigtem Env, Autostart-Overlay, Commit erst nach
-Audit, Zielrelease-Routenwechsel und Update-Rollback bei Validierungs-/Auditfehlern.
-Die isolierte Caddy-Integration prüft echte Host-/SNI-/Methodenabweisungen.
+Der separate Patientenzugang wird unter macOS und Windows unterstützt.
+Einrichtung und Start erfordern die TLS-, DNS-, Binding- und Listenerprüfungen.
+Die Praxis-IT prüft die Trennung von Praxis- und Patientennetz nach jeder
+Installation und bei Änderungen an Adressen, Firewall oder Netzadaptern.
+Dazu gehören erlaubte Zugriffe, abgewiesene Praxisrouten aus dem Patientennetz
+und das Verhalten nach Docker-/Host-Neustart oder Verlust der gebundenen Adresse.
 
-Reale Netzwerk-/Neustartabnahmen werden zentral unter [offene Abnahmen](../open-items.md) geführt. Portal und Staff verwenden bewusst denselben Frontend- und
-App-Stack. Die Restricted-Grenze wird durch die Proxy-Positivliste sowie die
-serverseitige API-Autorisierung erzwungen; ein separates Portal-Bundle ist nicht
-geplant.
-
-Windows ab Manager 6.1.2: Einrichtung und Start sind mit TLS-, DNS-, Binding-
-und Listenerprüfungen freigegeben. Das zusätzliche Betatest-Logging ist entfernt.
-Betrieb und historische Abnahme: [Windows-Patientenzugang](windows-portal-beta.md).
-Die reale Netzabnahme bleibt Bestandteil der jeweiligen Installation.
+Portal und Staff verwenden denselben Frontend- und App-Stack. Die Zugangsgrenze
+bilden die Proxy-Positivliste und die serverseitige API-Autorisierung. Ein
+IP-Binding allein garantiert keine Trennung nach Eingangsinterface; Firewall,
+Routing und Netzadapter bleiben Aufgabe der Praxis-IT.

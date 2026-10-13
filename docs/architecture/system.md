@@ -1,7 +1,5 @@
 # System — Container, Module, Persistenz
 
-Stand: 2026-09-01 · Ist am Code
-
 **Scope:** Stack, logische Komponenten, Code-Schnitt, Persistenz, Tagesreset, Schutzklassen.  
 Nicht: Domänendetail → [`domain.md`](domain.md) · SSE → [`realtime.md`](realtime.md) · Sandbox-Detail → [`documents.md`](documents.md) · Compose/Ports → [`../operations/runtime.md`](../operations/runtime.md)
 
@@ -31,17 +29,17 @@ Kritische Daten bleiben logisch von unkritischen Betriebsdaten getrennt (§2).
 
 Fachliche Schichten im Monolithen — kein Microservice-Schnitt. Abläufe: [`../flows.md`](../flows.md).
 
-| #   | Komponente           | Schutz                    | Kurz                                                                          |
-| --- | -------------------- | ------------------------- | ----------------------------------------------------------------------------- |
-| 1   | Frontend Gateway     | unkritisch                | Terminal, MFA, TV, Portal, Raum-Panel; SSE → [`realtime.md`](realtime.md)     |
-| 2   | Check-in & Ticket    | unkritisch                | Wartenummer (`laneCode`), Portal-Session; keine Klarnamen in Queue            |
-| 3   | Queue & Aufruf       | unkritisch                | Status, TV, Rückhol-Fenster, optional `roomId`                                |
-| 4   | Identity             | kritisch                  | PII für MFA (Mobil, DOB; eGK nur Discovery)                                   |
-| 5   | Dokumente            | kritisch                  | Upload, Anamnese-Output, Host-Export; Vorschau nur Sandbox                    |
-| 6   | Sandbox Adapter      | kritisch, isoliert        | Preview-Custody — [`documents.md`](documents.md)                              |
-| 7   | Tagesbetrieb & Reset | quer                      | Check-in-Sperre, Day-Close/Reset, Ops, Notfall                                |
-| 8   | SMS Adapter          | extern                    | Rückhol-SMS über Messaging-Provider                                           |
-| 9   | WLAN-/Captive        | extern, **nicht Produkt** | später erweiterbare schlanke Adapter + Manager-Auswahl — kein Gateway-Produkt |
+| #   | Komponente           | Schutz                    | Kurz                                                                      |
+| --- | -------------------- | ------------------------- | ------------------------------------------------------------------------- |
+| 1   | Frontend Gateway     | unkritisch                | Terminal, MFA, TV, Portal, Raum-Panel; SSE → [`realtime.md`](realtime.md) |
+| 2   | Check-in & Ticket    | unkritisch                | Wartenummer (`laneCode`), Portal-Session; keine Klarnamen in Queue        |
+| 3   | Queue & Aufruf       | unkritisch                | Status, TV, Rückhol-Fenster, optional `roomId`                            |
+| 4   | Identity             | kritisch                  | PII für MFA (Mobil, DOB; eGK nur Discovery)                               |
+| 5   | Dokumente            | kritisch                  | Upload, Anamnese-Output, Host-Export; Vorschau nur Sandbox                |
+| 6   | Sandbox Adapter      | kritisch, isoliert        | Preview-Custody — [`documents.md`](documents.md)                          |
+| 7   | Tagesbetrieb & Reset | quer                      | Check-in-Sperre, Day-Close/Reset, Ops, Notfall                            |
+| 8   | SMS Adapter          | extern                    | Rückhol-SMS über Messaging-Provider                                       |
+| 9   | WLAN-/Captive        | extern, **nicht Produkt** | Praxis-IT betreibt WLAN und Captive-Hardware; keine Vendor-Adapter        |
 
 ```mermaid
 flowchart LR

@@ -1,27 +1,22 @@
 # Integrationen — Grenzen
 
-Stand: 2026-09-04 · Abgleich [`product.md`](../product.md), Code/Manager, Archive
-
 **Scope:** Was Wartezimmer anbindet oder bewusst **nicht** ist.
-Status: **implementiert** · **geplant** · **Discovery**
 
 Nicht: LAN-TLS/Proxy → [`tls.md`](tls.md) · Compose-Alltag → [`runtime.md`](runtime.md)
 
-## 1. Guest-WLAN / Captive — Grenze + später Adapter
+## 1. Guest-WLAN und Captive-Grenzen
 
 |                       |                                                                                                                                                                                                                                                                                   |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Wir liefern**       | Portal-UI (`/portal/*`), Wartenummer-Prüfung, Session-API                                                                                                                                                                                                                         |
 | **Wir liefern nicht** | Router, AP, Captive-Hardware, eigenen Captive-Datenpfad (DHCP/Firewall/`ndsctl`)                                                                                                                                                                                                  |
-| **Später (nicht v1)** | Erweiterbare Liste **schlanker** Captive-Adapter (von uns gepflegt) mit **Auswahl im Manager**; Praxis-IT bleibt Betreiber von AP/Controller                                                                                                                                      |
 | **Session-Hooks**     | `sessions/captive-authorize` (Portal → App; `wlanAuthorized` immer `false` bis Adapter), `sessions/verify-ticket-code` (S2S Bearer `AUTH_KEY_CAPTIVE` / Rolle `captive`)                                                                                                          |
 | **Manager heute**     | Gateway stets `enabled: false` (`DISABLED_GATEWAY_PLAN`); Fokus Restricted-Netz / Portal-URL — kein Captive-Wizard in Portal-v1                                                                                                                                                   |
 | **Lab**               | openNDS-Gateway-Stack **entfernt** aus dem Repo (Compose/`gateway/`); Historie: [`../archive/gateway-captive-portal.md`](../archive/gateway-captive-portal.md); Adapter-Entwurf: [`../archive/roadmap-captive-portal-adapters.md`](../archive/roadmap-captive-portal-adapters.md) |
 
-WLAN-Hardware bleibt Praxis-IT. Internet-Portal/Whitelist = **nicht Produkt** (Outlook).
+WLAN-Hardware bleibt Praxis-IT. Ein öffentliches Internet-Portal gehört nicht zum Produktumfang.
 Restricted-IP-/Listener-Grenze (Portal-v1) ist davon getrennt und wird unter
-[`tls.md`](tls.md), [`restricted-lifecycle.md`](restricted-lifecycle.md) und
-[`praxis-it-network-isolation.md`](praxis-it-network-isolation.md) beschrieben.
+[`tls.md`](tls.md) und [`restricted-lifecycle.md`](restricted-lifecycle.md) beschrieben.
 
 ## 2. SMS / WhatsApp — Rückholbenachrichtigungen
 
@@ -45,15 +40,18 @@ Die MFA sieht „An Nachrichtendienst übergeben“ getrennt von „Zugestellt�
 
 Beim normalen Neustart bleiben Ergebnisse erhalten; unterbrochene Sendungen werden als unklar markiert. Nach Rückkehr oder Ablauf erfolgen keine weiteren Versuche. Tagesreset, Update und Restore behalten ihren bisherigen Vertrag: Laufzeitdaten werden verworfen. Providerseitig bereits übergebene Nachrichten lassen sich nicht zurückrufen. `ttl` wird auf die verbleibenden Rückholminuten begrenzt (mindestens eine Minute); SMS-Netze können diese Vorgabe ignorieren.
 
-### Einrichtung und echte Abnahme
+### Einrichtung und Funktionsprüfung
 
 1. In Ops → Messaging seven-API-Key, SMS-Absender und SMS-Aktivierung speichern. „Zugangsdaten hinterlegt“ bestätigt nur vorhandene Felder, keinen erfolgreichen Versand.
 2. WhatsApp bei seven einrichten: registrierte Absendernummer, API-Key mit WABA-Berechtigung und freigegebenes Template. Vorlage mit genau zwei Textparametern: `{{1}}` = Rückkehrzeit, `{{2}}` = Wartenummer. Praxisname im festen Vorlagentext hinterlegen; keine Diagnose oder Patientennamen aufnehmen. Beispiel: „Praxis Muster: Bitte kommen Sie bis {{1}} Uhr zurück. Ihre Wartenummer {{2}} bleibt bis dahin reserviert.“ Die Freigabe dieses Texts erfolgt beim Anbieter.
 3. Absender, Template-Name und freigegebene Sprache in Ops speichern und WhatsApp aktivieren. WhatsApp verwendet vorerst diese konfigurierte Sprache; SMS weiterhin die Check-in-Sprache.
 4. Auf kontrollierten Testgeräten SMS allein, WhatsApp und einen Empfänger ohne WhatsApp prüfen. Dabei tatsächlichen Empfang, Journalstatus und genau einen SMS-Fallback beobachten. Fehler-/Timeout-Fälle sind zusätzlich durch automatisierte Tests mit simulierten Antworten abgedeckt.
-5. Erst nach dieser Abnahme mit echten Patienten verwenden. Ohne eingerichtetem seven-Konto ist die Live-Abnahme offen.
+5. Erst nach erfolgreicher Funktionsprüfung mit Patienten verwenden. Anbietervereinbarung, Verwendungszweck und Speicherdauer legt die Praxis vor dem Einsatz fest.
 
-Sandbox-Abgleich vom 2026-10-08: Ein echter seven-Sandbox-Aufruf liefert HTTP 200, `success: "100"`, `debug: "true"` und `messages[0].id: null`. Praxis Flow erkennt dies als `simulated` und zeigt keine echte Zustellung an. Der Rückholhandler einschließlich Speicherung und MFA-Queue-Snapshot wurde damit in einer Wegwerf-Datenbank geprüft. Ohne echte Nachrichten-ID ist dies kein Nachweis für Journal-Zustellberichte oder WhatsApp-Fallback. Der Sandbox-Schlüssel wurde nicht in Repository oder App-Konfiguration gespeichert.
+Antworten der seven-Sandbox mit `debug: "true"` und ohne Nachrichten-ID werden
+als `simulated` angezeigt. Sie bestätigen keinen tatsächlichen Versand und liefern
+keinen Journal-Zustellbericht. Zustellung und WhatsApp-Fallback müssen mit dem
+eingerichteten Konto und kontrollierten Testempfängern geprüft werden.
 
 Providerverträge: [WhatsApp](https://docs.seven.io/en/rest-api/endpoints/whatsapp), [SMS](https://docs.seven.io/en/rest-api/endpoints/sms), [Journal](https://docs.seven.io/en/rest-api/endpoints/logbook).
 
@@ -61,17 +59,16 @@ Providerverträge: [WhatsApp](https://docs.seven.io/en/rest-api/endpoints/whatsa
 
 Smoke: `npm run smoke:messaging-recall`. API-Skizze: [`../architecture/apis.md`](../architecture/apis.md).
 
-## 3. Kontakt-CSV (PVS-nah) — implementiert; Vendor-PVS geplant
+## 3. Kontaktabgleich über CSV
 
-|              |                                                                                                              |
-| ------------ | ------------------------------------------------------------------------------------------------------------ |
-| **Heute**    | Import-Ordner (`CONTACT_LOOKUP_BASE_PATH` / Ops-Pfad), rekursiver CSV-Scan, Preview + Spalten-Mapping in Ops |
-| **Nicht**    | Vendor-PVS-/KIS-Adapter, PVS-UI im Patientenportal                                                           |
-| **Richtung** | Adapter pro PVS-Produkt (Discovery/geplant) — Stammdaten/Termine/Dokument-Übernahme                          |
+|           |                                                                                                              |
+| --------- | ------------------------------------------------------------------------------------------------------------ |
+| **Heute** | Import-Ordner (`CONTACT_LOOKUP_BASE_PATH` / Ops-Pfad), rekursiver CSV-Scan, Preview + Spalten-Mapping in Ops |
+| **Nicht** | Vendor-PVS-/KIS-Adapter, PVS-UI im Patientenportal                                                           |
 
 Check-in ohne CSV-Treffer bleibt möglich ([`flows.md`](../flows.md)).
 
-## 4. eGK — Discovery
+## 4. eGK — nicht implementiert
 
 |                  |                                                                                                                                   |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------------- |

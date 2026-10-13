@@ -1,20 +1,22 @@
-# Migration und spätere Architekturarbeiten
+# Transaktionen zwischen Host und Flow-Core
 
-- [ ] Device-Authorizations-Cutover: TV, Terminal und alle Room-Panels **einmal** neu koppeln/enrollen; Außen-Panels brauchen einmal die gemeinsame Room-Panel-PIN (alte In-Memory-Sessions werden nicht übernommen)
+## Atomare Schreibvorgänge
 
-## Spätere Architekturarbeit (kein Release-Blocker)
+Der Host öffnet in `app/src/shared/db/database.ts` die äußere SQLite-Transaktion.
+Core-Schreibvorgänge, Host-Zustand und Outbox-Einträge werden gemeinsam bestätigt
+oder zurückgerollt. Alle beteiligten Vorgänge verwenden dieselbe Verbindung.
 
-Verschachtelte Host-Transaktionen sind bereits durch Savepoints und einen Regressionstest abgesichert.
+## Verschachtelte Aufrufe
 
-- [ ] Flow-Core Transaktionsschnitt sauberziehen: `flow-core` mittelfristig transaktionsneutral machen oder zwei Modi anbieten
-- [ ] `checkIn()` innerhalb einer bestehenden Host-Transaktion sauber unterstützen
-- [ ] Optionalen Komfortpfad mit eigener Transaktion für Standalone-/PoC-Nutzung definieren
+`runInTransaction()` in `packages/flow-core/src/server/unit-of-work.ts` prüft
+`db.isTransaction`:
 
-## Architektur-Notiz: Transaktions-Owner
+- Ohne bestehende Transaktion verwendet der Flow-Core `BEGIN IMMEDIATE` und
+  anschließend `COMMIT` oder `ROLLBACK`.
+- Innerhalb einer Host-Transaktion verwendet er einen eigenen `SAVEPOINT`.
+  Erfolg gibt den Savepoint frei; ein Fehler rollt bis zum Savepoint zurück
+  und wird an den Aufrufer weitergegeben.
 
-- Uns ist ein Integrationsbruch zwischen Host und `flow-core` aufgefallen: beide Schichten wollten auf derselben SQLite-Connection die Write-Transaktion besitzen.
-- Der Host startet in `app/src/shared/db/database.ts` eine äußere Transaktion, damit Core-Write, Host-State und Outbox atomar zusammenbleiben.
-- `flow-core` hat in `packages/flow-core/src/server/unit-of-work.ts` zusätzlich selbst `BEGIN IMMEDIATE` geöffnet; das ist auf derselben SQLite-Connection nicht verschachtelbar.
-- Das Ergebnis war der Laufzeitfehler `cannot start a transaction within a transaction`, sichtbar im Docker-Log beim echten Terminal-Check-in.
-- Kurzfristiger Fix: innerer Core-Pfad über `SAVEPOINT`, damit verschachtelte Nutzung stabil läuft.
-- Mittelfristiges Ziel: klarer Ownership-Schnitt. Im Produkt sollte der Host der äußere Transaktions-Owner sein; `flow-core` sollte darin transaktionsneutral mitlaufen oder optional einen separaten Standalone-Modus anbieten.
+Das Freigeben eines Savepoints bestätigt die äußere Host-Transaktion nicht.
+Erst deren Abschluss schreibt den gesamten Vorgang dauerhaft fest. Weitere
+Schreibpfade müssen diese gemeinsame Transaktionsgrenze erhalten.

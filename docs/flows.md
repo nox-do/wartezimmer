@@ -4,26 +4,19 @@
 
 ## Funktionsübersicht der Runtime-UI
 
-Die Tabelle beschreibt die vorhandenen Oberflächen. Als geplant oder Discovery bezeichnete Punkte sind keine Produktzusage; [offene Fragen](open-items.md#fachliche-fragen-und-optionale-produktideen) werden getrennt geführt.
+Die Tabelle beschreibt die vorhandenen Oberflächen. Grenzen optionaler Anbindungen stehen unter [Integrationen](operations/integrations.md).
 
 | Bereich             | In Runtime-UI                                                                                                                                                                                                                                                                                                                                                                                                                     | Nur Backend/Mocks                                        |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | Terminal Happy Path | Phone/DOB (+49 fest), **Nachname+DOB** (optional per Ops), Themen, Bestätigung, MFA-Assist, Notfall, Terminal gesperrt, Themen-Zeitfenster (Backend-Filter), optional Bon-Druck (Kiosk), Sprachen de/en/tr/ru/uk (Patienten-UI; MFA wählt sichtbare Sprachen, Default nur DE)                                                                                                                                                     | Empfangs-Ausweg bei nicht verfügbarer Anmeldung / Themen |
-| Portal              | Wartenummer → Menü → Upload **und** Erstanamnese; Session-Abschluss (Formular → revoke, Upload → TTL 30 Min); Captive-Authorize-Hook (Lab)                                                                                                                                                                                                                                                                                        | Captive-Adapter später; Fragenkatalog-Review             |
+| Portal              | Wartenummer → Menü → Upload **und** Erstanamnese; Session-Abschluss (Formular → revoke, Upload → TTL 30 Min); Captive-Authorize-Hook (Lab)                                                                                                                                                                                                                                                                                        | Keine Captive-Adapter                                    |
 | MFA                 | Warteliste (SSE), Zonen, **Raum-Board** (grüne Spalte), **DnD** (WZ↔Räume), **Triage-Merker**, persistierter Anzeigename (`identity-ref`), Dokument-Vorschau (inkl. Deep-Link), Notfall (Ops-Stream), Quicksettings (**Terminal sperren**, Aufrufziel, Geräte-Presence/Pairing), Betrieb-Settings (WLAN-Promo, `returnWindowMinutes`), Rückhol-SMS, Themen-Reihenfolge per Drag, **Raum-Panel-Settings** (Tür + im Raum pro Raum) | Queue-Summary, Identity/Patient-Detail, PVS-Spalten      |
 | Raum-Panel          | Login pro Placement (`/room-panel`), Live-Snapshot (SSE), Ankunft/Entlassen/Aufruf aus `actions`, getrennte `callCandidates`-Liste                                                                                                                                                                                                                                                                                                | —                                                        |
 | TV                  | SSE, Aufruf, Chime, Pagination, Device-Pairing                                                                                                                                                                                                                                                                                                                                                                                    | —                                                        |
 
 **Echtzeit-Vertrag:** `docs/architecture/realtime.md` — Presence (offline) und Pairing (Code) sind getrennte SSE-Events; REST nur fuer Aktionen.
 
-Details und offene fachliche Punkte siehe Abschnitte pro Flow unten.
-
-**Bekanntes Verhalten (2026-10-07):** Erneutes Einchecken zum selben Thema erzeugt
-derzeit auch bei einem bereits offenen Visit eine weitere Wartenummer, am
-Terminal wie im MFA-Desktop. Kein Showstopper; ein Schutz mit Hinweis auf die
-bestehende Wartenummer wird für später empfohlen. Mehrere unterschiedliche
-Themen sollen weiterhin möglich sein. Einbaupunkt und Grenzen der
-Patientenerkennung: [Check-in-Guards](architecture/apis.md#bekanntes-verhalten-mehrfach-check-in-zum-selben-thema).
+Die folgenden Abschnitte beschreiben die Abläufe und ihre Grenzen.
 
 ## Produktprinzipien (Kurz)
 
@@ -31,7 +24,7 @@ Patientenerkennung: [Check-in-Guards](architecture/apis.md#bekanntes-verhalten-m
 - **Portal:** Wartenummer vom Terminal → Upload (TTL 30 Min) oder Anamnese (Session sofort zu)
 - **MFA:** Metadaten + Vorschau/Export/Verwerfen — kein Patient-Download im Portal
 - **SMS:** nur beim MFA-Rückholen (optional), nicht am Standard-Check-in
-- **Betrieb ≠ Patienten-Flow:** Manager und optionaler Proxy sind Host-/Netz-Hülle — siehe [Betrieb](#betrieb--manager-proxy-gateway); Captive-Hardware und Gateway-Container sind **nicht** Produktkern ([`integrations.md`](operations/integrations.md))
+- **Betrieb ≠ Patienten-Flow:** Manager und optionaler Proxy sind Host-/Netz-Hülle — siehe [Betrieb](#betrieb--manager-proxy-und-integrationsgrenzen); Captive-Hardware und Gateway-Container sind **nicht** Produktkern ([`integrations.md`](operations/integrations.md))
 
 ### SMS — wo ja, wo nein
 
@@ -46,7 +39,7 @@ Patientenerkennung: [Check-in-Guards](architecture/apis.md#bekanntes-verhalten-m
 **Wichtige Präzisierung „kein Einsehen“:**
 
 - Im **Patient-Portal**: keine Vorschau/Download durch Praxis — korrekt.
-- Am **MFA-Dashboard**: Metadaten + Liste, Übernahme/Verwerfen — das ist der geplante Abschluss (Phase 4 in der Journey).
+- Am **MFA-Dashboard**: Metadaten + Liste, Übernahme/Verwerfen — das ist der Abschluss der Dokumentverarbeitung.
 
 ---
 
@@ -58,12 +51,12 @@ Patientenerkennung: [Check-in-Guards](architecture/apis.md#bekanntes-verhalten-m
 
 ### Terminal-Betrieb: Kiosk + optional Drucker (Bon)
 
-| Komponente             | Pflicht?      | Zweck                                                                                                      |
-| ---------------------- | ------------- | ---------------------------------------------------------------------------------------------------------- |
-| **Kiosk-Modus**        | ja (Zielbild) | Vollbild, kein Browser-Chrome, kein Wegklicken, nach Timeout → Start (Idle später)                         |
-| **Thermo-/Bondrucker** | **optional**  | Wartenummer + Kurzinfo auf **Bon** — Patient hat etwas in der Hand, besonders bei `A-…` / `M-…` ohne Namen |
+| Komponente             | Pflicht?     | Zweck                                                                                                      |
+| ---------------------- | ------------ | ---------------------------------------------------------------------------------------------------------- |
+| **Kiosk-Modus**        | empfohlen    | Vollbild, kein Browser-Chrome, kein Wegklicken                                                             |
+| **Thermo-/Bondrucker** | **optional** | Wartenummer + Kurzinfo auf **Bon** — Patient hat etwas in der Hand, besonders bei `A-…` / `M-…` ohne Namen |
 
-**Bon-Inhalt (Skizze):** Praxisname, Wartenummer (groß), Anliegen (Themen-Kachel-Text) bzw. **„Empfang“** beim Pfad „Zur MFA“ (`M-…`) — nicht der interne Topic-Slug `mfa`, Uhrzeit/Datum. **Keine** Diagnose, minimal DSGVO.
+**Bon-Inhalt:** Praxisname, Wartenummer (groß), Anliegen (Themen-Kachel-Text) bzw. **„Empfang“** beim Pfad „Zur MFA“ (`M-…`) — nicht der interne Topic-Slug `mfa`, Uhrzeit/Datum. **Keine** Diagnose, minimal DSGVO.
 
 **Verhalten:**
 
@@ -84,7 +77,7 @@ Anmeldung (Start) ──┬── Rufnummer + Geburtsdatum ──┐
     → Bestätigung + Wartehinweis (Wartenummer)
 ```
 
-> Kein separater „Willkommen“-Screen — ein Tap weniger. Optional später: **Idle/Banner** am physischen Terminal (Logo, „Bitte berühren“), ohne eigenen Prozess-Schritt.
+> Das Terminal beginnt direkt mit der Auswahl des Anmeldeverfahrens; ein zusätzlicher Begrüßungs- oder Idle-Banner ist nicht implementiert.
 
 ### Terminal sperren (MFA, Quicksettings)
 
@@ -149,11 +142,11 @@ Patient wählt **ein** Hauptanliegen (große Kacheln):
 - Wartenummer: eindeutig pro Check-in, Portal-Session, Wartezimmer-Anzeige; **optional Bon** (s. Kiosk + Drucker)
 - Optional: Hinweis **Portal = Wartenummer eingeben** (Nummer nur vom Terminal, Flow 2; Captive nur wenn Praxis-IT das vorschaltet)
 
-### Offene Sprechstunde — Betrieb (Entscheidung v1)
+### Offene Sprechstunde
 
 Patient weiß: **jetzt oder bald** ist offene Sprechstunde. Thema `offen` verhält sich am Terminal wie jedes andere Thema: Check-in → Wartenummer → Wartezimmer.
 
-**Produktentscheidung (2026-06):** Ob das Wartezimmer „voll“ ist, entscheidet **immer die MFA** — nicht das Terminal. Es gibt **keinen** Terminal-Subflow mit drei Buttons (hier warten / in X Min. zurück / SMS am Terminal). Stattdessen:
+**Kapazität im Wartezimmer:** Ob das Wartezimmer „voll“ ist, entscheidet **immer die MFA** — nicht das Terminal. Es gibt **keinen** Terminal-Subflow mit drei Buttons (hier warten / in X Min. zurück / SMS am Terminal). Stattdessen:
 
 | Situation                       | Vorgehen                                                                                                                                  |
 | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
@@ -182,7 +175,7 @@ Patient weiß: **jetzt oder bald** ist offene Sprechstunde. Thema `offen` verhä
 
 **Bewusst nicht in v1:** persistiertes Setting `waitingRoomFull`, Terminal-Anzeige „mindestens X Min.“, Handynummer-Erfassung am Terminal für Rückruf, Bon mit Wiederkomm-Hinweis; Terminal bei vollem WZ mit drei Patienten-Optionen.
 
-Optionale Terminal-Anzeigen und Voraussetzungen für den SMS-Rollout: [offene fachliche Fragen](open-items.md#fachliche-fragen-und-optionale-produktideen).
+Rückholnachrichten und ihre Einrichtung beschreibt [Integrationen](operations/integrations.md#2-sms--whatsapp--rückholbenachrichtigungen).
 
 ### Prioritaet / Sortierung
 
@@ -193,23 +186,16 @@ Optionale Terminal-Anzeigen und Voraussetzungen für den SMS-Rollout: [offene fa
 ### Sonderfälle
 
 - Unbekannte Rufnummer: Check-in läuft weiter; MFA sieht keinen Namen und kann bei Bedarf nachpflegen.
-- Doppel-/Mehrfach-Check-in: kein Beta-Blocker; MFA sortiert doppelte oder falsche Zettel im Tagesbetrieb aus.
+- Doppel-/Mehrfach-Check-in: Die MFA prüft doppelte Anmeldungen und bereinigt sie im Tagesbetrieb.
 - Nicht verfügbare Themen / deaktivierte Anmeldung: Terminal führt zum Empfang.
 - eGK-Lesefehler / abgelaufen: zurückgestellt mit eGK-Integration.
 
-### Mögliche Ergänzungen zur Themenauswahl (Review)
+### Themenauswahl an die Praxis anpassen
 
-| Vorschlag                                                    | Warum                                       |
-| ------------------------------------------------------------ | ------------------------------------------- |
-| **AU / Krankschreibung / Attest**                            | In DE sehr häufig, oft nicht nur „Rezept“   |
-| **Akut — ich fühle mich akut unwohl**                        | Triage / Priorität, ggf. sofort MFA         |
-| **Befund / Laborergebnis besprechen**                        | eigene Wartezeit, nicht „Labor abgeben“     |
-| **Impfung / Spritze**                                        | eigener Slot / MFA-Vorbereitung             |
-| **Verordnung / Hilfsmittel / Verband**                       | nicht immer „Rezept“ im Patienten-Sinn      |
-| **Formulare / Unterlagen abgeben**                           | Überschneidung Flow 2 Upload — ggf. Verweis |
-| **Administratives** (Überweisung mitbringen, Adresse ändern) | kurz, MFA-Queue                             |
-
-→ Initiale Themenliste ist auf die aktuellen HTML-Demo-Kacheln festgelegt; Erweiterungen folgen spaeter gezielt pro Praxis.
+Die Praxis konfiguriert Themen und ihre Verfügbarkeit in den MFA-Einstellungen.
+Bezeichnungen sollen die tatsächlichen Anliegen der Patienten beschreiben;
+Routing und Zuständigkeiten müssen zu den angebotenen Themen passen.
+Siehe [Routing](architecture/routing.md).
 
 ---
 
@@ -219,10 +205,9 @@ Optionale Terminal-Anzeigen und Voraussetzungen für den SMS-Rollout: [offene fa
 
 ### Produktgrenze (WLAN / Captive)
 
-| Wir liefern                                                                    | Wir liefern nicht                                                                                                               |
-| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
-| Portal-UI (`/portal/*`), Wartenummer-Prüfung, Session-API                      | Router, APs, Captive-Portal-Hardware, eigenen Captive-Datenpfad                                                                 |
-| später: erweiterbare schlanke Captive-Adapter (von uns) mit Auswahl im Manager | openNDS-`gateway`-Container als Produktkern (nur Lab: [`archive/gateway-captive-portal.md`](archive/gateway-captive-portal.md)) |
+| Wir liefern                                               | Wir liefern nicht                                               |
+| --------------------------------------------------------- | --------------------------------------------------------------- |
+| Portal-UI (`/portal/*`), Wartenummer-Prüfung, Session-API | Router, APs, Captive-Portal-Hardware, eigenen Captive-Datenpfad |
 
 **Praxis-IT** stellt Gast-WLAN / Captive. Nach Freischaltung (oder ohne Captive: direkter Browser-Aufruf der Portal-URL) läuft unser Portal. Dev/Test ohne WLAN: `/portal` direkt im Browser. Kurzvertrag: [`integrations.md`](operations/integrations.md).
 
@@ -238,7 +223,7 @@ Optionale Terminal-Anzeigen und Voraussetzungen für den SMS-Rollout: [offene fa
 | **Session**                  | Portal → **Wartenummer** (+ Nutzungsbedingungen) → Menü                    |
 | **Dokumente / Erstanamnese** | Browser, Session = Nummer                                                  |
 
-**Warum voller Browser für Upload?** Captive-Mini-WebViews sind oft eingeschränkt (Datei-Picker, Kamera). Nach Freischaltung: Redirect in Safari/Chrome — volle Upload-APIs. Ohne Captive reicht der direkte Portal-Aufruf (LAN oder später extern über Proxy-Whitelist).
+**Warum voller Browser für Upload?** Captive-Mini-WebViews sind oft eingeschränkt (Datei-Picker, Kamera). Nach Freischaltung: Redirect in Safari/Chrome — volle Upload-APIs. Ohne Captive reicht der direkte Portal-Aufruf (Praxis- oder Patientennetz).
 
 | Screen      | Inhalt                                |
 | ----------- | ------------------------------------- |
@@ -287,11 +272,13 @@ Patient kann den **generierten** Bogen im Portal **nicht** erneut öffnen oder s
 - Upload ja, Löschen ja (durch Patient) — **nur selbst hochgeladene** Dateien
 - **Erstanamnese-PDF:** vom System erzeugt, Verarbeitung nur MFA
 - Einsehen / Download durch Praxis im Portal: **nein**
-- Exportierte Dokumente: Zielsystem und Aufbewahrung sind [offene fachliche Fragen](open-items.md#fachliche-fragen-und-optionale-produktideen); temporärer Intake folgt dem dokumentierten Tagesreset.
+- Exportierte Dokumente: Die Praxis legt Zielsystem, Zuständigkeit und Aufbewahrung fest. Der temporäre Intake folgt dem [Tagesreset](architecture/documents.md).
 
-### Weitere Produktentscheidungen
+### Konfiguration und Integrationsgrenzen
 
-Captive-Adapter, Limits und Fragenkatalog: [offene fachliche Fragen](open-items.md#fachliche-fragen-und-optionale-produktideen).
+Den Erstanamnese-Fragenkatalog stimmt die Praxis auf ihren Ablauf ab.
+Upload-Grenzen stehen unter [Dokumente](architecture/documents.md),
+Captive- und PVS-Grenzen unter [Integrationen](operations/integrations.md).
 
 ---
 
@@ -442,9 +429,12 @@ Ampel-Button auf jeder Queue-Karte (Button-Größe), Zyklus **Weiß → Grün �
 | Terminal | Notfall-Alarm                                         |
 | PVS `?`  | Termin, Raum                                          |
 
-### Weitere Produktentscheidungen
+### Zuständigkeit und PVS-Anbindung
 
-PVS-Anbindung und klinische Zuständigkeit: [offene fachliche Fragen](open-items.md#fachliche-fragen-und-optionale-produktideen).
+Die MFA verarbeitet die eingegangenen Dokumente. Die Praxis legt die weitere
+Übernahme ins Zielsystem und die klinische Zuständigkeit fest. Eine direkte
+Vendor-PVS-Anbindung ist nicht implementiert; siehe
+[Integrationen](operations/integrations.md).
 
 ---
 

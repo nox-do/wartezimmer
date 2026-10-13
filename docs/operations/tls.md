@@ -1,7 +1,5 @@
 # LAN-TLS (Produkt)
 
-Stand: 2026-09-28 · Ops-Ist für Wildcard-LAN-TLS und Restricted Portal
-
 **Scope:** Vertrauenswürdiges HTTPS im Praxis-LAN — Modell, Aktivierung, Betrieb, Grenzen.  
 **Ist:** TLS-Einrichtung ausschließlich im Netzwerk-Tab; Setup-API `/api/setup/host/tls/*`; Proxy-Service mit Custom-Caddy-Image.
 
@@ -10,7 +8,6 @@ Verwandte Dokumentation:
 - Bedienung: [Manager](../../manager/README.md)
 - Technischer Patienten-Zugangsvertrag: [Restricted-Lifecycle](restricted-lifecycle.md)
 - Lab (kein Produktbetrieb): [TLS-Lab](../development/tls-lab.md)
-- Freigaben und ausstehende Nachweise: [Offene Abnahmen](../open-items.md)
 
 ---
 
@@ -43,7 +40,7 @@ Browser (LAN) ── HTTP      ──► proxy:80  ── 301 → HTTPS   (nach 
 | TLS ohne HTTP-Proxy               | **nein** — Port 80 ist Voraussetzung (siehe §3)                                                            |
 | App terminiert TLS                | **nein** — nur Caddy/`proxy`                                                                               |
 
-**Zone heute (Code):** `TLS_OPERATOR_ZONE_DEFAULT = lan.notaus.de`, Betreiber-Mail `cert@notaus.de` (`packages/server-shared/src/setup-api.ts`). Das ist die **aktuelle Betreiber-/Testzone**. Eine spätere Marken-Domain ist noch festzulegen.
+**Standardzone:** `TLS_OPERATOR_ZONE_DEFAULT = lan.notaus.de`, Betreiber-Mail `cert@notaus.de` (`packages/server-shared/src/setup-api.ts`). Alternativ kann die Praxis eine eigene Domain verwenden.
 
 **Namenswahl (Manager, ein Schritt):**
 
@@ -484,18 +481,17 @@ Gateway/Captive/Internet-Portal sind **andere** Themen → [`integrations.md`](i
 
 ## 10. Weiterführende Dokumente
 
-| Dokument                                                           | Rolle                                           |
-| ------------------------------------------------------------------ | ----------------------------------------------- |
-| **Dieses** (`operations/tls.md`)                                   | **Ops-Ist** für TLS und Restricted Listener     |
-| [`restricted-lifecycle.md`](restricted-lifecycle.md)               | Apply/Remove, Crash-Recovery und Updatevertrag  |
-| [`praxis-it-network-isolation.md`](praxis-it-network-isolation.md) | Verantwortungsgrenze und praktische Netzabnahme |
-| [`backup.md`](backup.md)                                           | Geltender `.pfbackup`-v2-Vertrag                |
-| [tls-lab.md](../development/tls-lab.md)                            | Lab, nicht Produkt                              |
+| Dokument                                             | Rolle                                          |
+| ---------------------------------------------------- | ---------------------------------------------- |
+| **Dieses** (`operations/tls.md`)                     | **Ops-Ist** für TLS und Restricted Listener    |
+| [`restricted-lifecycle.md`](restricted-lifecycle.md) | Apply/Remove, Crash-Recovery und Updatevertrag |
+| [`backup.md`](backup.md)                             | Geltender `.pfbackup`-v2-Vertrag               |
+| [tls-lab.md](../development/tls-lab.md)              | Lab, nicht Produkt                             |
 
 Bei Abweichungen gelten **Code und diese Betriebsdokumentation**. Historische
 Pläne sind keine parallele Source of Truth.
 
-### Restricted-Vertrag ab Generator v6
+### Restricted-Listener und Zugangsprüfung
 
 Im konfigurierten TLS-Modus akzeptiert Port 80 nur den exakten Staff-Host;
 sonstige Hosts werden abgebrochen, auch vor dem Cutover. Ohne TLS-Konfiguration
@@ -524,7 +520,7 @@ API-Aufrufe werden im Runtime-Audit nicht ausgeführt.
 NIC-Drafts, das persistente Apply-/Remove-Journal und der versionierte Vertrag aus
 Updatepaketen sind im [Restricted-Lifecycle](restricted-lifecycle.md) beschrieben.
 
-### Review und Regressionstests für eigene Domains
+### Eigene Domains prüfen
 
 `setup/src/host-tls.test.ts` prüft eigene Domains mit ACME einschließlich
 Wiederaufnahme, fehlendem CNAME, Ausstellung, Cutover und Erneuerung mit
@@ -543,40 +539,25 @@ DNS-01-Ausstellung, Wildcard und HTTP/HTTPS-Cutover geprüft, ohne eine produkti
 Domain oder Let's Encrypt zu verändern. Produktions-DNS und das Vertrauen auf
 den tatsächlichen Praxisgeräten bleiben Teil der Vor-Ort-Abnahme.
 
-Prüfstand 2026-09-28: Manager- und Setup-Tests, Typprüfungen, gezieltes Linting
-und Manager-Build erfolgreich. Die TLS-Oberfläche wurde in einer isolierten
-Komponentenvorschau einschließlich schmalem Fenster geprüft.
-`TLS_LAB_LAN_IP=192.168.0.100 npm run smoke:tls-cutover -- --own-domain` lief
-mit echter Pebble-/Caddy-Runtime erfolgreich durch: genau eine Wildcard-Order,
-DNS, Portbindung, abgewiesene Portal-/Fremdhosts, HTTPS-Cutover, HTTP-Redirect,
-HTTP/2 und SSE. Dafür wurde der laufende Praxis-Stack vorübergehend gestoppt
-und nach dem Aufräumen der Testcontainer wieder gestartet.
+### Plattformen und Netzprüfung
 
-### Windows-Manager ist keine Restricted-Freigabe
+Staff-HTTPS und der separate Patientenzugang werden unter macOS und Windows
+unterstützt. Einrichtung, verwalteter Start und Restore eines aktiven
+Restricted-Bindings unterliegen den TLS-, DNS-, Binding- und Listenerprüfungen.
+Die Praxis-IT prüft im konkreten Netz paralleles 443-Publishing, gekreuzte
+Host-/SNI-Werte, fehlendes SNI, unbeabsichtigte IPv6-Zugriffe, Adressverlust und
+Wiederanlauf nach einem Docker-/Host-Neustart. Der technische Ablauf steht im
+[Restricted-Lifecycle](restricted-lifecycle.md).
 
-Die Windows-Vorbereitung lässt die macOS-Gates in `restricted-network.ts` und
-`host-state.ts` bestehen. Sie schützen die Freigabe des separaten Portal-
-Listeners einschließlich Ziel-IP-Publishes und Host-/SNI-Policy; sie sind keine
-Dateipfadprüfung. Windows blockiert außerdem einen bereits gespeicherten
-aktiven Restricted-Marker beim verwalteten Start sowie dessen Backup-Restore
-vor Cutover. `host-tls.ts` und `proxy-tls.ts` bieten Staff-HTTPS; dessen reale
-Windows-Abnahme bleibt separat offen. Paralleles 443-Publishing, gekreuzte
-Hosts/SNI, fehlendes SNI, IPv6 und Adressverlust dürfen nicht aus erfolgreichen
-Windows-Pfadtests abgeleitet werden. [Abnahmeprotokoll](../open-items.md#windows-abnahmeprotokoll).
+### DNS-Resolver für ACME
 
-### Windows-DNS-Teilnachweis vom 2026-10-01
-
-Anwenderseitig bestätigt: Docker-DNS `127.0.0.11` lieferte bei der TXT-Abfrage
-über den Challenge-CNAME NXDOMAIN, während die direkte Abfrage über `1.1.1.1`
-CNAME und TXT korrekt lieferte. Auch der autoritative Zielserver war erreichbar.
-Nach Ergänzung von `resolvers 1.1.1.1:53` im ACME-Issuer und Caddy-Reload wurde
-das Wildcard-Zertifikat erfolgreich ausgestellt. Welcher vorgeschaltete lokale
-Resolver oder Filter den Fehler verursacht hat, ist damit nicht bewiesen.
-
-Der Generator setzt diesen Resolver nun für Managed ACME (Produktion und Staging)
-auf allen Hosts explizit. Ausgehende DNS-Abfragen zu `1.1.1.1:53` müssen im
-Betriebsnetz erlaubt sein; es wird keine Firewallregel automatisch geöffnet.
+Für Managed ACME in Produktion und Staging verwendet der Caddy-Issuer explizit
+`1.1.1.1:53`. Ausgehende DNS-Abfragen zu diesem Resolver müssen im Betriebsnetz
+erlaubt sein; die Anwendung öffnet keine Firewallregeln automatisch.
 Die Einstellung betrifft ACME-DNS-Prüfungen, nicht die DNS-Auflösung der Clients.
-Der Pebble-Prüfstand behält `coredns:53`; Custom-PEM erhält keine ACME-Resolver.
-Die Propagationsprüfung bleibt eingeschaltet. Zertifikatsausstellung ist ein
-Teilnachweis, keine vollständige HTTPS-Cutover-/Restricted-Abnahme.
+Das Pebble-Lab verwendet `coredns:53`; Custom-PEM benötigt keinen ACME-Resolver.
+Die Propagationsprüfung bleibt eingeschaltet.
+
+Bei fehlgeschlagener Ausstellung die Erreichbarkeit des Resolvers sowie CNAME
+und TXT-Eintrag der Challenge prüfen. Eine erfolgreiche Zertifikatsausstellung
+ersetzt nicht die Prüfung von HTTPS-Zugriff und Netztrennung auf den Praxisgeräten.

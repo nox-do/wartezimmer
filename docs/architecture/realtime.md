@@ -1,7 +1,5 @@
 # Echtzeit — SSE & Outbox
 
-Stand: 2026-09-01 · Ist (`ops-event-hub`, `queue-stream-hub`, `outbox-worker`, MFA `queue-stream.ts`)
-
 **Scope:** Push-Kanäle, Presence ≠ Pairing, Connection-Budget, Outbox als Audit.  
 Nicht: Rollenmatrix → [`apis.md`](apis.md) · Fachflows → [`../flows.md`](../flows.md) · TLS-Ops → [`../operations/tls.md`](../operations/tls.md)
 
@@ -39,7 +37,7 @@ Hubs: `app/src/shared/ops/ops-event-hub.ts`, `app/src/shared/queue/queue-stream-
 
 Mehrere MFA-Tabs = Vielfaches von 2. Unter **HTTP/1.1** (Direkt `:8080` oder HTTP-only-Proxy) kann das browserseitige Per-Origin-Limit REST verzögern, während SSE offen bleibt.
 
-**LAN-TLS:** Browser ↔ Proxy oft **HTTP/2** (Caddy `protocols h1 h2`) — multiplexed die Browser-Seite; Hop Proxy → App bleibt HTTP/1.1 ([`../operations/tls.md`](../operations/tls.md)). Ohne TLS/h2 gilt weiter das HTTP/1.1-Bild. Multi-Tab-Budget-Optimierung (BroadcastChannel o. ä.) ist **optional**, messungsgetrieben — [offene technische Folgeentscheidungen](../open-items.md#ui--und-technische-folgeentscheidungen-keine-release-zusage).
+**LAN-TLS:** Browser ↔ Proxy oft **HTTP/2** (Caddy `protocols h1 h2`) — multiplexed die Browser-Seite; Hop Proxy → App bleibt HTTP/1.1 ([`../operations/tls.md`](../operations/tls.md)). Ohne TLS/h2 gilt das HTTP/1.1-Verbindungslimit. Jeder Tab öffnet eigene SSE-Verbindungen; eine tabübergreifende Koordination ist nicht implementiert.
 
 ### Ops Wire-Format
 

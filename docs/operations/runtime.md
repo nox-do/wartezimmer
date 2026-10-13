@@ -1,7 +1,5 @@
 # Runtime — Compose, Host, Tagesbetrieb
 
-Stand: 2026-09-14 · am Code geprüft (`setup/src/docker.ts`, Compose Delivery/Dev)
-
 **Scope:** Was nach der Installation läuft — Services, Compose-Stacking, Ports/Volumes, Alltag.  
 Nicht: Manager-Bau → [Manager](../../manager/README.md) · LAN-TLS → [`tls.md`](tls.md) · Backup → [`backup.md`](backup.md) · Anbindungen → [`integrations.md`](integrations.md)
 
@@ -155,14 +153,16 @@ Das bisherige benannte Volume `sandbox_intake_data` wird nicht mehr eingebunden.
 
 Verifikation ohne Änderung der Installation: `npm run build:server-shared`, `npm run -w @wartezimmer/sandbox build`, anschließend `SANDBOX_TEST_IMAGE=wartezimmer/sandbox:<lokaler-Tag> node scripts/smoke-sandbox-lifecycle.mjs`. Der Test erzeugt ausschließlich einen eigenen kurzlebigen Container samt Testvolume und entfernt beides anschließend. Er prüft Schreibschutz, Dokumentverlust beim Neustart, erhaltenen Cache und die Schreibrechte des realen FreshClam-Updaters offline.
 
-## Windows-Betriebsgrenzen (Vorbereitung)
+## Windows-Betriebsgrenzen
 
 Der Manager läuft als native Windows-Anwendung; Docker führt die ausgelieferten
 Linux/amd64-Container in Docker Desktop aus. Ein Windows-Hostpfad wie
 `C:\Praxis\Import` ist die Quelle eines Mounts, `/imports` sein Containerziel.
 `/mnt/c`, WSL-UNC-Pfade und Linux-Socket-Kontexte sind keine austauschbaren
-Hostpfade. Windows akzeptiert nur lokale feste Laufwerke, keine Netzlaufwerke,
-UNC-/Device-Pfade oder Symlink-/Junction-Vorfahren. Hostpfad-Eingaben sind auf
+Hostpfade. Das Installationsverzeichnis muss auf einem lokalen festen Laufwerk
+liegen. Für Import und Export sind zusätzlich im Betriebskonto verbundene
+Netzlaufwerke zulässig. UNC-/Device-Pfade und Symlink-/Junction-Vorfahren werden
+abgewiesen. Hostpfad-Eingaben sind auf
 220 Zeichen begrenzt; damit wird keine beliebige Long-Path-Unterstützung von
 Docker/tar/Windows zugesagt. Leerzeichen und Unicode sind zulässig, reservierte
 Windows-Namen, Steuerzeichen, `#` und nachgestellte Punkte/Leerzeichen nicht.
@@ -181,8 +181,10 @@ Physische Staff-Adresse bewusst wählen: Windows zeigt auch WSL-, Hyper-V-,
 VPN- und virtuelle Adapter. Ein IP-Binding garantiert keine Isolation nach
 Eingangsinterface. 80/443, ohne Proxy auch 8080, unterliegen Windows-Firewall und
 Netzprofil; 8082 und Setup bleiben Loopback. Keine automatischen Firewallregeln
-und keine zusätzliche Manager-Elevation. Netzwerk-/Wiederstart-Abnahme und
-unterstützte Versionsmatrix: [offene Windows-Prüfungen](../open-items.md#windows-abnahmeprotokoll).
+und keine zusätzliche Manager-Elevation. Nach Einrichtung oder Änderung des
+Netzes Zugriffe von Praxis- und Patientengeräten sowie das Verhalten nach
+Docker-/Host-Neustart prüfen. Plattformvoraussetzungen:
+[Manager](../../manager/README.md#windows).
 
 ### CSV-Kontakte unter Windows: Hostordner und Containerpfad
 
@@ -192,17 +194,20 @@ unter `/imports` ein; die Kontaktkonfiguration in der App verwendet `/imports`
 oder dessen Unterordner, niemals den Windows-Hostpfad. Großgeschriebene `.CSV`-
 Endungen werden vom Scanner berücksichtigt.
 
-UNC-/SMB-Quellen wie `\\server\kontakte` und verbundene Netzlaufwerke sind aktuell
-nicht unterstützt. Ein lokaler Ordner, der zusätzlich per SMB freigegeben ist,
-ist davon zu unterscheiden: Der Manager verwendet dessen lokalen Laufwerkspfad.
+Direkte UNC-/SMB-Pfade wie `\\server\kontakte` sind nicht unterstützt.
+Für Import und Export kann die Praxis-IT ein Netzlaufwerk im Betriebskonto
+verbinden und dessen Laufwerksbuchstaben verwenden. Verbindung und Docker-Mount
+müssen auch nach einem Host-Neustart verfügbar sein. Ein lokal freigegebener
+Ordner wird über seinen lokalen Laufwerkspfad eingebunden.
 Die Windows-Freigabe und ihre Berechtigungen richtet die Praxis-IT separat ein.
-Bei einer entfernten Exportquelle ist ein gesondert eingerichteter Transfer in
-den lokalen Importordner erforderlich; der Manager enthält keine Synchronisation.
+Wird eine entfernte Exportquelle nicht als verbundenes Netzlaufwerk verwendet,
+richtet die Praxis-IT den Transfer in den lokalen Importordner ein. Der Manager
+enthält keine Dateisynchronisation.
 Dateien erst vollständig übertragen und anschließend unter ihrem endgültigen
 CSV-Namen bereitstellen, damit der Scanner keine halbfertigen Exporte liest.
 
-Abnahme mit synthetischen Kontakten: Hostdatei im gewählten Ordner erzeugen,
+Funktionsprüfung mit synthetischen Kontakten: Hostdatei im gewählten Ordner erzeugen,
 im Container unter `/imports` nachweisen und in der App Vorschau und Suche
 prüfen. Anschließend Datei ersetzen, den erneuten Einlesevorgang auslösen und
-geänderten Kontakt prüfen; nach Docker-/Host-Neustart wiederholen. Reale
-Windows-Mounts, Zugriffsrechte und Aktualisierung sind noch nicht abgenommen.
+geänderten Kontakt prüfen; nach Docker-/Host-Neustart wiederholen. Dabei
+Mounts, Zugriffsrechte und die Aktualisierung im gewählten Betriebskonto prüfen.
