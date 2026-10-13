@@ -11,6 +11,10 @@ test('dependency stripping preserves runtime data and licenses and never follows
   const dependency = path.join(root, 'node_modules/lib');
   fs.mkdirSync(path.join(dependency, 'tests'), { recursive: true });
   fs.writeFileSync(path.join(dependency, 'tests/helper.js'), 'test');
+  fs.mkdirSync(path.join(dependency, 'spec'), { recursive: true });
+  fs.writeFileSync(path.join(dependency, 'spec/index.spec.js'), 'test');
+  fs.mkdirSync(path.join(dependency, 'specs'), { recursive: true });
+  fs.writeFileSync(path.join(dependency, 'specs/helper.js'), 'test');
   for (const name of [
     'index.js',
     'index.js.map',

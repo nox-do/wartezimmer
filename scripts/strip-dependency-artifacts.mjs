@@ -16,6 +16,8 @@ export function stripDependencyArtifacts(directory) {
             'test',
             'tests',
             '__tests__',
+            'spec',
+            'specs',
             'benchmark',
             'benchmarks',
             'example',
