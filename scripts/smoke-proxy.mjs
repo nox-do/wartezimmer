@@ -11,7 +11,7 @@
  *   npm run smoke:proxy -- --cleanup # remove leftover smoke containers/network
  *
  * Env:
- *   WARTEZIMMER_PROXY_IMAGE  image ref (default caddy:2.11.4)
+ *   WARTEZIMMER_PROXY_IMAGE  image ref (default caddy:2.11.7)
  *   PROXY_SMOKE_PORT         host port for proxy (default 18080)
  *   PROXY_SMOKE_KEEP=1       same as --keep
  */
@@ -22,7 +22,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const DEFAULT_PROXY_IMAGE = 'caddy:2.11.4';
+const DEFAULT_PROXY_IMAGE = 'caddy:2.11.7';
 const NETWORK = 'pf-proxy-smoke-net';
 const UPSTREAM_NAME = 'pf-proxy-smoke-app';
 const PROXY_NAME = 'pf-proxy-smoke-proxy';

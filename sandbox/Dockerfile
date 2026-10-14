@@ -48,7 +48,8 @@ ENV NODE_ENV=production
 RUN rm -rf /usr/local/lib/node_modules/npm \
   && rm -f /usr/local/bin/npm /usr/local/bin/npx
 
-RUN apk add --no-cache clamav clamav-libunrar \
+# CVE-2026-103111: fail the build if the repository cannot supply fixed PCRE2.
+RUN apk add --no-cache --upgrade clamav clamav-libunrar 'pcre2>=10.49-r0' \
   && mkdir -p /var/log/clamav \
   && chown clamav:clamav /var/log/clamav
 

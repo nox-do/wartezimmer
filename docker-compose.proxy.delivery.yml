@@ -19,7 +19,7 @@ services:
 
   proxy:
     logging: *docker-logging
-    image: ${WARTEZIMMER_PROXY_IMAGE:-caddy:2.11.4}
+    image: ${WARTEZIMMER_PROXY_IMAGE:-caddy:2.11.7}
     # Caddy is supplied by a verified Wartezimmer release; customer systems never pull it implicitly.
     pull_policy: never
     restart: unless-stopped

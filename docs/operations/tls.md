@@ -118,7 +118,7 @@ verweigert Start oder Recreate, wenn diese Adresse fehlt oder nicht lokal ist.
 
 Compose-Stacking (`setup/src/docker.ts`): Base → `docker-compose.proxy(.delivery).yml` wenn `PROXY_ENABLED` + aktiver Mode → optional `proxy-tls(.delivery).yml` → Lab nur bei `TLS_ACME_DIRECTORY=pebble`.
 
-Image: `WARTEZIMMER_PROXY_IMAGE` (Delivery: `wartezimmer-proxy:…-acmedns`, sonst Default `caddy:2.11.4`); Delivery `pull_policy: never` (app/sandbox/proxy).
+Image: `WARTEZIMMER_PROXY_IMAGE` (Delivery: `wartezimmer-proxy:…-acmedns`, sonst Default `caddy:2.11.7`); Delivery `pull_policy: never` (app/sandbox/proxy).
 
 ### Env (Auszug)
 
@@ -299,7 +299,7 @@ verwendeten Host-IP ist kein zusätzlicher Blocker.
 
 |                |                                                                                                                                        |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Image          | `WARTEZIMMER_PROXY_IMAGE` — Delivery: `wartezimmer-proxy:…-acmedns` (xcaddy + `dns.providers.acmedns`); Fallback/Legacy `caddy:2.11.4` |
+| Image          | `WARTEZIMMER_PROXY_IMAGE` — Delivery: `wartezimmer-proxy:…-acmedns` (xcaddy + `dns.providers.acmedns`); Fallback/Legacy `caddy:2.11.7` |
 | Delivery       | `pull_policy: never` auf app/sandbox/proxy — kein Registry-Nachzug in der Praxis                                                       |
 | Port 80        | immer mit Proxy-Overlay (`PROXY_HTTP_PORT`, Default 80)                                                                                |
 | Port 443       | nur mit TLS-Overlay (`PROXY_HTTPS_PORT`, Default 443)                                                                                  |

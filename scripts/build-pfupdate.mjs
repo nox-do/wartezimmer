@@ -68,7 +68,7 @@ Package layout (extracted):
 Images tagged as:
   wartezimmer/app:<version>
   wartezimmer/sandbox:<version>
-  wartezimmer-proxy:2.11.4-acmedns  ← offline reverse proxy with ACME-DNS (not auto-started)
+  wartezimmer-proxy:2.11.7-acmedns  ← offline reverse proxy with ACME-DNS (not auto-started)
 `);
 }
 

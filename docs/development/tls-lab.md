@@ -20,12 +20,12 @@ Feste `container_name` und Host-Ports: nur **eine** Lab- bzw. App-Instanz gleich
 ## Custom image
 
 ```sh
-docker build -t wartezimmer-proxy:2.11.4-acmedns -f proxy/Dockerfile .
-docker run --rm wartezimmer-proxy:2.11.4-acmedns caddy list-modules | grep acmedns
+docker build -t wartezimmer-proxy:2.11.7-acmedns -f proxy/Dockerfile .
+docker run --rm wartezimmer-proxy:2.11.7-acmedns caddy list-modules | grep acmedns
 ```
 
-`WARTEZIMMER_PROXY_IMAGE=wartezimmer-proxy:2.11.4-acmedns` — the HTTP-only default
-remains `caddy:2.11.4`.
+`WARTEZIMMER_PROXY_IMAGE=wartezimmer-proxy:2.11.7-acmedns` — the HTTP-only default
+remains `caddy:2.11.7`.
 
 ## Dynamic LAN IP
 
@@ -162,7 +162,7 @@ already occupies the lab container names.
 | Certificate checks fail / unknown CA | Fetch current `/roots/0` after Pebble start into `TLS_PEBBLE_ROOT_CA_PATH`. Minica is not the issuing CA.                                                |
 | Pebble was restarted                 | Issuing CA is new. Re-fetch `/roots/0` into `TLS_PEBBLE_ROOT_CA_PATH` and obtain the certificate again. Product compose restart does not restart Pebble. |
 | Port 443 busy                        | Another proxy/Caddy; stop it. Local checks use `127.0.0.1:443` with SNI `labhost.lan.tls.lab`.                                                           |
-| `dns.providers.acmedns` missing      | Rebuild `wartezimmer-proxy:2.11.4-acmedns`.                                                                                                              |
+| `dns.providers.acmedns` missing      | Rebuild `wartezimmer-proxy:2.11.7-acmedns`.                                                                                                              |
 | Docker missing                       | The smoke **fails** (no silent skip). CI may omit the job only via an explicit gate.                                                                     |
 
 ## Pins

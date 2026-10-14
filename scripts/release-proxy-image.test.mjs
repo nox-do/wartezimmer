@@ -9,8 +9,8 @@ import {
 const digest = `sha256:${'a'.repeat(64)}`;
 const baseId = `sha256:${'b'.repeat(64)}`;
 const customId = `sha256:${'c'.repeat(64)}`;
-const baseRef = 'caddy:2.11.4';
-const customRef = 'wartezimmer-proxy:2.11.4-acmedns';
+const baseRef = 'caddy:2.11.7';
+const customRef = 'wartezimmer-proxy:2.11.7-acmedns';
 
 function inspection(id) {
   return JSON.stringify([{ Id: id, Os: 'linux', Architecture: 'arm64' }]);

@@ -4,8 +4,8 @@ Wartezimmer third-party notices
 Caddy
 -----
 
-Version: 2.11.4
-Container image: caddy:2.11.4
+Version: 2.11.7
+Container image: caddy:2.11.7
 Upstream source: https://github.com/caddyserver/caddy
 Official image: https://hub.docker.com/_/caddy
 License: Apache License 2.0

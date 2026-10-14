@@ -8,25 +8,31 @@ export const PFUPDATE_BASENAME_PREFIX = 'wartezimmer-update-';
 export const PFUPDATE_IMAGES_TAR_PATH = 'images/wartezimmer-images.tar';
 
 /** Pinned offline reverse-proxy image shipped in new release/.pfupdate packages. */
-export const WARTEZIMMER_PROXY_IMAGE_REF = 'wartezimmer-proxy:2.11.4-acmedns' as const;
+export const WARTEZIMMER_PROXY_IMAGE_REF = 'wartezimmer-proxy:2.11.7-acmedns' as const;
 /** Stock Caddy tag still valid in already-issued v1 packages and HTTP-only Compose defaults. */
 export const WARTEZIMMER_PROXY_IMAGE_LEGACY_REF = 'caddy:2.11.4' as const;
 /** Upstream stock Caddy used as the custom-image Dockerfile base. */
-export const WARTEZIMMER_PROXY_BASE_IMAGE_REF = WARTEZIMMER_PROXY_IMAGE_LEGACY_REF;
+export const WARTEZIMMER_PROXY_BASE_IMAGE_REF = 'caddy:2.11.7' as const;
+export const WARTEZIMMER_PROXY_IMAGE_LEGACY_CUSTOM_REF =
+  'wartezimmer-proxy:2.11.4-acmedns' as const;
+const LEGACY_PROXY_REGISTRY_DIGEST =
+  'sha256:df7f1c2fb114453b951de51a98efc010db1655a92c2e86be6706714e2417a78d';
 /** Immutable upstream multi-platform digest approved for the pinned Caddy release (base image). */
 export const WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST =
-  'sha256:df7f1c2fb114453b951de51a98efc010db1655a92c2e86be6706714e2417a78d' as const;
+  'sha256:685ae3d7c34d9b5f8caeddc5d14051db7bbd88ff1f5a2fa0c16bd8ca328fb7af' as const;
 export const WARTEZIMMER_PROXY_IMAGE_PINNED_REF =
   `${WARTEZIMMER_PROXY_BASE_IMAGE_REF}@${WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST}` as const;
 export const WARTEZIMMER_PROXY_IMAGE_ENV_KEY = 'WARTEZIMMER_PROXY_IMAGE' as const;
 
 export const WARTEZIMMER_PROXY_IMAGE_ALLOWED_REFS = [
   WARTEZIMMER_PROXY_IMAGE_REF,
+  WARTEZIMMER_PROXY_IMAGE_LEGACY_CUSTOM_REF,
+  WARTEZIMMER_PROXY_BASE_IMAGE_REF,
   WARTEZIMMER_PROXY_IMAGE_LEGACY_REF,
 ] as const;
 
-/** Compose HTTP default when `WARTEZIMMER_PROXY_IMAGE` is unset (`:-caddy:2.11.4`). */
-export const WARTEZIMMER_PROXY_IMAGE_COMPOSE_DEFAULT_REF = WARTEZIMMER_PROXY_IMAGE_LEGACY_REF;
+/** Compose HTTP default when `WARTEZIMMER_PROXY_IMAGE` is unset (`:-caddy:2.11.7`). */
+export const WARTEZIMMER_PROXY_IMAGE_COMPOSE_DEFAULT_REF = WARTEZIMMER_PROXY_BASE_IMAGE_REF;
 
 /** First allowed proxy tag present in a docker-load result (custom preferred over stock). */
 export function pickLoadedProxyImageRef(loaded: readonly string[]): string | undefined {
@@ -611,9 +617,14 @@ export function validatePfupdateImageRefs(manifest: PfupdateManifestV1): string[
       }
     }
     if (manifest.imageDigests?.proxy) {
-      if (manifest.imageDigests.proxy.registryDigest !== WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST) {
+      const expectedProxyDigest =
+        manifest.images.proxy === WARTEZIMMER_PROXY_IMAGE_LEGACY_REF ||
+        manifest.images.proxy === WARTEZIMMER_PROXY_IMAGE_LEGACY_CUSTOM_REF
+          ? LEGACY_PROXY_REGISTRY_DIGEST
+          : WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST;
+      if (manifest.imageDigests.proxy.registryDigest !== expectedProxyDigest) {
         errors.push(
-          `manifest.json: imageDigests.proxy.registryDigest muss "${WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST}" sein.`,
+          `manifest.json: imageDigests.proxy.registryDigest muss "${expectedProxyDigest}" sein.`,
         );
       }
       for (const noticePath of PFUPDATE_OPTIONAL_PROXY_NOTICE_PATHS) {

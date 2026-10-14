@@ -15,7 +15,7 @@ import tls from 'node:tls';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const PROXY_IMAGE = 'wartezimmer-proxy:2.11.4-acmedns';
+const PROXY_IMAGE = 'wartezimmer-proxy:2.11.7-acmedns';
 
 export const TLS_PEBBLE_SETUP_SMOKE = {
   managed: {

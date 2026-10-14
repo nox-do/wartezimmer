@@ -8,6 +8,7 @@ import {
   WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST,
   WARTEZIMMER_PROXY_IMAGE_REF,
   WARTEZIMMER_PROXY_IMAGE_LEGACY_REF,
+  WARTEZIMMER_PROXY_IMAGE_LEGACY_CUSTOM_REF,
   pickLoadedProxyImageRef,
   buildPfupdateFilename,
   buildPfupdateManifest,
@@ -244,6 +245,8 @@ test('pickLoadedProxyImageRef prefers custom over stock and ignores other tags',
 test('validatePfupdatePackage still accepts legacy stock Caddy proxy pin', () => {
   const manifest = sampleManifest({ withProxy: true, withProxyDigest: true });
   manifest.images.proxy = WARTEZIMMER_PROXY_IMAGE_LEGACY_REF;
+  manifest.imageDigests!.proxy!.registryDigest =
+    'sha256:df7f1c2fb114453b951de51a98efc010db1655a92c2e86be6706714e2417a78d';
   const result = validatePfupdatePackage({
     manifest,
     files: digestMapFromManifest(manifest),
@@ -251,6 +254,29 @@ test('validatePfupdatePackage still accepts legacy stock Caddy proxy pin', () =>
   });
   assert.equal(result.ok, true);
   assert.equal(result.manifest?.images.proxy, WARTEZIMMER_PROXY_IMAGE_LEGACY_REF);
+});
+
+test('validatePfupdatePackage accepts the earlier acmedns image with its original digest', () => {
+  const manifest = sampleManifest({ withProxy: true, withProxyDigest: true });
+  manifest.images.proxy = WARTEZIMMER_PROXY_IMAGE_LEGACY_CUSTOM_REF;
+  manifest.imageDigests!.proxy!.registryDigest =
+    'sha256:df7f1c2fb114453b951de51a98efc010db1655a92c2e86be6706714e2417a78d';
+  const result = validatePfupdatePackage({
+    manifest,
+    files: digestMapFromManifest(manifest),
+    sha256Sums: formatSha256Sums(manifest.files),
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.manifest?.images.proxy, WARTEZIMMER_PROXY_IMAGE_LEGACY_CUSTOM_REF);
+  manifest.imageDigests!.proxy!.registryDigest = WARTEZIMMER_PROXY_IMAGE_REGISTRY_DIGEST;
+  assert.equal(
+    validatePfupdatePackage({
+      manifest,
+      files: digestMapFromManifest(manifest),
+      sha256Sums: formatSha256Sums(manifest.files),
+    }).ok,
+    false,
+  );
 });
 
 test('validatePfupdatePackage still accepts legacy packages without proxy', () => {
