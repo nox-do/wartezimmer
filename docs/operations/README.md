@@ -3,6 +3,11 @@
 Eine Installation = eine Praxis, ein Stack auf einem Host. Der Manager ist die
 operative Oberfläche; CLI und manuelle Compose-Aufrufe sind Support-Fallback.
 
+Vor dem produktiven Einsatz und nach Änderungen prüft das Praxisteam seine
+konfigurierten Abläufe mit fiktiven Besuchen. Bei Complex Routing insbesondere
+jeden vorgesehenen Behandlungspfad und die benötigten Abweichungen durchspielen;
+siehe [Prüfung der Routing-Konfiguration](../architecture/routing.md#konfigurierte-abläufe-vor-dem-einsatz-prüfen).
+
 | Aufgabe                                                      | Verbindliches Dokument                             |
 | ------------------------------------------------------------ | -------------------------------------------------- |
 | Pakete bauen, ausliefern und Software aktualisieren          | [Manager](../../manager/README.md)                 |

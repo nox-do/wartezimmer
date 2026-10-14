@@ -65,6 +65,10 @@ im konkreten Praxisnetz. Plattformvoraussetzungen stehen in der
 [TLS](docs/operations/tls.md) und
 [Restricted-Lifecycle](docs/operations/restricted-lifecycle.md).
 
+Die Manager-Installer für macOS und Windows werden unsigniert veröffentlicht;
+die macOS-Apps sind außerdem nicht notarisiert. Hinweise zur Installation und
+zu den Betriebssystemmeldungen stehen in der [Manager-Dokumentation](manager/README.md).
+
 ## Lokale Entwicklung
 
 ### Voraussetzungen
@@ -168,6 +172,14 @@ website/                Projektwebsite für GitHub Pages
 | Website pflegen und lokal ansehen      | [Website-README](website/README.md)                                   |
 
 Frühere Website-Entwürfe und Originalbilder liegen im [Website-Archiv](docs/archive/website/2026-10-10/README.md) und werden nicht veröffentlicht. Eine lokale Website-Vorschau lässt sich mit `node scripts/build-pages.mjs --preview` bauen.
+
+## Kontakt und Support
+
+Für technische Fragen und Fehler nutzt bitte die [GitHub Issues](https://github.com/nox-do/wartezimmer/issues). Als Anwender erreicht ihr uns unter [info@notaus.de](mailto:info@notaus.de). Ich betreue beide Kontaktwege selbst.
+
+Sicherheitsprobleme bitte vertraulich an [info@notaus.de](mailto:info@notaus.de) melden; siehe [Sicherheitsmeldungen](SECURITY.md). Öffentliche Issues dürfen keine Patienteninformationen, Zugangsdaten oder unbereinigten Diagnosepakete enthalten.
+
+Externe Beiträge erfolgen nach Absprache. Bitte zuerst ein Issue zur vorgeschlagenen Änderung öffnen und vor einem Pull Request die Abstimmung abwarten; siehe [Beiträge zum Projekt](CONTRIBUTING.md).
 
 ## Lizenz
 

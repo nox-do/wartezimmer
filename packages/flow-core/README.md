@@ -20,7 +20,7 @@ der vollständige Lizenztext.
 
 Öffentliche Downloadangebote bleiben den offiziellen Bezugsquellen vorbehalten;
 GitHub-Plattformrechte, Forks, automatische Quellcodearchive und Projektbeiträge
-sind in Abschnitt 3.2 der Lizenz gesondert berücksichtigt. Unveränderte Fassungen
+sind in Abschnitt 3 der Lizenz gesondert berücksichtigt. Unveränderte Fassungen
 dürfen kostenlos und nichtöffentlich unmittelbar an einzelne Empfänger weitergegeben
 werden. Weitere öffentliche Angebote benötigen eine gesonderte Erlaubnis.
 

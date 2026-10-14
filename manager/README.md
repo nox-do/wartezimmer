@@ -284,9 +284,17 @@ liegen unter `dist/releases/<releaseVersion>/`.
 ## Windows
 
 `npm run dist:manager:win` erzeugt einen internen NSIS-Installer für x64.
+Der Windows-Installer wird ohne Codesignierung veröffentlicht. Die Manager-Installer
+für macOS und Windows bleiben bewusst unsigniert. Die bei Installation und Start
+auftretenden Betriebssystemmeldungen sind Bestandteil der Plattformabnahme und
+werden mit den Releasehinweisen dokumentiert.
 Ziel: Windows 11, lokaler Docker Desktop mit WSL2/Linux-Containern und Compose
 ab 2.24.4. Keine ARM64-Zusage. Der benutzerbezogene Manager braucht kein
 separates Node/npm und fordert keine Administratorrechte an.
+
+Windows ARM hat Early-Access-Status. Bisherige Versuche in einer VM ersetzen
+keine Abnahme auf echter ARM-Hardware; ein natives ARM64-Releasepaket wird
+derzeit nicht angeboten. Die reguläre Windows-Zusage gilt für x64.
 
 Neue Daten liegen unter `%LOCALAPPDATA%\Wartezimmer`, außerhalb von Programm
 und ASAR.

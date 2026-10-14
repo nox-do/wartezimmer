@@ -69,7 +69,9 @@ es ist kein allgemeines crashfestes Journal für den gesamten Software-/DB-Updat
 
 ## Plattformen und Netzwerkgrenze
 
-Der separate Patientenzugang wird unter macOS und Windows unterstützt.
+Der separate Patientenzugang wird unter macOS und Windows x64 unterstützt.
+Windows ARM bleibt Early Access; die bisherigen VM-Versuche genügen nicht
+für eine reguläre Freigabe der Netztrennung.
 Einrichtung und Start erfordern die TLS-, DNS-, Binding- und Listenerprüfungen.
 Die Praxis-IT prüft die Trennung von Praxis- und Patientennetz nach jeder
 Installation und bei Änderungen an Adressen, Firewall oder Netzadaptern.

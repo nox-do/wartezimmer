@@ -167,9 +167,9 @@ export const dict = {
       'Klassische SMS über seven.io — z. B. wenn nur ein SMS-Tarif gebucht ist oder WhatsApp nicht verfügbar ist.',
     messagingSmsFromLabel: 'Absender (optional)',
     messagingSaveSms: 'SMS speichern',
-    messagingWhatsappSectionTitle: 'WhatsApp-Rückruf',
+    messagingWhatsappSectionTitle: 'WhatsApp-Rückruf (experimentell)',
     messagingWhatsappSectionHint:
-      'WhatsApp Business über seven.io (WABA). Template braucht zwei Platzhalter: {{1}} Rückkehrzeit, {{2}} Wartenummer (z. B. A-001). Beim Rückruf wird zuerst WhatsApp versucht. Ist WhatsApp nicht aktiv oder sicher fehlgeschlagen, folgt SMS (sofern konfiguriert). Bei unklarem Versand wird keine zweite Nachricht automatisch verschickt.',
+      'In Version 6.1.3 noch nicht praktisch mit dem Anbieter getestet, einschließlich SMS-Fallback. Vor Aktivierung Datenschutz und Versand mit Testempfängern prüfen. WhatsApp Business über seven.io (WABA). Template braucht zwei Platzhalter: {{1}} Rückkehrzeit, {{2}} Wartenummer (z. B. A-001). Beim Rückruf wird zuerst WhatsApp versucht. Ist WhatsApp nicht aktiv oder sicher fehlgeschlagen, folgt SMS (sofern konfiguriert). Bei unklarem Versand wird keine zweite Nachricht automatisch verschickt.',
     messagingWhatsappFromLabel: 'WABA-Absendernummer',
     messagingWhatsappTemplateLabel: 'Template-Name',
     messagingWhatsappLanguageLabel: 'Template-Sprache',

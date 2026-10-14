@@ -5,6 +5,20 @@ Nicht: Nummernkreis/Themen-Editor-Detail → [`domain.md`](domain.md) · Call-Ra
 
 **Stil:** Architecture-Docs beschreiben den **Ist-Stand**.
 
+## Konfigurierte Abläufe vor dem Einsatz prüfen
+
+Nach dem Einrichten oder Ändern einer Routing-Konfiguration prüft das Praxisteam
+die vorgesehenen Abläufe mit fiktiven Besuchen, bevor es sie produktiv nutzt.
+Das gilt insbesondere für Complex Routing: Die konkreten Behandlungspfade und
+ihre Kombinationen lassen sich durch allgemeine automatisierte Tests nicht
+vollständig abdecken.
+
+Für jeden eingesetzten Pfad den Check-in, die Reihenfolge der Stationen,
+Raumzuordnung und Aufruf sowie den Abschluss durchspielen. Auch die im
+Praxisalltag benötigten Abweichungen wie Umleitung, Abwesenheit und Rückholen
+prüfen. Allgemeine Softwaretests und die Prüfung der individuellen
+Praxis-Konfiguration ergänzen einander.
+
 ## 1. Leitidee
 
 | Ebene                | Verantwortung                                                                                    |

@@ -20,6 +20,14 @@ Restricted-IP-/Listener-Grenze (Portal-v1) ist davon getrennt und wird unter
 
 ## 2. SMS / WhatsApp — Rückholbenachrichtigungen
 
+**Release 6.1.3:** Wir haben SMS mit echtem Empfang erfolgreich getestet.
+WhatsApp haben wir noch nicht praktisch getestet, auch den SMS-Fallback nicht.
+Die Funktion bleibt optional, experimentell und standardmäßig deaktiviert.
+Bei WhatsApp haben wir außerdem Datenschutzbedenken. Wer es ausprobieren möchte,
+sollte vorab den Datenschutz klären und den Versand mit Testempfängern prüfen.
+Wir freuen uns über Feedback; bitte keine Zugangsdaten oder Patienteninformationen
+mitschicken.
+
 | Provider         | Stand                                         |
 | ---------------- | --------------------------------------------- |
 | `mock`           | Dev/Test                                      |

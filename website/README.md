@@ -44,10 +44,12 @@ Der manuelle Workflow `.github/workflows/pages.yml` baut ausschließlich die
 aktive Website nach `dist/pages/`. Der reguläre Build bleibt gesperrt, solange
 `data-publish-placeholder` in den öffentlichen HTML-Dateien steht:
 
-- `downloads.html`: sieben geprüfte Release-URLs einsetzen. Mac-Manager 6.1.3,
-  Windows-Manager 6.1.3, Erstinstallation/Updates 6.1.3. Versionen und URLs
-  gemeinsam aktualisieren; deaktivierte Buttons durch Downloadlinks ersetzen.
-- `lizenzen.html`: öffentlichen Quellcode-Link ergänzen. Der Build erzeugt
+- `downloads.html`: sieben Downloadlinks für Manager, Erstinstallation und Updates
+  der Version 6.1.3 zeigen auf `nox-do/wartezimmer`, Release `v6.1.3`.
+  Prüfsummen und Releaseübersicht sind ebenfalls verlinkt. Vor dem Website-Publish
+  die Release-Assets bereitstellen und die tatsächliche Erreichbarkeit prüfen.
+  Bei späteren Releases Versionen und URLs gemeinsam aktualisieren.
+- `lizenzen.html`: Quellcode-Link auf `https://github.com/nox-do/wartezimmer` gesetzt. Der Build erzeugt
   `licenses/wartezimmer-LICENSE.txt` ausschließlich aus der Root-Datei `LICENSE`.
   Maßgeblich ist Version 1.1 vom 13. Oktober 2026
   ohne Entwurfs- oder Arbeitsfassungskennzeichnung. Die Übersicht erklärt erlaubte
@@ -63,8 +65,8 @@ Betreiber- und Kontaktdaten wurden unverändert aus dem bisherigen Impressum
 übernommen. Vorhandene Veröffentlichungsmarkierungen bleiben erhalten.
 Keine fehlenden URLs, Lizenzentscheidungen oder rechtlichen Angaben erfinden.
 
-Aktuell ist kein Git-Remote eingerichtet. Für die Veröffentlichung Repository
-verbinden, GitHub Pages auf GitHub Actions einstellen und den Workflow manuell
+Das Git-Remote ist `git@github.com:nox-do/wartezimmer.git`. Für die Veröffentlichung
+GitHub Pages auf GitHub Actions einstellen und den Workflow manuell
 starten. Mit Repository-Variable `PAGES_BASE_URL` (vollständiger URL einschließlich
 Projektpfad) werden Sitemap und deren robots.txt-Verweis erzeugt.
 
