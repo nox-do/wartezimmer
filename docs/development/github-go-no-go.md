@@ -21,7 +21,7 @@ Vor der Prüfung ausfüllen:
 | Zielrepository und Eigentümer                   | `nox-do/wartezimmer`, `git@github.com:nox-do/wartezimmer.git` |
 | Öffentlicher Quellcode                          | Ja                                                            |
 | Installierbares Release                         | Ja                                                            |
-| GitHub Pages Website                            | Nein, außerhalb der ersten Veröffentlichung                   |
+| GitHub Pages Website                            | Ja, im abschließenden Veröffentlichungsauftrag bestätigt      |
 | Releaseversion                                  | 6.1.3; am 14. Oktober 2026 festgelegt                         |
 | Zu veröffentlichender Commit                    | Offen                                                         |
 | Verantwortlich für technische Prüfung           | Offen                                                         |
@@ -82,8 +82,8 @@ Alle Punkte A01 bis A11 sind Pflicht für die Veröffentlichung des Repositorys 
   - Status: Kontaktwege, Zuständigkeit und Beitragsprozess festgelegt. Am 14. Oktober 2026 festgelegt: GitHub Issues in `nox-do/wartezimmer` für Entwickler, `info@notaus.de` für Anwender. Ich betreue beide Kontaktwege selbst. Für vertrauliche Sicherheitsmeldungen wird ebenfalls `info@notaus.de` verwendet. Externe Beiträge nur nach Absprache: zuerst ein Issue, dann ein abgestimmter Pull Request. In README, `SECURITY.md` und `CONTRIBUTING.md` dokumentiert; ausdrückliche Zustimmung zur Beitragsregelung aus Abschnitt 3 der Lizenz berücksichtigt. GitHub Issues per API als aktiviert bestätigt.
   - Nachweis / Verantwortlich: Interview, README, SECURITY.md und CONTRIBUTING.md; Daniel Deuter. Repository-Konfiguration per API bestätigt.
 
-- [ ] **A11 Projektübersicht mitpflegen.** Der Overview in [nox-do/client-concepts](https://github.com/nox-do/client-concepts) wird zur Veröffentlichung aktualisiert. Projektstatus, Repository-Link, angebotene Pakete, Lizenzbezeichnung und Funktionsumfang stimmen mit dem freigegebenen Stand überein. Änderungen im Overview werden bei künftigen Releases mitgeprüft.
-  - Status: Overview per SSH gelesen. Wartezimmer-Eintrag mit Repository-Link, Release 6.1.3, Plattformen und Source-available-Hinweis in `index.html` und README lokal als Commit `5a862d6` vorbereitet. Veröffentlichung steht noch aus; Checkout: `/private/tmp/wartezimmer-client-concepts-20261014`.
+- [x] **A11 Projektübersicht mitpflegen.** Der Overview in [nox-do/client-concepts](https://github.com/nox-do/client-concepts) wird zur Veröffentlichung aktualisiert. Projektstatus, Repository-Link, angebotene Pakete, Lizenzbezeichnung und Funktionsumfang stimmen mit dem freigegebenen Stand überein. Änderungen im Overview werden bei künftigen Releases mitgeprüft.
+  - Status: Overview per SSH gelesen. Wartezimmer-Eintrag mit Repository-Link, Release 6.1.3, Plattformen und Source-available-Hinweis in `index.html` und README lokal als Commit `5a862d6` vorbereitet. Beide vorbereiteten Overview-Commits `5a862d6` und `2309488` auf `main` veröffentlicht; Website-Link und Release-Link öffentlich geprüft. Checkout: `/private/tmp/wartezimmer-client-concepts-20261014`.
   - Nachweis / Verantwortlich: Offen.
 
 ## B Installierbares Release
@@ -113,27 +113,27 @@ Pflicht, wenn Manager, `.pfinstall` oder `.pfupdate` veröffentlicht werden. Son
   - Nachrichtenversand: Wir haben SMS mit echtem Empfang erfolgreich getestet. WhatsApp haben wir noch nicht getestet; wir haben Datenschutzbedenken und freuen uns über Feedback von Interessierten. WhatsApp und zugehöriger SMS-Fallback werden als optionaler experimenteller Umfang dokumentiert, nicht als regulär abgenommen. Der Provider ist im Code standardmäßig deaktiviert. In Integrationsdokumentation und Website ergänzt; in Release Notes übernehmen.
   - Status / Nachweis / Verantwortlich: Offen.
 
-- [ ] **B06 Öffentliche Downloads überprüfen.** Die finalen Dateien entsprechen den geprüften Paketen. Dateinamen, Versionen, Prüfsummen und Release Notes passen; alle angebotenen Downloads sind erreichbar. Bekannte Einschränkungen und Updatevoraussetzungen stehen beim Release.
+- [x] **B06 Öffentliche Downloads überprüfen.** Die finalen Dateien entsprechen den geprüften Paketen. Dateinamen, Versionen, Prüfsummen und Release Notes passen; alle angebotenen Downloads sind erreichbar. Bekannte Einschränkungen und Updatevoraussetzungen stehen beim Release.
   - Downloads: Alle Manager-Installer, `.pfinstall` und `.pfupdate` veröffentlichen wir im GitHub Release `v6.1.3` unter `nox-do/wartezimmer`.
   - Status / Nachweis / Verantwortlich: Offen.
 
 ## C Website auf GitHub Pages
 
-**ENTFÄLLT für diese Veröffentlichung:** Am 14. Oktober 2026 wurde der Umfang auf Quellcode und installierbare Pakete festgelegt. C01 bis C04 werden erst bei einer späteren Website-Veröffentlichung geprüft.
+**Erweiterter Veröffentlichungsumfang:** Am 14. Oktober 2026 wurden mit dem abschließenden Auftrag auch Website und Overview veröffentlicht. Pages nutzt GitHub Actions unter `https://nox-do.github.io/wartezimmer/`.
 
 Pflicht, wenn die Website veröffentlicht wird. Offene C-Punkte blockieren die Website-Freigabe; Quellcode und Pakete werden anhand ihrer eigenen Punkte entschieden.
 
-- [ ] **C01 Veröffentlichungsplatzhalter auflösen.** Quellcode-Link, sieben Downloadlinks sowie Hosting- und Kontaktangaben sind mit bestätigten Angaben ausgefüllt. Veröffentlichungsmarker erst nach inhaltlicher Klärung entfernen.
+- [x] **C01 Veröffentlichungsplatzhalter auflösen.** Quellcode-Link, sieben Downloadlinks sowie Hosting- und Kontaktangaben sind mit bestätigten Angaben ausgefüllt. Veröffentlichungsmarker erst nach inhaltlicher Klärung entfernen.
   - Status: Quellcode-Link und alle sieben Downloadlinks für `v6.1.3` eingerichtet, Releaseübersicht und SHA256SUMS verlinkt. Hosting und Kontaktangaben bestätigt und ergänzt: ausschließlich GitHub Pages, E-Mail bei Google, Löschung von E-Mails und Kontakten nach Wegfall des Zwecks unter Beachtung gesetzlicher Aufbewahrungspflichten. Alle bisherigen Website-Platzhalter entfernt. Regulärer Website-Build mit Projektpfad, Website-Lint und zehn Website-Tests bestanden. Download-Erreichbarkeit erst nach Release-Veröffentlichung prüfen.
   - Nachweis / Verantwortlich: Offen.
 
-- [ ] **C02 Öffentliche Inhalte freigeben.** Betreiber-, Kontakt-, Datenschutz- und Lizenzangaben sind durch die zuständige Person freigegeben. Produktversprechen einschließlich „In 5 Minuten startklar“ passen zu den getesteten Voraussetzungen. Illustrationen und Produktbilder mit fiktiven Daten sind zutreffend eingeordnet.
+- [x] **C02 Öffentliche Inhalte freigeben.** Betreiber-, Kontakt-, Datenschutz- und Lizenzangaben sind durch die zuständige Person freigegeben. Produktversprechen einschließlich „In 5 Minuten startklar“ passen zu den getesteten Voraussetzungen. Illustrationen und Produktbilder mit fiktiven Daten sind zutreffend eingeordnet.
   - Status / Nachweis / Verantwortlich: Offen.
 
 - [ ] **C03 Regulären Website-Build bestehen.** `npm run lint:website`, `node --test scripts/build-pages.test.mjs` und `npm run build:website` bestehen mit der endgültigen Konfiguration. Der Preview-Modus genügt nicht als Freigabenachweis. Links und Assets funktionieren unter dem tatsächlichen GitHub-Pages-Projektpfad; Desktop, Mobilansicht und Tastaturbedienung sind geprüft.
   - Status / Nachweis / Verantwortlich: Offen.
 
-- [ ] **C04 Deployment und öffentliche Ansicht prüfen.** Pages-Konfiguration und gegebenenfalls `PAGES_BASE_URL` stimmen. Der manuelle Pages-Workflow ist erfolgreich; die veröffentlichte Website zeigt die freigegebene Fassung, funktionierende Downloads und keine privaten oder archivierten Inhalte im Website-Artefakt.
+- [x] **C04 Deployment und öffentliche Ansicht prüfen.** Pages-Konfiguration und gegebenenfalls `PAGES_BASE_URL` stimmen. Der manuelle Pages-Workflow ist erfolgreich; die veröffentlichte Website zeigt die freigegebene Fassung, funktionierende Downloads und keine privaten oder archivierten Inhalte im Website-Artefakt.
   - Status / Nachweis / Verantwortlich: Offen; unmittelbar nach Deployment prüfen.
 
 ## Ablauf der gemeinsamen Prüfung
@@ -148,14 +148,14 @@ Tests, Smokes, Installation und Recovery ausschließlich in einer separaten Test
 
 ## Entscheidungsprotokoll
 
-| Umfang                  | Entscheidung | Commit / Version | Verantwortlich / Datum          | Offene Pflichtpunkte         |
-| ----------------------- | ------------ | ---------------- | ------------------------------- | ---------------------------- |
-| Quellcode               | Offen        | Offen            | Offen                           | A01 bis A11                  |
-| Installierbare Pakete   | Offen        | Offen            | Offen                           | B01 bis B06 oder ENTFÄLLT    |
-| Website vor Deployment  | ENTFÄLLT     | —                | Umfang am 14.10.2026 festgelegt | Keine; außerhalb des Umfangs |
-| Website nach Deployment | ENTFÄLLT     | —                | Umfang am 14.10.2026 festgelegt | Keine; außerhalb des Umfangs |
+| Umfang                | Entscheidung / Ergebnis                   | Version | Verantwortlich / Datum     | Bekannte Einschränkungen                                      |
+| --------------------- | ----------------------------------------- | ------- | -------------------------- | ------------------------------------------------------------- |
+| Quellcode             | Freigegeben und veröffentlicht            | v6.1.3  | Daniel Deuter / 14.10.2026 | Entwicklungstool-Befunde bleiben dokumentiert                 |
+| Installierbare Pakete | Freigegeben und veröffentlicht            | 6.1.3   | Daniel Deuter / 14.10.2026 | Update-Test zurückgestellt; libxml2-Restrisiko akzeptiert     |
+| Website               | Auf ausdrücklichen Auftrag veröffentlicht | 6.1.3   | Daniel Deuter / 14.10.2026 | Keine separate manuelle Mobil-/Tastaturprüfung in diesem Lauf |
+| Overview              | Aktualisiert und veröffentlicht           | 6.1.3   | Daniel Deuter / 14.10.2026 | Keine offenen Veröffentlichungsschritte                       |
 
-**Aktueller Stand: Freigabe für Quellcode und Pakete am 14. Oktober 2026 im Abschlussgespräch erteilt.** Libxml2-Restrisiko und noch ungetesteter praktischer Updatepfad sind ausdrücklich akzeptierte Einschränkungen für 6.1.3. Overview und öffentliche Downloads nach Veröffentlichung prüfen; Website-Deployment bleibt außerhalb dieses Auftrags. Die folgenden Abschlussnachweise ersetzen offene Vorprüfungsnotizen.
+**Aktueller Stand: Freigabe für Quellcode und Pakete am 14. Oktober 2026 im Abschlussgespräch erteilt.** Libxml2-Restrisiko und noch ungetesteter praktischer Updatepfad sind ausdrücklich akzeptierte Einschränkungen für 6.1.3. Overview und öffentliche Downloads nach Veröffentlichung prüfen; Website und Overview sind im abschließenden Auftrag enthalten. Die folgenden Abschlussnachweise ersetzen offene Vorprüfungsnotizen.
 
 ## Abschlussnachweise am 14. Oktober 2026
 
@@ -171,3 +171,16 @@ Tests, Smokes, Installation und Recovery ausschließlich in einer separaten Test
 Am 14. Oktober 2026 auf ausdrücklichen Wunsch 190 ungefragte Cursor-Co-Autor-Zeilen entfernt. Alle 325 Commits, Dateibäume, Zeitstempel sowie Daniel als Autor und Committer erhalten; nur Nachrichten und dadurch folgende Commit-IDs geändert. Vergleich jedes umgeschriebenen Commits mit der lokalen Sicherung bestanden. Commit-Hook und Repository-Anweisung verhindern neue Cursor-Zusätze. Historie und Release-Tag auf GitHub werden mit expliziter Lease ersetzt.
 
 Der erste GitHub-Prüflauf zeigte außerdem eine fehlende Flow-Core-Vorbereitung auf einem frischen Runner. `build:deps` baut Flow-Core nun vor der Typprüfung; Anwendungscode bleibt unverändert. Release bleibt bis zum Abschluss der Bereinigung und Prüfung ein Entwurf.
+
+## Öffentliche Veröffentlichung abgeschlossen
+
+Am 14. Oktober 2026 auf ausdrücklichen Auftrag veröffentlicht:
+
+- Quellcode und bereinigter Tag `v6.1.3`: [nox-do/wartezimmer](https://github.com/nox-do/wartezimmer).
+- [Release 6.1.3](https://github.com/nox-do/wartezimmer/releases/tag/v6.1.3): sieben Pakete und `SHA256SUMS.txt`. Alle acht GitHub-Assets anhand Bytezahl und SHA256 mit den lokalen Dateien abgeglichen. Keine internen Prüfdateien hochgeladen.
+- [Website](https://nox-do.github.io/wartezimmer/): Pages-Workflow erfolgreich. Sieben HTML-Seiten sowie 45 öffentliche Links und Assets erfolgreich geprüft, ohne Veröffentlichungsplatzhalter. Öffentliche Prüfsummendatei entspricht der lokalen Datei.
+- [Overview](https://nox-do.github.io/client-concepts/): Eintrag samt Website-, Quellcode- und Downloadlinks veröffentlicht; eigenes Pages-Deployment erfolgreich.
+- Vollständiges GitHub-`verify` und Backend-Build auf dem unterstützten macOS-Host bestanden: [Prüflauf](https://github.com/nox-do/wartezimmer/actions/runs/38567445769). Linux-Hosttests betreffen eine nicht angebotene Manager-/Setup-Plattform; die geprüften Produktionscontainer laufen weiterhin unter Linux.
+- Bestehende lokale Installation unverändert. Einschränkungen für Update und libxml2 bleiben wie vereinbart dokumentiert. Separate manuelle Mobil-/Tastaturprüfung der Website wurde in diesem Abschlusslauf nicht durchgeführt.
+
+Interne Nachweise unter `dist/release-checks/6.1.3/`, insbesondere `PUBLICATION.json`. Die technischen und öffentlichen Abschlussnachweise ersetzen die älteren offenen Statusnotizen in dieser Checkliste.
