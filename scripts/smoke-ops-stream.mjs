@@ -65,6 +65,7 @@ async function main() {
     headers: {
       accept: 'text/event-stream',
       cookie: mfaAuth.cookieJar.header(),
+      'x-client-role': 'mfa',
     },
   });
   assert(response.ok, `GET /ops/stream expected 200 but got ${response.status}`);
@@ -100,6 +101,7 @@ async function main() {
     headers: {
       accept: 'text/event-stream',
       cookie: mfaAuth.cookieJar.header(),
+      'x-client-role': 'mfa',
     },
   });
   assert(streamResponse.ok, `Second GET /ops/stream expected 200 but got ${streamResponse.status}`);

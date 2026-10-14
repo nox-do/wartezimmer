@@ -47,16 +47,16 @@ Alle Punkte A01 bis A11 sind Pflicht für die Veröffentlichung des Repositorys 
   - Nachweis / Verantwortlich: Offen.
 
 - [ ] **A04 Start aus einem frischen Clone nachweisen.** Eine separate Testumgebung startet mit dokumentierten Voraussetzungen, `npm ci`, `.env.example` und eigenen Testzugangsdaten. Docker-Start und die in der README beschriebenen Oberflächen funktionieren ohne Dateien aus dem bisherigen Entwicklerrechner. Beispiele enthalten ausschließlich fiktive Daten; die initiale PIN und ihr Änderungsweg sind verständlich dokumentiert.
-  - Status: Offen.
-  - Nachweis / Verantwortlich: Betriebssystem, Node/npm/Docker-Versionen, Commit und Startprotokoll eintragen.
+  - Status: Frischer lokaler Clone von Commit `34ec949`: `npm ci`, vollständiger Build und nativer Start mit eigener temporärer Datenbank und Import-/Exportordnern bestanden. Der vollständige Docker-Start nach README ist noch separat zu prüfen.
+  - Nachweis / Verantwortlich: Isolierter Checkout `/private/tmp/wartezimmer-release-check-20261014`; Installations-, Build- und Startlogs in `/private/tmp/wartezimmer-fresh-*-20261014.log`.
 
 - [x] **A05 Vollständige technische Prüfung bestehen.** `npm run verify` und `npm run build` laufen am Veröffentlichungskandidaten erfolgreich. Das zusätzliche Build prüft auch den Backend-Build; `verify` allein ersetzt ihn nicht. Fehler werden behoben und betroffene Prüfungen erneut ausgeführt.
   - Status: Bestanden am 14. Oktober 2026. `npm run verify` vollständig erfolgreich, einschließlich aller Workspace-Tests, Typprüfung, Drift-Prüfung, UI-Build und UI-Secretcheck. `npm run build` ebenfalls erfolgreich. HTTP-Tests benötigten lokale Testports außerhalb der Sandbox.
   - Nachweis / Verantwortlich: Commit, Befehle und Ergebnisse eintragen.
 
 - [ ] **A06 Abhängigkeiten und bekannte Schwachstellen bewerten.** npm-Abhängigkeiten und eingesetzte Container sind geprüft. Sicherheitsbefunde sind nach Erreichbarkeit und Auswirkung bewertet; keine ungeklärte Schwachstelle mit erheblicher Auswirkung im ausgelieferten Betrieb. Festgestellte Grenzen und erforderliche Maßnahmen sind dokumentiert.
-  - Status: `npm audit --omit=dev` am 14. Oktober 2026 ohne bekannte Schwachstellen. Container-Sicherheitsbewertung noch separat offen.
-  - Nachweis / Verantwortlich: npm-Audit-Bericht; Containerbewertung ergänzen.
+  - Status: `npm audit --omit=dev` am 14. Oktober 2026 ohne bekannte Schwachstellen. Vollständiger npm-Audit inklusive Entwicklungstools meldet 38 Befunde, darunter zwei kritische bei Vitest/Tinypool; Bewertung des ausgelieferten Umfangs noch offen. Docker Scout nach ausdrücklich erlaubter Übertragung an Docker durchgeführt: ARM64-App ohne hohe/kritische Befunde, Sandbox mit zwei hohen Befunden (`pcre2`, `libxml2`), Proxy mit hohen und kritischen Befunden in Alpine-/Go-Paketen. Containerbefunde noch zu bewerten beziehungsweise zu beheben; kein reguläres GO für die Pakete aus diesen Scans.
+  - Nachweis / Verantwortlich: npm-Audit-Berichte in `/private/tmp/wartezimmer-*-audit-20261014.json`; Scout-SARIF-Berichte im Releaseordner `dist/releases/6.1.3/SCOUT-*.sarif.json`. Bisher nur ARM64-Images gescannt.
 
 - [ ] **A07 Sicherheitsgrenzen praktisch prüfen.** Rollen, Sitzungen, Gerätefreigaben und Portalzugriff bestehen positive und negative Tests: Ein Patientengerät erhält keinen Zugriff auf MFA, Ops oder fremde Dokumente. Uploadprüfung, Dokumentenfreigabe und Sandbox-Zugriff entsprechen der dokumentierten Architektur. Änderungen an der Autorisierung sind durch passende Tests abgedeckt.
   - Status: Offen.
@@ -93,7 +93,7 @@ Pflicht, wenn Manager, `.pfinstall` oder `.pfupdate` veröffentlicht werden. Son
   - Nachweis / Verantwortlich: Im Interview bestätigt; technische Zuordnung der getesteten Artefakte ergänzen.
 
 - [ ] **B03 Praxisabläufe im Teststack bestehen.** `npm run smoke:all` läuft mit passender Konfiguration erfolgreich. Anmeldung, Warteliste, Raumzuordnung, Aufruf, Abwesenheit/Rückholen, Portal-Dokumente und Tageswechsel sind mit fiktiven Daten geprüft. Manager-, Proxy- und TLS-Prüfungen separat passend zum angebotenen Betriebsumfang ausführen.
-  - Status: Manueller Praxisdurchlauf im Interview bestätigt. Wir haben in Version 6.1.3 Anmeldung, Warteliste, Raumzuordnung/Aufruf, Abwesenheit/Rückholen, Portal-Dokumente und Tageswechsel erfolgreich durchgespielt; im Interview am 14. Oktober 2026 bestätigt. Automatisierter Lauf von `smoke:all` sowie passende Manager-, Proxy- und TLS-Prüfungen noch separat nachzuweisen.
+  - Status: Manueller Praxisdurchlauf im Interview bestätigt. Wir haben in Version 6.1.3 Anmeldung, Warteliste, Raumzuordnung/Aufruf, Abwesenheit/Rückholen, Portal-Dokumente und Tageswechsel erfolgreich durchgespielt; im Interview am 14. Oktober 2026 bestätigt. Isolierte Smokes für Sitzungen, TV-/Terminal-Pairing einschließlich verweigerter MFA-Mutationen, Emergency, Ops-Einstellungen, Ops-Stream, Praxiszeiten und simulierten Rückholversand bestanden. Veraltete Testdaten und fehlende Rollenheader korrigiert. Dokumentenfluss, OpenAPI-Gesamtdurchlauf, Tageswechsel mit Sandbox und passende Manager-/Proxy-/TLS-Prüfungen noch offen; `smoke:all` noch nicht vollständig bestanden.
   - Nachweis / Verantwortlich: Im Interview bestätigt; Testumgebung und Zuordnung zu den finalen Paketen ergänzen.
 
 - [ ] **B04 Update, Backup und Wiederherstellung bestehen.** Update von der angebotenen Vorgängerversion, Datenerhalt und Wiederherstellung eines Backups sind praktisch geprüft. Für ein Erstrelease ohne unterstützten Updatepfad ist dies ausdrücklich beschrieben; Backup und Restore bleiben Pflicht. Abbruch und Recovery einer fehlgeschlagenen Installation beziehungsweise eines Updates führen zu einem nachvollziehbaren, wiederherstellbaren Zustand.

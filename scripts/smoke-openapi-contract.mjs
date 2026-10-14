@@ -84,6 +84,7 @@ async function main() {
     jsonBody: {
       topicId: 'offen',
       authPath: 'phone_dob',
+      phoneNumber: '+4917612345678',
     },
   });
   assertResponseSchema(bundle, 'POST', '/api/v1/checkins', 201, created, 'checkin create');

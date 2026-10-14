@@ -61,7 +61,7 @@ async function main() {
     console.log('2) Topic "offen" wird mit TOPIC_DISABLED abgewiesen');
     const openBlocked = await requestJson(baseUrl, 'POST', '/api/v1/checkins', {
       auth: terminalAuth,
-      jsonBody: { topicId: 'offen', authPath: 'phone_dob' },
+      jsonBody: { topicId: 'offen', authPath: 'phone_dob', phoneNumber: '+4917612345678' },
       expectedStatus: 409,
     });
     assert(
@@ -72,7 +72,7 @@ async function main() {
     console.log('3) Nicht-offen Topic funktioniert weiterhin');
     await requestJson(baseUrl, 'POST', '/api/v1/checkins', {
       auth: terminalAuth,
-      jsonBody: { topicId: 'rezept', authPath: 'phone_dob' },
+      jsonBody: { topicId: 'rezept', authPath: 'phone_dob', phoneNumber: '+4917612345678' },
       expectedStatus: 201,
     });
 
@@ -96,7 +96,7 @@ async function main() {
     console.log('6) Normaler Check-in wird mit CHECKIN_CLOSED abgewiesen');
     const closedCheckin = await requestJson(baseUrl, 'POST', '/api/v1/checkins', {
       auth: terminalAuth,
-      jsonBody: { topicId: 'rezept', authPath: 'phone_dob' },
+      jsonBody: { topicId: 'rezept', authPath: 'phone_dob', phoneNumber: '+4917612345678' },
       expectedStatus: 409,
     });
     assert(

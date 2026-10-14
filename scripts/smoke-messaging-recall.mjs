@@ -9,6 +9,19 @@ import {
   smokeStaffAuth,
 } from './smoke-helpers.mjs';
 
+async function moveToWaiting(baseUrl, mfaAuth, visitId) {
+  const queue = await requestJson(baseUrl, 'GET', '/api/v1/queue', {
+    auth: mfaAuth,
+    expectedStatus: 200,
+  });
+  if (queue.body?.items?.find((item) => item.visitId === visitId)?.status === 'waiting') return;
+  await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(visitId)}/transition`, {
+    auth: mfaAuth,
+    jsonBody: { type: 'return_to_waiting' },
+    expectedStatus: 200,
+  });
+}
+
 async function main() {
   loadRepoDotEnv();
 
@@ -88,6 +101,7 @@ async function main() {
   });
   const visitId = checkin.body?.visitId;
   assert(typeof visitId === 'string' && visitId.length > 0, 'Missing visitId');
+  await moveToWaiting(baseUrl, mfaAuth, visitId);
 
   console.log('4b) Terminalnummer allein erlaubt keinen Benachrichtigungsversand');
   await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(visitId)}/transition`, {
@@ -197,6 +211,7 @@ async function main() {
   });
   const visitNoPhone = checkinNoPhone.body?.visitId;
   assert(typeof visitNoPhone === 'string' && visitNoPhone.length > 0, 'Missing visitId (no phone)');
+  await moveToWaiting(baseUrl, mfaAuth, visitNoPhone);
   await requestJson(
     baseUrl,
     'POST',
@@ -253,6 +268,7 @@ async function main() {
   });
   const visitRetry = checkinRetry.body?.visitId;
   assert(typeof visitRetry === 'string' && visitRetry.length > 0, 'Missing visitId (retry)');
+  await moveToWaiting(baseUrl, mfaAuth, visitRetry);
   await requestJson(baseUrl, 'POST', `/api/v1/queue/${encodeURIComponent(visitRetry)}/transition`, {
     auth: mfaAuth,
     jsonBody: { type: 'set_absence', mode: 'wait_here' },

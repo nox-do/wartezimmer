@@ -1,9 +1,5 @@
 #!/usr/bin/env node
 
-import fs from 'node:fs';
-import path from 'node:path';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { loadRepoDotEnv } from './dotenv.mjs';
 import {
   assert,
@@ -14,19 +10,13 @@ import {
   smokeStaffAuth,
 } from './smoke-helpers.mjs';
 
-const execFileAsync = promisify(execFile);
-
-async function dockerExec(container, command) {
-  const { stdout } = await execFileAsync('docker', ['exec', container, 'sh', '-lc', command], {
-    cwd: process.cwd(),
-  });
-  return stdout.trim();
-}
-
 function applyAuthHeaders(headers, auth) {
   const cookieHeader = auth?.cookieJar?.header();
   if (cookieHeader) {
     headers.cookie = cookieHeader;
+  }
+  if (auth?.role) {
+    headers['x-client-role'] = auth.role;
   }
   if (auth?.origin) {
     headers.origin = auth.origin;
@@ -117,6 +107,7 @@ async function main() {
     jsonBody: {
       topicId: 'offen',
       authPath: 'phone_dob',
+      phoneNumber: '+4917612345678',
     },
     expectedStatus: 201,
   });

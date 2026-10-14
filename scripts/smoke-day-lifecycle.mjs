@@ -94,6 +94,7 @@ async function main() {
     jsonBody: {
       topicId: 'offen',
       authPath: 'phone_dob',
+      phoneNumber: '+4917612345678',
     },
     expectedStatus: 201,
   });
@@ -119,7 +120,8 @@ async function main() {
     expectedStatus: 200,
   });
   assert(
-    Array.isArray(queueBeforeReset.body?.items) && queueBeforeReset.body.items.length === 1,
+    Array.isArray(queueBeforeReset.body?.items) &&
+      queueBeforeReset.body.items.some((item) => item.visitId === visitId),
     'Expected ticket to remain after day-close/start',
   );
 
