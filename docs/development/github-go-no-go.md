@@ -37,7 +37,7 @@ Alle Punkte A01 bis A11 sind Pflicht für die Veröffentlichung des Repositorys 
   - Nachweis / Verantwortlich: Offen.
 
 - [ ] **A02 Geheimnisse und private Daten ausschließen.** Ein Secret-Scan und eine Sichtprüfung decken den Veröffentlichungskandidaten und die gesamte zur Veröffentlichung vorgesehene Git-Historie ab. Keine echten Patienten- oder Praxisdaten, Zugangsdaten, Tokens, privaten Schlüssel, Dumps oder Backups enthalten; auch Screenshots, Fixtures, Archive und Konfigurationsbeispiele prüfen. Gefundene echte Zugangsdaten werden ersetzt beziehungsweise widerrufen und aus dem Veröffentlichungsumfang entfernt. Den geprüften Umfang und bereinigte Befunde dokumentieren, ohne Geheimnisse in den Nachweis zu kopieren.
-  - Status: Offen. `npm run check:repository` bestanden, 1466 erfasste Pfade. `.env`, `backups/` und `dumps/` sind ignoriert und aktuell nicht erfasst. Der Hygienecheck prüft Dateimuster und einzelne Schlüsselmarker, keinen vollständigen Secret-Scan oder die Historie.
+  - Status: Quelltext-Mustercheck am 14. Oktober 2026 ohne Befund: 315 erreichbare Commits, 7318 eindeutige Textblobs und drei lokale Secret-Werte geprüft. Muster für private Schlüssel sowie GitHub-, AWS-, Slack- und Stripe-Zugangsdaten geprüft. 58 binäre Blobs separat zu bewerten; kein vollständiger Nachweis für beliebige Secret-Formate. `npm run check:repository` bestanden, 1466 erfasste Pfade zum Zeitpunkt der Vorprüfung. `.env`, `backups/` und `dumps/` sind ignoriert und aktuell nicht erfasst. Der Hygienecheck prüft Dateimuster und einzelne Schlüsselmarker, keinen vollständigen Secret-Scan oder die Historie.
   - Im Interview am 14. Oktober 2026 bestätigt: Wir haben keine echten Patienten- oder Praxisdaten verwendet. Den seven.io-API-Key haben wir ausschließlich über das WebUI hinterlegt. Der Speicherweg in `database-messaging.ts` schreibt Zugangsdaten in die Laufzeitdatenbank; Standardpfad laut `database.ts`: `/var/lib/wartezimmer/app/wartezimmer.db`. Eine Prüfung der Dateinamen in der erreichbaren Git-Historie fand keine `.env`, SQLite-Dateien, Backups, Dumps oder Dateien unter `data/`; die gefundene `lab/coredns/lan.tls.lab.db` ist eine DNS-Zonendatei. Das ist noch kein vollständiger Secret-Scan. Kein bestätigter Leak; Widerruf nur bei festgestellter Offenlegung erforderlich. Laufzeitdaten dürfen nicht in Releasepakete gelangen. Den Schlüsselwert nicht in Prüfprotokolle übernehmen.
   - Nachweis / Verantwortlich: Offen.
 
@@ -55,8 +55,8 @@ Alle Punkte A01 bis A11 sind Pflicht für die Veröffentlichung des Repositorys 
   - Nachweis / Verantwortlich: Commit, Befehle und Ergebnisse eintragen.
 
 - [ ] **A06 Abhängigkeiten und bekannte Schwachstellen bewerten.** npm-Abhängigkeiten und eingesetzte Container sind geprüft. Sicherheitsbefunde sind nach Erreichbarkeit und Auswirkung bewertet; keine ungeklärte Schwachstelle mit erheblicher Auswirkung im ausgelieferten Betrieb. Festgestellte Grenzen und erforderliche Maßnahmen sind dokumentiert.
-  - Status: Offen.
-  - Nachweis / Verantwortlich: Bericht, Bewertung und gegebenenfalls begründete Restbefunde eintragen.
+  - Status: `npm audit --omit=dev` am 14. Oktober 2026 ohne bekannte Schwachstellen. Container-Sicherheitsbewertung noch separat offen.
+  - Nachweis / Verantwortlich: npm-Audit-Bericht; Containerbewertung ergänzen.
 
 - [ ] **A07 Sicherheitsgrenzen praktisch prüfen.** Rollen, Sitzungen, Gerätefreigaben und Portalzugriff bestehen positive und negative Tests: Ein Patientengerät erhält keinen Zugriff auf MFA, Ops oder fremde Dokumente. Uploadprüfung, Dokumentenfreigabe und Sandbox-Zugriff entsprechen der dokumentierten Architektur. Änderungen an der Autorisierung sind durch passende Tests abgedeckt.
   - Status: Offen.
@@ -77,7 +77,7 @@ Alle Punkte A01 bis A11 sind Pflicht für die Veröffentlichung des Repositorys 
   - Nachweis / Verantwortlich: Interview, README, SECURITY.md und CONTRIBUTING.md; Daniel Deuter. Repository-Konfiguration noch offen.
 
 - [ ] **A11 Projektübersicht mitpflegen.** Der Overview in [nox-do/client-concepts](https://github.com/nox-do/client-concepts) wird zur Veröffentlichung aktualisiert. Projektstatus, Repository-Link, angebotene Pakete, Lizenzbezeichnung und Funktionsumfang stimmen mit dem freigegebenen Stand überein. Änderungen im Overview werden bei künftigen Releases mitgeprüft.
-  - Status: Overview per SSH gelesen. Wartezimmer-Eintrag mit Repository-Link, Release 6.1.3, Plattformen und Source-available-Hinweis in `index.html` und README lokal vorbereitet. Veröffentlichung steht noch aus; Checkout: `/private/tmp/wartezimmer-client-concepts-20261014`.
+  - Status: Overview per SSH gelesen. Wartezimmer-Eintrag mit Repository-Link, Release 6.1.3, Plattformen und Source-available-Hinweis in `index.html` und README lokal als Commit `5a862d6` vorbereitet. Veröffentlichung steht noch aus; Checkout: `/private/tmp/wartezimmer-client-concepts-20261014`.
   - Nachweis / Verantwortlich: Offen.
 
 ## B Installierbares Release
@@ -85,7 +85,7 @@ Alle Punkte A01 bis A11 sind Pflicht für die Veröffentlichung des Repositorys 
 Pflicht, wenn Manager, `.pfinstall` oder `.pfupdate` veröffentlicht werden. Sonst jeden Punkt begründet als ENTFÄLLT markieren.
 
 - [ ] **B01 Releasepakete eindeutig zuordnen.** Version, Tag, Commit, Manager und Installations-/Updatepakete passen zusammen. Pakete enthalten ausschließlich Produktionsartefakte und erforderliche Lizenzen. Unterstützte Architektur und Plattform sind eindeutig benannt; Prüfsummen sind vorhanden. Signierung beziehungsweise der tatsächliche Signierungsstatus und erwartete Betriebssystemmeldungen sind geprüft und dokumentiert.
-  - Entscheidung am 14. Oktober 2026: Manager-Installer dauerhaft unsigniert veröffentlichen; Signierungskosten sollen vermieden werden. macOS ohne Signierung und Notarisierung, Windows ohne Codesignierung. Fehlende Signierung ist bewusst gewählt und allein kein NO-GO. Tatsächlichen Paketstatus, erfolgreiche Installation und auftretende Betriebssystemmeldungen dennoch prüfen; Hinweise in Dokumentation und Release Notes aufnehmen.
+  - Entscheidung am 14. Oktober 2026: Manager-Installer dauerhaft unsigniert veröffentlichen; Signierungskosten sollen vermieden werden. macOS ohne Signierung und Notarisierung, Windows ohne Codesignierung. Fehlende Signierung ist bewusst gewählt und allein kein NO-GO. Neue Manager-Pakete aus Commit `3442c16` gebaut. Paketarchitekturen und enthaltene Dateien geprüft; Windows ohne Authenticode-Zertifikat, macOS nur Ad-hoc-Signatur ohne Herausgeberidentität. Isolierter Setup-Smoke des paketierten ARM64-Mac-Managers bestanden. Erfolgreiche Installation und auftretende Betriebssystemmeldungen weiterhin den finalen Paketen zuordnen; Hinweise in Dokumentation und Release Notes aufnehmen.
   - Status / Nachweis / Verantwortlich: Offen.
 
 - [ ] **B02 Neuinstallation auf unterstützten Plattformen bestehen.** macOS Apple Silicon, macOS Intel und Windows 11 x64 sind für die jeweils angebotenen Pakete geprüft. Installation und Start funktionieren mit den dokumentierten Voraussetzungen und mit dem paketierten Manager. Ein erfolgreicher Entwicklungsstart allein genügt nicht.
