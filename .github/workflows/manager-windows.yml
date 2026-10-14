@@ -8,8 +8,8 @@ jobs:
   macos-release-archive:
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '22.22.2'
       - run: node --test scripts/release-archive.test.mjs
@@ -17,8 +17,8 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '22.22.2'
           cache: npm
