@@ -188,6 +188,7 @@
         : t('ops.messagingApiKeyMissing')}
     </p>
     <p class="text-desc text-desc--tight">{t('ops.messagingSevenApiKeyHint')}</p>
+    <p class="text-desc text-desc--tight">{t('ops.messagingSevenApiKeyPermissionsHint')}</p>
   </section>
 
   <section class="panel">

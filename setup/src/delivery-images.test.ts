@@ -349,7 +349,10 @@ test('prepare rejects safe but undeclared archive paths before docker load', asy
           return { ok: true, loaded: [], log: '' };
         },
       }),
-      /PFINSTALL_TAR_ENTRY_UNEXPECTED/,
+      (error: unknown) => {
+        assert.equal(resolveSetupApiError(error).body.error.code, 'PFINSTALL_TAR_ENTRY_UNEXPECTED');
+        return true;
+      },
     );
     assert.equal(dockerLoadCalled, false);
   } finally {
@@ -440,7 +443,7 @@ test('fresh prepare rejects an existing installation before docker load', async 
 });
 
 function addEmbeddedManifest(source: string): void {
-  for (const file of ['THIRD_PARTY_NOTICES.txt', 'licenses/caddy/LICENSE.txt']) {
+  for (const file of ['LICENSE', 'THIRD_PARTY_NOTICES.txt', 'licenses/caddy/LICENSE.txt']) {
     fs.mkdirSync(path.dirname(path.join(source, file)), { recursive: true });
     fs.writeFileSync(path.join(source, file), 'license fixture');
   }
@@ -473,7 +476,7 @@ function embeddedDeps(): NonNullable<Parameters<typeof preparePfinstall>[4]> {
   };
 }
 
-test('build-format v2 installs from a renamed single file and activates the pinned package', async () => {
+test('build-format v2 with project license installs from a renamed file and activates the pin', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-single-file-'));
   const source = createBundleSource();
   try {
@@ -493,8 +496,53 @@ test('build-format v2 installs from a renamed single file and activates the pinn
   }
 });
 
+test('earlier format-2 packages without project license remain readable', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-license-compat-'));
+  const source = createBundleSource();
+  try {
+    fs.rmSync(path.join(source, 'LICENSE'));
+    const manifestPath = path.join(source, 'manifest.json');
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    delete manifest.files.LICENSE;
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+    const archive = path.join(root, 'release.pfinstall');
+    packBundleSource(source, archive);
+    const prepared = await preparePfinstall(root, archive, 'fresh', readyDocker, embeddedDeps());
+    markInstallOperationInstalling(root, prepared.operation.id);
+    assert.equal(activatePreparedPfinstall(root, prepared.operation.id).releaseVersion, '1.4.2');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(source, { recursive: true, force: true });
+  }
+});
+
 test('embedded metadata and payload failures stop before compose validation or Docker load', async (t) => {
   const cases: [string, (source: string) => void, string][] = [
+    [
+      'changed project license',
+      (source) => fs.appendFileSync(path.join(source, 'LICENSE'), 'corrupt'),
+      'PFINSTALL_CONTENT_MISMATCH',
+    ],
+    [
+      'missing project license',
+      (source) => fs.rmSync(path.join(source, 'LICENSE')),
+      'PFINSTALL_MANIFEST_INVALID',
+    ],
+    [
+      'missing project license checksum',
+      (source) => {
+        const file = path.join(source, 'manifest.json');
+        const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
+        delete manifest.files.LICENSE;
+        fs.writeFileSync(file, JSON.stringify(manifest));
+      },
+      'PFINSTALL_MANIFEST_INVALID',
+    ],
+    [
+      'unexpected payload file',
+      (source) => fs.writeFileSync(path.join(source, 'unexpected.txt'), 'extra'),
+      'PFINSTALL_TAR_ENTRY_UNEXPECTED',
+    ],
     [
       'broken JSON',
       (source) => fs.writeFileSync(path.join(source, 'manifest.json'), '{'),

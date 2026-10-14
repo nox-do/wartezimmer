@@ -11,7 +11,7 @@ archiviert. Das Archiv wird nicht veröffentlicht.
 3. Ein Besuch mit Anmeldung, Unterlagen, optionaler Abwesenheit und Aufruf, jeweils aus Patienten- und Teamperspektive.
 4. Klein anfangen, Download oder Unterstützung, kurze FAQ und Kontakt.
 
-„Kostenlos im Praxisbetrieb · Lokal in Ihrer Praxis · In 15 Minuten eingerichtet.“ bleibt
+„Kostenlos im Praxisbetrieb · Lokal in Ihrer Praxis · In 5 Minuten startklar.“ bleibt
 bereits im Hero sichtbar. Downloads und Technik haben eigene Seiten.
 Die Header- und Footer-Navigation auf allen Seiten gemeinsam pflegen.
 

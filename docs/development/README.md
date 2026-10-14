@@ -1,5 +1,6 @@
 # Entwicklung und Testwerkzeuge
 
+- [Go No Go für GitHub](github-go-no-go.md): Freigabekriterien und Nachweise für Quellcode, Releasepakete und Website.
 - [Demo-Belegung](demo-data.md): Räume und fiktive Patienten im lokalen Docker-Stack anlegen.
 - [TLS-Lab](tls-lab.md): isolierte Pebble-/acme-dns-/Caddy-Umgebung für TLS-Smokes.
 - [Architektur](../architecture/README.md): Systemaufbau und technische Regeln.

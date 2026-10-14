@@ -158,6 +158,8 @@ export const dict = {
     messagingSevenApiKeyLabel: 'seven.io API-Key',
     messagingSevenApiKeyHint:
       'Gleicher Key für SMS und WhatsApp. Leer lassen, um den gespeicherten Schlüssel beizubehalten.',
+    messagingSevenApiKeyPermissionsHint:
+      'Bei seven.io einen Live-API-Key mit den Berechtigungen sms (SMS-Versand) und journal (Zustellstatus) anlegen. Für WhatsApp zusätzlich waba aktivieren. Ein Sandbox-Key versendet keine echten Nachrichten.',
     messagingApiKeyPlaceholder: 'Neuen Key eintragen oder leer lassen',
     messagingOptionalPlaceholder: 'Optional',
     messagingSmsSectionTitle: 'SMS-Rückruf',
@@ -335,7 +337,7 @@ export const dict = {
     recallSmsErrorGeneric: 'Versand fehlgeschlagen ({code}) — Patient bitte am Empfang ansprechen.',
     recallNotifyRetrySuccess: 'Benachrichtigung an Nachrichtendienst übergeben.',
     recallNotifySending: 'Benachrichtigung wird gesendet…',
-    recallNotifyDelivered: 'Benachrichtigung zugestellt',
+    recallNotifyDelivered: 'Zugestellt laut Nachrichtendienst',
     recallNotifyUnknown: 'Versand unklar – bitte vor erneutem Versand prüfen.',
     recallNotifySimulated: 'Simulation – keine Nachricht verschickt',
     fixRecallNotifyModalTitle: 'Nummer korrigieren',

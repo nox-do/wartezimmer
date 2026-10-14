@@ -311,6 +311,8 @@ function prepareReleaseBundle(archivePath: string): PreparedReleaseBundle {
     'THIRD_PARTY_NOTICES.txt',
     'licenses/caddy/LICENSE.txt',
   ];
+  // License-bearing releases and earlier format-2 packages share the same reader.
+  if (entries.some((entry) => entry.name === 'LICENSE')) payloadFiles.push('LICENSE');
   const allowedFiles = new Set<string>([...payloadFiles, 'manifest.json']);
   for (const entry of entries) {
     if (!entry.name) continue;
@@ -318,7 +320,11 @@ function prepareReleaseBundle(archivePath: string): PreparedReleaseBundle {
       entry.type === 'file'
         ? allowedFiles.has(entry.name)
         : [...allowedFiles].some((file) => file.startsWith(`${entry.name}/`));
-    if (!allowed) throw new Error(`PFINSTALL_TAR_ENTRY_UNEXPECTED: ${entry.rawName}`);
+    if (!allowed)
+      throw releaseValidationError(
+        'PFINSTALL_TAR_ENTRY_UNEXPECTED',
+        'Das Installationspaket enthält unerwartete Dateien. Bitte ein passendes Paket und einen aktuellen Manager verwenden.',
+      );
   }
   if (!entries.some((entry) => entry.name === dockerArchive)) {
     throw new Error('RELEASE_BUNDLE_UNSUPPORTED');
