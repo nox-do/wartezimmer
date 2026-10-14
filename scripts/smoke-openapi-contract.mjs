@@ -184,6 +184,14 @@ async function main() {
     'session resolve not found',
   );
 
+  const beforeCall = await requestJson(baseUrl, '/api/v1/queue', mfaAuth);
+  if (beforeCall.body?.items?.find((item) => item.visitId === visitId)?.status !== 'waiting') {
+    await requestJson(baseUrl, `/api/v1/queue/${encodeURIComponent(visitId)}/transition`, mfaAuth, {
+      method: 'POST',
+      jsonBody: { type: 'return_to_waiting' },
+    });
+  }
+
   console.log(`queue) POST /api/v1/queue/${visitId}/transition`);
   const called = await requestJson(
     baseUrl,
