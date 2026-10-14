@@ -19,7 +19,7 @@
     "build:domain": "npm run -w @wartezimmer/domain build",
     "build:flow-core": "npm run -w @wartezimmer/flow-core build",
     "build:server-shared": "npm run -w @wartezimmer/server-shared build",
-    "build:deps": "npm run build:domain && npm run build:server-shared",
+    "build:deps": "npm run build:domain && npm run build:server-shared && npm run build:flow-core",
     "build:ui": "npm run build:domain && node scripts/build-ui.mjs",
     "build:app": "npm run build:domain && npm run build:server-shared && npm run build:flow-core && npm run -w @wartezimmer/app build && node scripts/copy-ui-static.mjs",
     "build": "npm run build:domain && npm run build:server-shared && npm run build:ui && npm run build:app",

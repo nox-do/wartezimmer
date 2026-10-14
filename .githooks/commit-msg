@@ -1,0 +1,5 @@
+#!/bin/sh
+if LC_ALL=C grep -Eiq '^[[:space:]]*Co-authored-by:.*(cursoragent@cursor\.com|<[^>]*@cursor\.com>)' "$1"; then
+  echo 'Commit abgelehnt: Cursor-Co-Autor-Zusätze sind in diesem Repository nicht erlaubt.' >&2
+  exit 1
+fi
