@@ -11,7 +11,8 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    # Manager/Setup host tests target the supported desktop platforms.
+    runs-on: macos-14
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
