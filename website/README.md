@@ -41,8 +41,8 @@ oder echte Produktansichten mit fiktiven Daten. Keine erfundenen Referenzen.
 ## Veröffentlichungsstand
 
 Der manuelle Workflow `.github/workflows/pages.yml` baut ausschließlich die
-aktive Website nach `dist/pages/`. Der reguläre Build bleibt gesperrt, solange
-`data-publish-placeholder` in den öffentlichen HTML-Dateien steht:
+aktive Website nach `dist/pages/`. Alle bisherigen Veröffentlichungsplatzhalter sind ausgefüllt. Neue
+`data-publish-placeholder`-Markierungen sperren den regulären Build:
 
 - `downloads.html`: sieben Downloadlinks für Manager, Erstinstallation und Updates
   der Version 6.1.3 zeigen auf `nox-do/wartezimmer`, Release `v6.1.3`.
@@ -59,10 +59,12 @@ aktive Website nach `dist/pages/`. Der reguläre Build bleibt gesperrt, solange
   unveränderter Fassungen an einzelne Empfänger sind als Ausnahmen zu berücksichtigen.
   Details regelt die Lizenz. Das Projekt ist Source-available; sonstige Website-Inhalte
   sind nur bei ausdrücklicher Zuordnung umfasst.
-- `datenschutz.html`: bestehende Hosting- und Kontaktangaben vervollständigen.
+- `datenschutz.html`: GitHub Pages als alleiniger Host, Google für E-Mail und
+  Löschung nach Wegfall des Zwecks unter Beachtung gesetzlicher Aufbewahrungspflichten
+  sind beschrieben. Anbieterinformationen sind verlinkt.
 
 Betreiber- und Kontaktdaten wurden unverändert aus dem bisherigen Impressum
-übernommen. Vorhandene Veröffentlichungsmarkierungen bleiben erhalten.
+übernommen. Die bisherigen Veröffentlichungsmarkierungen sind durch die bestätigten Angaben ersetzt.
 Keine fehlenden URLs, Lizenzentscheidungen oder rechtlichen Angaben erfinden.
 
 Das Git-Remote ist `git@github.com:nox-do/wartezimmer.git`. Für die Veröffentlichung

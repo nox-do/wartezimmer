@@ -99,8 +99,18 @@ test('Pages build renders the canonical license, project sitemap and blocks inco
     await readFile(path.join(output, 'robots.txt'), 'utf8'),
     /Sitemap: https:\/\/example.org\/project\/sitemap.xml/,
   );
-  assert.notEqual(invoke([]).status, 0);
-  assert.match(invoke([]).stderr, /Angaben vor Veröffentlichung/);
+  const publicationPage = path.join(directory, 'website/datenschutz.html');
+  const completePage = await readFile(publicationPage, 'utf8');
+  await writeFile(
+    publicationPage,
+    completePage.replace('</main>', '<p data-publish-placeholder="fixture">Offen</p></main>'),
+  );
+  const incomplete = invoke([]);
+  assert.notEqual(incomplete.status, 0);
+  assert.match(incomplete.stderr, /Angaben vor Veröffentlichung/);
+  await writeFile(publicationPage, completePage);
+  const publication = invoke([]);
+  assert.equal(publication.status, 0, publication.stderr);
   assert.notEqual(invoke(['--preview'], 'https://example.org/project?token=secret').status, 0);
   const templatePath = path.join(directory, 'website/lizenz.html');
   await writeFile(

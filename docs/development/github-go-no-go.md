@@ -116,7 +116,7 @@ Pflicht, wenn Manager, `.pfinstall` oder `.pfupdate` veröffentlicht werden. Son
 Pflicht, wenn die Website veröffentlicht wird. Offene C-Punkte blockieren die Website-Freigabe; Quellcode und Pakete werden anhand ihrer eigenen Punkte entschieden.
 
 - [ ] **C01 Veröffentlichungsplatzhalter auflösen.** Quellcode-Link, sieben Downloadlinks sowie Hosting- und Kontaktangaben sind mit bestätigten Angaben ausgefüllt. Veröffentlichungsmarker erst nach inhaltlicher Klärung entfernen.
-  - Status: Quellcode-Link und alle sieben Downloadlinks für `v6.1.3` eingerichtet, Releaseübersicht und SHA256SUMS verlinkt. Noch offen: zwei Datenschutzmarker für Hosting und Kontaktanfragen in `website/datenschutz.html`. Der reguläre Website-Build bleibt dadurch gesperrt; Preview-Build und Website-Tests bestanden.
+  - Status: Quellcode-Link und alle sieben Downloadlinks für `v6.1.3` eingerichtet, Releaseübersicht und SHA256SUMS verlinkt. Hosting und Kontaktangaben bestätigt und ergänzt: ausschließlich GitHub Pages, E-Mail bei Google, Löschung von E-Mails und Kontakten nach Wegfall des Zwecks unter Beachtung gesetzlicher Aufbewahrungspflichten. Alle bisherigen Website-Platzhalter entfernt. Regulärer Website-Build mit Projektpfad, Website-Lint und zehn Website-Tests bestanden. Download-Erreichbarkeit erst nach Release-Veröffentlichung prüfen.
   - Nachweis / Verantwortlich: Offen.
 
 - [ ] **C02 Öffentliche Inhalte freigeben.** Betreiber-, Kontakt-, Datenschutz- und Lizenzangaben sind durch die zuständige Person freigegeben. Produktversprechen einschließlich „In 5 Minuten startklar“ passen zu den getesteten Voraussetzungen. Illustrationen und Produktbilder mit fiktiven Daten sind zutreffend eingeordnet.
