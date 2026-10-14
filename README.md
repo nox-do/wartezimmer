@@ -2,7 +2,7 @@
 
 Wartezimmer ist ein lokal betriebenes System zur Organisation von Patientenbesuchen in Arztpraxen. Es verbindet Anmeldung, Warteliste, Raumzuordnung und Patientenaufruf mit einem optionalen Portal für Dokumente und Anamnese. Das Praxisteam arbeitet im Browser; Anwendung und Datenverarbeitung laufen auf einem Docker-Host in der Praxis.
 
-Diese README richtet sich an Entwickler und die Praxis-IT. Die [Projektwebsite](website/README.md) erklärt die Anwendung im Praxisalltag; die [Dokumentation](docs/README.md) beschreibt Fachlichkeit, Architektur und Betrieb.
+Diese README richtet sich an Entwickler und die Praxis-IT. Die [Projektwebsite](https://nox-do.github.io/wartezimmer/) erklärt die Anwendung im Praxisalltag; die [Dokumentation](docs/README.md) beschreibt Fachlichkeit, Architektur und Betrieb.
 
 ## Fachlicher Umfang
 
