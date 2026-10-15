@@ -1,5 +1,16 @@
 import type { DocumentStatus } from '../db/db-types.js';
 
+// Accepted documents remain visible until explicitly discarded or exported.
+export const PENDING_DOCUMENT_STATUSES = [
+  'received',
+  'scanning',
+  'scan_clean',
+  'blocked_malware',
+  'scan_error',
+  'preview_requested',
+  'export_requested',
+] as const satisfies readonly DocumentStatus[];
+
 const PREVIEWABLE_STATUSES = new Set<DocumentStatus>([
   'scan_clean',
   'preview_requested',

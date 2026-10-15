@@ -1,3 +1,4 @@
+import { PENDING_DOCUMENT_STATUSES } from '../documents/document-status-rules.js';
 import type { DatabaseSync } from 'node:sqlite';
 
 export function prepareDocumentDatabaseStatements(db: DatabaseSync) {
@@ -78,7 +79,7 @@ export function prepareDocumentDatabaseStatements(db: DatabaseSync) {
         updated_at AS updatedAt
       FROM documents
       WHERE visit_id = ?
-        AND status IN ('scan_clean', 'preview_requested', 'export_requested')
+        AND status IN (${PENDING_DOCUMENT_STATUSES.map((status) => `'${status}'`).join(', ')})
       ORDER BY created_at DESC`,
     ),
   };

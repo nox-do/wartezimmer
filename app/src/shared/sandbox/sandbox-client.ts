@@ -573,7 +573,7 @@ export function getSandboxClient(): SandboxClient {
     const baseUrl = process.env.SANDBOX_BASE_URL ?? 'http://127.0.0.1:8081';
     const token = process.env.SANDBOX_INTERNAL_TOKEN?.trim() ?? '';
     const requestTimeoutMs = readPositiveTimeoutMs('SANDBOX_REQUEST_TIMEOUT_MS', 7000);
-    const scanTimeoutMs = readPositiveTimeoutMs('SANDBOX_SCAN_TIMEOUT_MS', 15000);
+    const scanTimeoutMs = readPositiveTimeoutMs('SANDBOX_SCAN_TIMEOUT_MS', 20000);
     const previewPutTimeoutMs = readPositiveTimeoutMs(
       'SANDBOX_PREVIEW_PUT_TIMEOUT_MS',
       Math.max(45_000, scanTimeoutMs + 10_000),

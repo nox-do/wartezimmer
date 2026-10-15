@@ -31,7 +31,7 @@ export function getSandboxConfig(): SandboxConfig {
       process.env.SANDBOX_INTAKE_BASE_PATH?.trim() || '/var/lib/wartezimmer/sandbox-intake',
     scannerDbPath: process.env.CLAMAV_DB_PATH?.trim() || '/var/lib/clamav',
     scanEnabled: (process.env.SANDBOX_SCAN_ENABLED?.trim() ?? 'true') === 'true',
-    scanTimeoutMs: Number.parseInt(process.env.SANDBOX_SCAN_TIMEOUT_MS?.trim() ?? '', 10) || 15000,
+    scanTimeoutMs: Number.parseInt(process.env.SANDBOX_SCAN_TIMEOUT_MS?.trim() ?? '', 10) || 20000,
     maxSignatureAgeHours: resolveMaxSignatureAgeHours(process.env.CLAMAV_MAX_SIGNATURE_AGE_HOURS),
     sandboxAuthEnabled,
     sandboxInternalToken,

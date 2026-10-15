@@ -14,3 +14,17 @@ export function previewSandboxStatusMessage(status: string | undefined): string 
       return status ? 'previewUnavailable' : null;
   }
 }
+
+export function documentScanStatusMessage(status: string | undefined): string | null {
+  switch (status) {
+    case 'blocked_malware':
+      return 'previewBlockedMalware';
+    case 'scan_error':
+      return 'previewScanError';
+    case 'received':
+    case 'scanning':
+      return 'previewScanning';
+    default:
+      return null;
+  }
+}

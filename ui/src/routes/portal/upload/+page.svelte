@@ -116,8 +116,12 @@
     uploading = false;
 
     if (uploadedCount > 0) {
-      uploadFeedback = t('portal.uploadSuccess');
-      toastStore.success(t('portal.uploadSuccess'));
+      if (uploadedCount === files.length) {
+        uploadFeedback = t('portal.uploadSuccess');
+        toastStore.success(uploadFeedback);
+      } else {
+        uploadFeedback = t('portal.uploadPartial');
+      }
       session = activeSession;
       await loadDocuments(activeSession);
     }

@@ -38,7 +38,9 @@ export const dict = {
     uploadPrivacyOpen: 'Privacy notice for uploads',
     uploadAdd: 'Choose file / take photo',
     uploading: 'Uploading…',
-    uploadSuccess: 'Thank you — you can close this page now.',
+    uploadSuccess: 'Thank you — your documents have been received. You can now close this page.',
+    uploadPartial:
+      'Not all documents could be uploaded. Please check the list and try uploading the missing documents again.',
     uploadError: 'Upload failed.',
     fileTooLarge: 'File is too large (max. 25 MB).',
     fileListLabel: 'Your files (names only)',

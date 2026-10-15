@@ -1,3 +1,4 @@
+import { PENDING_DOCUMENT_STATUSES } from '../documents/document-status-rules.js';
 import type { DatabaseSync } from 'node:sqlite';
 import type { Runtime } from '@wartezimmer/flow-core/server';
 import type { VisitStatus } from '@wartezimmer/flow-core';
@@ -29,8 +30,6 @@ const VISIT_QUEUE_STATUSES = new Set<VisitStatus>([
   'in_progress',
   'blocked',
 ]);
-
-const PENDING_DOCUMENT_STATUSES = ['scan_clean', 'preview_requested', 'export_requested'] as const;
 
 export function ensureVisitHostStateSchema(db: DatabaseSync): void {
   db.exec(`

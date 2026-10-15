@@ -326,7 +326,7 @@ function markDocumentDiscardedByMfa(deps: DocumentDeps, document: MfaDocumentRow
   return requireDocumentByIdFromDb(deps, documentId);
 }
 
-export function discardDocumentAfterMalwareInDb(
+export function blockDocumentAfterMalwareInDb(
   deps: DocumentDeps,
   documentId: string,
 ): MfaDocumentRow {
@@ -334,20 +334,20 @@ export function discardDocumentAfterMalwareInDb(
   if (document.status === 'discarded_by_mfa' || document.status === 'discarded_by_patient') {
     return document;
   }
-  const allowedMalwareDiscard = new Set<DocumentStatus>([
+  const allowedMalwareBlock = new Set<DocumentStatus>([
     'scan_clean',
     'blocked_malware',
     'received',
     'preview_requested',
     'export_requested',
   ]);
-  if (!allowedMalwareDiscard.has(document.status)) {
+  if (!allowedMalwareBlock.has(document.status)) {
     throw domainError('INVALID_TRANSITION');
   }
   const updatedAt = deps.nowIso();
   applyDocumentStatusTransition(deps, {
     documentId,
-    toStatus: 'discarded_by_mfa',
+    toStatus: 'blocked_malware',
     updatedAt,
     eventType: 'DocumentLifecycleChanged',
     eventPayload: {
@@ -355,7 +355,7 @@ export function discardDocumentAfterMalwareInDb(
       visitId: document.visitId,
       sessionId: document.sessionId,
       fromStatus: document.status,
-      toStatus: 'discarded_by_mfa',
+      toStatus: 'blocked_malware',
       reason: 'blocked_malware',
       updatedAt,
     },

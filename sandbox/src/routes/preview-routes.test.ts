@@ -3,6 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { IntakeStore } from '../intake-store.js';
 import { buildSandboxApp } from '../app.js';
 import type { SandboxConfig } from '../sandbox-config.js';
 
@@ -111,3 +112,54 @@ test('deleting a document releases its preview session and missing source has a 
     await rm(basePath, { recursive: true, force: true });
   }
 });
+
+for (const scanStatus of ['scan_error', 'blocked_malware'] as const) {
+  test(`${scanStatus} retains metadata but denies file content and preview`, async () => {
+    const basePath = await mkdtemp(path.join(tmpdir(), 'wartezimmer-blocked-'));
+    const app = buildSandboxApp(testConfig(basePath));
+    try {
+      const store = new IntakeStore(basePath);
+      const source = await store.writeFromBuffer(
+        'blocked-doc',
+        'upload.pdf',
+        'application/pdf',
+        Buffer.from('private-content'),
+      );
+      await store.saveRecord({
+        ...source,
+        documentId: 'blocked-doc',
+        fileName: 'upload.pdf',
+        mimeType: 'application/pdf',
+        sizeBytes: 15,
+        scanStatus,
+        scannedAt: new Date().toISOString(),
+      });
+      const content = await app.inject({
+        method: 'GET',
+        url: '/internal/documents/blocked-doc/content',
+      });
+      assert.equal(content.statusCode, 409);
+      assert.equal(content.body.includes('private-content'), false);
+      const preview = await app.inject({
+        method: 'PUT',
+        url: '/internal/preview/sessions/blocked-session/document',
+        payload: { documentRef: 'blocked-doc', mimeType: 'application/pdf' },
+      });
+      assert.equal(preview.statusCode, 200);
+      assert.equal(
+        preview.json().status,
+        scanStatus === 'scan_error' ? 'render_error' : 'blocked_malware',
+      );
+      const embed = await app.inject({
+        method: 'GET',
+        url: '/internal/preview/embed/blocked-session',
+      });
+      assert.notEqual(embed.statusCode, 200);
+      assert.equal(embed.body.includes('private-content'), false);
+      assert.equal((await store.readRecord('blocked-doc'))?.scanStatus, scanStatus);
+    } finally {
+      await app.close();
+      await rm(basePath, { recursive: true, force: true });
+    }
+  });
+}

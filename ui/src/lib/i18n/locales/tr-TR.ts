@@ -38,7 +38,9 @@ export const dict = {
     uploadPrivacyOpen: 'Yükleme için gizlilik bildirimi',
     uploadAdd: 'Dosya seç / fotoğraf çek',
     uploading: 'Yükleniyor…',
-    uploadSuccess: 'Teşekkürler — sayfayı kapatabilirsiniz.',
+    uploadSuccess: 'Teşekkürler — belgeleriniz alındı. Bu sayfayı artık kapatabilirsiniz.',
+    uploadPartial:
+      'Tüm belgeler yüklenemedi. Lütfen listeyi kontrol edin ve eksik belgeleri yeniden yüklemeyi deneyin.',
     uploadError: 'Yükleme başarısız.',
     fileTooLarge: 'Dosya çok büyük (en fazla 25 MB).',
     fileListLabel: 'Dosyalarınız (yalnızca adlar)',

@@ -145,7 +145,7 @@ import {
   discardDocumentByMfaInDb,
   discardDocumentOnDischargeInDb,
   renameDocumentFileNameInDb,
-  discardDocumentAfterMalwareInDb,
+  blockDocumentAfterMalwareInDb,
   assertPatientDocumentDiscardableInDb,
   discardPatientDocumentInDb,
   getDocumentByIdFromDb,
@@ -782,9 +782,9 @@ export class CoreDatabase {
     );
   }
 
-  discardDocumentAfterMalware(documentId: string): MfaDocumentRow {
-    return this.withTransaction('discardDocumentAfterMalware', () =>
-      discardDocumentAfterMalwareInDb(this.documentDeps(), documentId),
+  blockDocumentAfterMalware(documentId: string): MfaDocumentRow {
+    return this.withTransaction('blockDocumentAfterMalware', () =>
+      blockDocumentAfterMalwareInDb(this.documentDeps(), documentId),
     );
   }
 

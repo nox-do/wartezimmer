@@ -6,7 +6,7 @@
   import Modal from '$lib/components/Modal.svelte';
   import { discardDocument, exportDocument, fetchDocumentsForVisit, previewDocument, renameDocument } from '$lib/documents/document-api';
   import { resolveSandboxEmbedUrl } from '$lib/documents/resolve-embed-url';
-  import { previewSandboxStatusMessage } from '$lib/documents/preview-sandbox-status';
+  import { documentScanStatusMessage, previewSandboxStatusMessage } from '$lib/documents/preview-sandbox-status';
   import { splitFileName } from '$lib/documents/split-file-name';
   import type { MfaDocument, MfaDocumentPreview } from '$lib/documents/types';
   import { t } from '$lib/i18n/i18nStore.svelte';
@@ -51,7 +51,7 @@
     activeDocument ? splitFileName(activeDocument.fileName) : { base: '', extension: '' },
   );
   const embedSrc = $derived(resolveSandboxEmbedUrl(activePreview?.preview?.embedUrl));
-  const previewStatusKey = $derived(previewSandboxStatusMessage(activePreview?.preview?.status));
+  const previewStatusKey = $derived(documentScanStatusMessage(activeDocument?.status) ?? previewSandboxStatusMessage(activePreview?.preview?.status));
   const showPreviewFrame = $derived(Boolean(embedSrc && !previewStatusKey));
   const canGoPrev = $derived(activeIndex > 0);
   const canGoNext = $derived(activeIndex >= 0 && activeIndex < items.length - 1);
@@ -160,8 +160,10 @@
     }
 
     const requestId = ++previewRequestSeq;
-    previewLoading = true;
     activePreview = null;
+    previewLoading = false;
+    if (documentScanStatusMessage(activeDocument.status)) return;
+    previewLoading = true;
 
     const result = await previewDocument(activeDocument.id);
     if (requestId !== previewRequestSeq) {
@@ -176,7 +178,7 @@
 
     activePreview = result.data;
     applyPreviewToItems(result.data);
-    if (result.data.preview?.status === 'blocked_malware' || result.data.status === 'discarded_by_mfa') {
+    if (result.data.status === 'discarded_by_mfa') {
       toastStore.error(t('mfa.previewBlockedMalware'));
       activePreview = null;
       const blockedId = activeDocument.id;

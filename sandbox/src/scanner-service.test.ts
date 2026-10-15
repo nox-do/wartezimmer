@@ -104,3 +104,30 @@ test('concurrent updates share one updater and a failed attempt preserves curren
   assert.equal((await readFreshclamAttempt(dir))!.ok, true);
   assert.notEqual((await readFreshclamAttempt(dir))!.lastSuccessfulCheckAt, previous);
 });
+
+for (const outcome of ['clean', 'timeout', 'malware'] as const) {
+  test(`scanner uses the 20 second budget and preserves ${outcome} outcome`, async (t) => {
+    const { dir } = await fixture(t, 1);
+    let scanCalled = false;
+    const run = async (_cmd: string, args: string[], options: { timeout?: number }) => {
+      if (args.includes('/document.pdf')) {
+        scanCalled = true;
+        assert.equal(options.timeout, 20_000);
+        if (outcome === 'timeout')
+          throw Object.assign(new Error('timeout'), { killed: true, signal: 'SIGTERM' });
+        if (outcome === 'malware') throw Object.assign(new Error('infected'), { code: 1 });
+      }
+      return { stdout: 'ClamAV test', stderr: '' };
+    };
+    const scanner = createScannerService(
+      { scanEnabled: true, scannerDbPath: dir, scanTimeoutMs: 20_000, maxSignatureAgeHours: 48 },
+      run as Parameters<typeof createScannerService>[1],
+    );
+    const result = await scanner.scanDocumentAtPath('/document.pdf');
+    assert.equal(scanCalled, true);
+    assert.equal(
+      result.status,
+      outcome === 'timeout' ? 'scan_error' : outcome === 'malware' ? 'blocked_malware' : 'clean',
+    );
+  });
+}

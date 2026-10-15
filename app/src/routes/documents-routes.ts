@@ -169,7 +169,7 @@ export function registerDocumentRoutes(app: FastifyInstance, db: CoreDatabase): 
 
             if (preview.status === 'blocked_malware') {
               await purgeDocumentArtifacts(documentId);
-              const purged = db.discardDocumentAfterMalware(documentId);
+              const purged = db.blockDocumentAfterMalware(documentId);
               publishTvQueueUpdate(db);
               return {
                 ...purged,

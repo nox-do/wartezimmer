@@ -560,7 +560,9 @@ export const dict = {
     previewRenderError:
       'Datei konnte in der Sandbox nicht gerendert werden. Bitte erneut hochladen oder das MFA-Team informieren.',
     previewBlockedMalware:
-      'Schadsoftware erkannt — die Datei wurde vom Server entfernt. Metadaten (Dateiname, Zeit) bleiben protokolliert.',
+      'Schadsoftware erkannt. Zugriff und Export sind gesperrt. Bitte das Dokument erneut aus einer sicheren Quelle bereitstellen.',
+    previewScanError:
+      'Die Datei konnte nicht auf Schadsoftware geprüft werden. Zugriff und Export sind gesperrt. Bitte das Dokument erneut hochladen lassen.',
     previewScanning: 'Datei wird gescannt…',
     previewPrevious: 'Vorheriges Dokument',
     previewNext: 'Nächstes Dokument',
@@ -1016,7 +1018,9 @@ export const dict = {
     uploadPrivacyOpen: 'Datenschutzhinweise zum Upload',
     uploadAdd: 'Datei auswählen / Foto aufnehmen',
     uploading: 'Wird hochgeladen…',
-    uploadSuccess: 'Danke — Sie können die Seite jetzt schließen.',
+    uploadSuccess: 'Danke — Ihre Dokumente wurden empfangen. Sie können die Seite jetzt schließen.',
+    uploadPartial:
+      'Nicht alle Dokumente konnten hochgeladen werden. Bitte prüfen Sie die Liste und versuchen Sie fehlende Dokumente erneut.',
     uploadError: 'Upload fehlgeschlagen.',
     fileTooLarge: 'Datei ist zu groß (max. 25 MB).',
     fileListLabel: 'Ihre Dateien (nur Namen sichtbar)',
