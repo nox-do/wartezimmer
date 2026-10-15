@@ -41,9 +41,19 @@ services:
       sandbox:
         condition: service_healthy
     healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8080/api/v1/ops/health']
+      test:
+        [
+          'CMD',
+          'wget',
+          '-qO-',
+          '-T',
+          '4',
+          '--header=Connection: close',
+          'http://127.0.0.1:8080/api/v1/ops/health',
+        ]
       interval: 10s
-      timeout: 3s
+      timeout: 6s
+      start_period: 60s
       retries: 5
 
   sandbox:
@@ -73,9 +83,19 @@ services:
       - /tmp:size=64m,mode=1777
       - /var/log/clamav:size=8m,mode=1777
     healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8081/internal/health/live']
+      test:
+        [
+          'CMD',
+          'wget',
+          '-qO-',
+          '-T',
+          '4',
+          '--header=Connection: close',
+          'http://127.0.0.1:8081/internal/health/live',
+        ]
       interval: 10s
-      timeout: 3s
+      timeout: 6s
+      start_period: 60s
       retries: 5
 
 volumes:

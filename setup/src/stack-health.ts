@@ -51,7 +51,7 @@ export async function waitForExpectedStackHealth(
   runOptions: ComposeRunOptions,
   options: WaitForStackHealthOptions = {},
 ): Promise<WaitForStackHealthResult> {
-  const timeoutMs = options.timeoutMs ?? 120_000;
+  const timeoutMs = options.timeoutMs ?? 180_000;
   const intervalMs = options.intervalMs ?? 2_000;
   const now = options.now ?? Date.now;
   const sleep =

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { wizardIsBusy, wizardProgress } from './wizard-controller.js';
+  import { wizardIsBusy, wizardProgress, wizardError } from './wizard-controller.js';
 
   import { dockerPrerequisitesHints, dockerPrerequisiteChecks } from '../shared/docker-prerequisites-ui.js';
   import {
@@ -262,7 +262,16 @@
         </dl>
       {/if}
     {:else if snapshot.step === 8}
-      {#if wizardUsesExistingTlsConfiguration(snapshot.status)}
+      {#if wizardIsBusy(snapshot)}
+        <p class="wizard-progress is-active" role="status" aria-live="polite">
+          <span class="spinner" aria-hidden="true"></span>
+          {wizardProgress(snapshot) ?? 'Einrichtung wird abgeschlossen …'}
+        </p>
+      {:else if wizardError(snapshot)}
+        {#if snapshot.applyResult}
+          <p>Die Einstellungen sind angewendet. Mit „Erneut prüfen“ wird nur die Abschlussprüfung wiederholt.</p>
+        {/if}
+      {:else if wizardUsesExistingTlsConfiguration(snapshot.status)}
         <h3 class="wizard-subheading">Einrichtung bereits abgeschlossen</h3>
         <p>
           Die aktive HTTPS-Konfiguration wurde erkannt und nicht erneut geschrieben. Wartezimmer

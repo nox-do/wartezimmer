@@ -71,12 +71,12 @@
       {/if}
     {:else}
       <div class="notice is-warn" role="status">
-        <p>Die Abschlussprüfung ist noch nicht erfolgreich.</p>
+        <p>Die Abschlussprüfung war nicht erfolgreich.</p>
         {#each preview?.baselineErrors ?? [] as error, index (index)}
           <p>{error}</p>
         {/each}
       </div>
-      <p class="hint">Direkt nach dem Start kann dies einen Moment dauern. Warten Sie kurz und prüfen Sie den Status erneut. Weitere Details finden Sie auf der Statusseite.</p>
+      <p class="hint">Die Einrichtung ist noch nicht abgeschlossen. Mit „Status erneut prüfen“ wiederholen Sie die Prüfung. Details finden Sie auf der Statusseite.</p>
     {/if}
   {/if}
 
@@ -101,7 +101,7 @@
       {/if}
     {/if}
     {#if !preview?.baselineReady && (snapshot.recoveryPhase === 'finish' || snapshot.recoveryPhase === 'restart' || wizardError(snapshot))}
-      <button type="button" class="btn-secondary" disabled={wizardIsBusy(snapshot)} onclick={() => controller.cancel()}>Zum Status</button>
+      <button type="button" class="btn-secondary" disabled={wizardIsBusy(snapshot)} onclick={() => controller.cancel()}>Status zur Fehlerprüfung öffnen</button>
     {/if}
   </footer>
   {#if snapshot.recoveryPhase === 'restart' || (snapshot.recoveryPhase === 'finish' && preview && !preview.baselineReady)}

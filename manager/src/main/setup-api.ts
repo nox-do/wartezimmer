@@ -8,6 +8,8 @@ import {
 } from '@wartezimmer/server-shared/setup-api';
 
 const DEFAULT_SETUP_API_TIMEOUT_MS = 30_000;
+/** Docker-Status kann auf schwachen Hosts während eines Imports länger brauchen. */
+const SETUP_STATUS_TIMEOUT_MS = 40_000;
 /** Erstinstallation: docker compose up --build kann deutlich länger als Status-Polls dauern. */
 const FIRST_INSTALL_APPLY_TIMEOUT_MS = 10 * 60 * 1000;
 /** Release-Paket importieren (docker load) kann mehrere Minuten dauern. */
@@ -91,6 +93,9 @@ function isSetupApplyBody(
 }
 
 export function setupApiTimeoutMs(request: SetupApiCallRequest): number {
+  if (request.method === 'GET' && request.path.split('?')[0] === '/api/setup/host/status') {
+    return SETUP_STATUS_TIMEOUT_MS;
+  }
   if (request.method === 'POST' && request.path === '/api/setup/host/rebuild') return 5 * 60 * 1000;
   if (request.method === 'POST' && request.path === '/api/setup/host/installation/start') {
     return 3 * 60 * 1000;

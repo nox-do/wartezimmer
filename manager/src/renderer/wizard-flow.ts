@@ -40,7 +40,7 @@ export type WizardFlowState = ReturnType<typeof createInitialWizardFields> & {
   releaseImportStatus: string | null;
 };
 
-export type WizardAdvanceAfter = 'loadNetwork' | 'loadPlan' | 'apply-and-refresh';
+export type WizardAdvanceAfter = 'loadNetwork' | 'loadPlan' | 'apply-and-refresh' | 'refresh';
 
 export type WizardAdvanceAction =
   | { type: 'validate-error'; message: string }
@@ -143,7 +143,7 @@ export function planWizardAdvance(step: WizardStep, state: WizardFlowState): Wiz
     if (!state.applyResult) {
       return { type: 'goto', step: 8, after: 'apply-and-refresh' };
     }
-    return { type: 'complete' };
+    return { type: 'goto', step: 8, after: 'refresh' };
   }
 
   return { type: 'validate-error', message: 'Unbekannter Schritt.' };
@@ -213,7 +213,7 @@ export async function refreshWizardStatus(api: WartezimmerManagerApi): Promise<H
   return api.fetchSetupStatus({ includeProbes: true });
 }
 
-export const WIZARD_PROBE_WAIT_MESSAGE = 'App startet — Erreichbarkeit wird geprüft …';
+export const WIZARD_PROBE_WAIT_MESSAGE = 'Betriebsbereitschaft und Erreichbarkeit werden geprüft …';
 
 export async function refreshWizardStatusAfterApply(
   api: WartezimmerManagerApi,

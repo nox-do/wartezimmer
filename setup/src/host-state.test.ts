@@ -1845,3 +1845,68 @@ test('interrupted binding change restores confirmed env and only touches runtime
     });
   }
 });
+
+for (const outcome of ['slow-start', 'timeout', 'crash'] as const) {
+  test(`applySetupPlan checks readiness after compose up (${outcome})`, async () => {
+    await withRoot(async (root) => {
+      writeExample(root);
+      let started = false;
+      let removed = false;
+      let now = 0;
+      const stopped = { running: false, services: [] };
+      const hooks: HostWriteRuntimeHooks = {
+        inspectLifecycleResidues: async () => 'none',
+        composeValidateConfig: async () => ({ ok: true, log: '' }),
+        composeUp: async () => {
+          started = true;
+          return { ok: true, log: '', gatewaySkipped: false };
+        },
+        composePs: async () => {
+          if (!started || removed) return stopped;
+          const compose = healthyCompose();
+          if (outcome === 'crash') compose.services[0]!.state = 'exited';
+          else if (outcome === 'timeout' || now < 60_000) compose.services[0]!.health = 'starting';
+          return compose;
+        },
+        composeRemoveServices: async () => {
+          removed = true;
+          return { ok: true, log: '' };
+        },
+        stackHealthWaitOptions: {
+          timeoutMs: 180_000,
+          intervalMs: 2_000,
+          now: () => now,
+          sleep: async (ms) => {
+            now += ms;
+          },
+        },
+      };
+      const apply = applySetupPlan(
+        ctx(root),
+        {
+          lanAppIp: '192.168.1.10',
+          practiceDisplayName: 'Praxis',
+          proxy: { enabled: false },
+          gateway: gwOff('192.168.1.10'),
+          runCompose: true,
+          runProbes: false,
+        },
+        hooks,
+      );
+      if (outcome === 'slow-start') {
+        await apply;
+        assert.equal(now, 60_000);
+        assert.equal(removed, false);
+      } else {
+        await assert.rejects(
+          apply,
+          outcome === 'crash'
+            ? /App wurde unerwartet beendet/
+            : /App wurde nicht rechtzeitig betriebsbereit/,
+        );
+        assert.equal(now, 180_000);
+        assert.equal(removed, true);
+      }
+    });
+  });
+}
