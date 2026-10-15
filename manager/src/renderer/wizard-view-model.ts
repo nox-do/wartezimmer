@@ -15,6 +15,8 @@ export function wizardCheckMark(ok: boolean): string {
 export function wizardIsCompleted(state: WizardControllerState): boolean {
   return (
     state.step === 8 &&
+    !wizardIsBusy(state) &&
+    state.action.kind !== 'failed' &&
     (Boolean(state.applyResult) || wizardUsesExistingTlsConfiguration(state.status))
   );
 }
@@ -23,7 +25,7 @@ export function wizardBackHidden(state: WizardControllerState): boolean {
   if (state.step <= 1) {
     return true;
   }
-  if (wizardIsCompleted(state)) {
+  if (wizardIsCompleted(state) || (state.step === 8 && state.applyResult)) {
     return true;
   }
   return false;
@@ -40,6 +42,8 @@ export function wizardNextButtonLabel(state: WizardControllerState): string {
     return wizardUsesExistingTlsConfiguration(state.status) ? 'Abschließen' : 'Anwenden';
   }
   if (state.step === 8) {
+    if (wizardIsBusy(state)) return 'Bitte warten …';
+    if (state.applyResult && state.action.kind === 'failed') return 'Erneut prüfen';
     if (state.applyResult) {
       return 'Zum Status';
     }
@@ -56,7 +60,7 @@ export function wizardNextButtonDisabled(state: WizardControllerState): boolean 
     return !canLeaveWizardStep1(state.status, wizardIsBusy(state));
   }
   if (state.step === 8) {
-    return Boolean(state.applyResult);
+    return Boolean(state.applyResult) && state.action.kind !== 'failed';
   }
   return false;
 }

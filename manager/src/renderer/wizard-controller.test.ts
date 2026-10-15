@@ -364,7 +364,9 @@ test('failed apply on step 8 can be retried without leaving the step', async () 
       applySetupPlan: async () => {
         applies += 1;
         if (applies === 1) {
-          throw new Error('Compose konnte nicht gestartet werden.');
+          throw new Error(
+            'Die App wurde nicht rechtzeitig betriebsbereit. Änderung fehlgeschlagen; vorheriger Zustand wurde wiederhergestellt.',
+          );
         }
         return minimalApplyResult();
       },
@@ -390,7 +392,10 @@ test('failed apply on step 8 can be retried without leaving the step', async () 
   assert.equal(controller.getState().step, 8);
   assert.equal(controller.getState().applyResult, null);
   assert.equal(wizardIsBusy(controller.getState()), false);
-  assert.equal(wizardError(controller.getState()), 'Compose konnte nicht gestartet werden.');
+  assert.equal(
+    wizardError(controller.getState()),
+    'Die App wurde nicht rechtzeitig betriebsbereit. Änderung fehlgeschlagen; vorheriger Zustand wurde wiederhergestellt.',
+  );
   assert.equal(wizardNextButtonDisabled(controller.getState()), false);
   assert.equal(wizardNextButtonLabel(controller.getState()), 'Anwenden');
 
@@ -604,4 +609,51 @@ test('packaged first launch waits for Docker then discovers installation choices
   await controller.refreshRecovery();
   assert.equal(controller.getState().recoveryPhase, 'choose');
   assert.equal(discoveries, 1);
+});
+
+test('completion stays hidden while applying and checking; failed checks retry without applying again', async () => {
+  const applyGate = deferred<ReturnType<typeof minimalApplyResult>>();
+  const probeGate = deferred<{ probes: HostStatus['probes'] }>();
+  let applies = 0;
+  let probes = 0;
+  let completed = 0;
+  const controller = createWizardController({
+    api: {
+      applySetupPlan: async () => {
+        applies++;
+        return applyGate.promise;
+      },
+      fetchSetupStatus: async () => minimalHostStatus(),
+      runSetupProbes: async () => {
+        probes++;
+        if (probes === 1) return probeGate.promise;
+        return { probes: [{ id: 'app.health.local', ok: true, message: 'ok' }] };
+      },
+    } as never,
+    onComplete: () => {
+      completed++;
+    },
+    onCancel() {},
+  });
+  controller.show(minimalHostStatus(), 'embedded');
+  controller.patchFields({ step: 7, lanAppIp: '192.168.1.10' });
+  const pending = controller.goNext();
+  assert.equal(wizardIsBusy(controller.getState()), true);
+  assert.equal(wizardIsCompleted(controller.getState()), false);
+  controller.complete();
+  assert.equal(completed, 0);
+  applyGate.resolve(minimalApplyResult());
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.ok(controller.getState().applyResult);
+  assert.equal(wizardIsBusy(controller.getState()), true);
+  assert.equal(wizardIsCompleted(controller.getState()), false);
+  probeGate.reject(new Error('Prüfung nicht erreichbar'));
+  await pending;
+  assert.equal(wizardIsCompleted(controller.getState()), false);
+  assert.equal(wizardNextButtonLabel(controller.getState()), 'Erneut prüfen');
+  assert.equal(wizardNextButtonDisabled(controller.getState()), false);
+  await controller.goNext();
+  assert.equal(applies, 1);
+  assert.equal(probes, 2);
+  assert.equal(wizardIsCompleted(controller.getState()), true);
 });

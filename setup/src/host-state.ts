@@ -1,3 +1,4 @@
+import { stackStartFailureMessage } from './stack-start-error.js';
 import { auditRestrictedStart, type RestrictedStartAuditHooks } from './restricted-start-audit.js';
 import { restrictedPlatformSupported, restrictedPlatformMessage } from './restricted-platform.js';
 
@@ -400,8 +401,8 @@ async function runBindingChange<T>(
       recovery.ok
         ? unchanged
           ? `${error instanceof BindingPreflightError ? error.stage : 'Vorprüfung'} fehlgeschlagen; vorheriger Env-Zustand wurde wiederhergestellt, die Laufzeit blieb unverändert.`
-          : 'Änderung fehlgeschlagen; vorheriger Zustand wurde wiederhergestellt.'
-        : 'Änderung fehlgeschlagen; vorheriger Zustand wurde nicht vollständig wiederhergestellt. Bitte die Setup-Diagnose prüfen.',
+          : `${stackStartFailureMessage(error)} Änderung fehlgeschlagen; vorheriger Zustand wurde wiederhergestellt.`
+        : `${stackStartFailureMessage(error)} Änderung fehlgeschlagen; vorheriger Zustand wurde nicht vollständig wiederhergestellt. Bitte die Setup-Diagnose prüfen.`,
       recovery.ok
         ? error instanceof BindingPreflightError
           ? error.cause
@@ -1947,7 +1948,13 @@ export async function applySetupPlan(
           if (!compose.ok) {
             throw new Error(compose.log);
           }
-          const runtimeCompose = await runComposePs({ ...runOptions, withProxy: proxy.enabled });
+          const health = await waitForExpectedStackHealth(
+            runComposePs,
+            { ...runOptions, withProxy: proxy.enabled },
+            hooks?.stackHealthWaitOptions,
+          );
+          if (!health.ok) throw new Error(health.errors.join('\n'));
+          const runtimeCompose = health.compose;
           const auditError = failedStaffBindingAudit({
             compose: runtimeCompose,
             env: envAfterWrite,

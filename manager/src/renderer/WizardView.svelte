@@ -156,6 +156,7 @@
       <WizardSteps {snapshot} {controller} {hostPlatform} />
     {/if}
 
+    {#if !(snapshot.step === 8 && wizardIsBusy(snapshot))}
     <footer class="actions-row actions-row--footer" id="wizard-actions">
       {#if completed}
         <button
@@ -208,10 +209,11 @@
           disabled={wizardIsBusy(snapshot)}
           onclick={() => controller?.cancel()}
         >
-          Abbrechen
+          {snapshot.step === 8 && snapshot.applyResult ? 'Status zur Fehlerprüfung öffnen' : 'Abbrechen'}
         </button>
       {/if}
     </footer>
+    {/if}
     {/if}
   {/if}
 

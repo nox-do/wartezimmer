@@ -43,3 +43,18 @@ export async function refreshTrustedProxyAddresses(): Promise<void> {
 export function isTrustedProxyPeer(address: string | undefined): boolean {
   return trustProxyHeaders() && !!address && trustedProxyAddresses.has(address.toLowerCase());
 }
+
+/** Local liveness must not wait for the proxy which itself depends on app health. */
+export async function refreshProxyForRequest(
+  request: { method: string; raw: { url?: string; socket: { remoteAddress?: string } } },
+  refresh: () => Promise<void> = refreshTrustedProxyAddresses,
+): Promise<void> {
+  const peer = request.raw.socket.remoteAddress;
+  if (
+    request.method === 'GET' &&
+    request.raw.url === '/api/v1/ops/health' &&
+    (peer === '127.0.0.1' || peer === '::1' || peer === '::ffff:127.0.0.1')
+  )
+    return;
+  await refresh();
+}

@@ -25,7 +25,7 @@ import { registerSecurityHeaders } from './http/security-headers.js';
 import {
   trustProxyHeaders,
   trustedProxyAddresses,
-  refreshTrustedProxyAddresses,
+  refreshProxyForRequest,
 } from './http/trusted-proxy.js';
 
 export function resolveAppTrustProxy(
@@ -45,8 +45,8 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   if (trustProxyHeaders()) {
-    app.addHook('onRequest', async () => {
-      await refreshTrustedProxyAddresses();
+    app.addHook('onRequest', async (request) => {
+      await refreshProxyForRequest(request);
     });
   }
 

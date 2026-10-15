@@ -40,7 +40,8 @@ services:
       test:
         - CMD-SHELL
         - |
-          wget -qO- --no-check-certificate "https://127.0.0.1:443/__wartezimmer/health" >/dev/null 2>&1 || wget -qO- "http://127.0.0.1:80/" >/dev/null 2>&1
+          wget -qO- -T 2 --header='Connection: close' --no-check-certificate "https://127.0.0.1:443/__wartezimmer/health" >/dev/null 2>&1 || wget -qO- -T 2 --header='Connection: close' "http://127.0.0.1:80/" >/dev/null 2>&1
       interval: 10s
-      timeout: 3s
+      timeout: 6s
+      start_period: 60s
       retries: 5

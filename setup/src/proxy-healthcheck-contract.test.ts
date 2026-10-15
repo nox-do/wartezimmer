@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
+import { parse } from 'yaml';
 
 const projectRoot = path.resolve(import.meta.dirname, '../..');
 
@@ -27,7 +28,7 @@ for (const fileName of ['docker-compose.proxy.yml', 'docker-compose.proxy.delive
     assert.match(compose, /https:\/\/127\.0\.0\.1:443\/__wartezimmer\/health/);
     assert.match(
       compose,
-      /wget -qO- --no-check-certificate "https:\/\/127\.0\.0\.1:443\/__wartezimmer\/health" >\/dev\/null 2>&1 \|\| wget -qO- "http:\/\/127\.0\.0\.1:80\/"/,
+      /wget -qO- -T 2 --header='Connection: close' --no-check-certificate "https:\/\/127\.0\.0\.1:443\/__wartezimmer\/health" >\/dev\/null 2>&1 \|\| wget -qO- -T 2 --header='Connection: close' "http:\/\/127\.0\.0\.1:80\/"/,
     );
     assert.doesNotMatch(compose, /127\.0\.0\.1:\$\{PROXY_(?:HTTP|HTTPS)_PORT/);
     assert.match(
@@ -60,3 +61,25 @@ for (const fileName of [
     assert.doesNotMatch(compose, /0\.0\.0\.0|\[::\]|:::/);
   });
 }
+
+test('source and delivery healthchecks agree and allow bounded cold starts', () => {
+  for (const file of ['docker-compose.yml', 'docker-compose.delivery.yml']) {
+    const compose = parse(fs.readFileSync(path.join(projectRoot, file), 'utf8'));
+    for (const name of ['app', 'sandbox']) {
+      const health = compose.services[name].healthcheck;
+      assert.deepEqual(health.test.slice(0, 6), [
+        'CMD',
+        'wget',
+        '-qO-',
+        '-T',
+        '4',
+        '--header=Connection: close',
+      ]);
+      assert.equal(health.start_period, '60s');
+      assert.equal(health.timeout, '6s');
+      assert.equal(health.interval, '10s');
+      assert.equal(health.retries, 5);
+    }
+    assert.equal(compose.services.app.depends_on.sandbox.condition, 'service_healthy');
+  }
+});

@@ -26,6 +26,7 @@ import {
   type WizardAdvanceAfter,
   type WizardFlowState,
 } from './wizard-flow.js';
+import { connectionProbesReady } from './setup-probes.js';
 import { resolvedLanIp } from './wizard-state.js';
 
 export type WizardCallbacks = {
@@ -268,12 +269,21 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
     try {
       const applyState = state;
       const operation = state.operation;
-      const applyResult = await applyWizardSetup(deps.api, applyState);
+      if (after === 'apply-and-refresh') {
+        patch({
+          action: {
+            kind: 'working',
+            progress: 'Konfiguration wird gespeichert und Wartezimmer gestartet …',
+          },
+        });
+        const applyResult = await applyWizardSetup(deps.api, applyState);
+        if (!still(generation)) return;
+        patch({ applyResult });
+      }
       if (!still(generation)) {
         return;
       }
       patch({
-        applyResult,
         action: {
           kind: 'working',
           progress: operation
@@ -298,6 +308,11 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       }
       patch({ status });
       if (operation) patch({ recoveryPreview, recoveryPhase: 'finish' });
+      else if (!connectionProbesReady(status.probes)) {
+        throw new Error(
+          'Die Erreichbarkeitsprüfung war innerhalb der Wartezeit nicht erfolgreich. Bitte erneut prüfen.',
+        );
+      }
     } finally {
       await refreshHostAfterMutation();
     }

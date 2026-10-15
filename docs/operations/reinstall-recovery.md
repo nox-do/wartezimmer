@@ -128,3 +128,33 @@ sind damit nicht garantiert abgebrochen. Nach Wiederstart Zustand erneut lesen
 und die vorhandene Recovery verwenden. Kein Löschen ungeklärter Journale.
 Bei blockierten Dateien den sperrenden Prozess beenden und den Zustand im Manager
 erneut prüfen, bevor Recovery wiederholt wird.
+
+## Sporadischer Startfehler auf langsamen Docker-Desktop-Rechnern
+
+Nach Untersuchung des Windows-Tests mit 6.1.3 bekommen App, Sandbox und Proxy
+60 Sekunden Anlaufzeit (`start_period`). Danach gelten weiterhin fünf Fehlversuche
+bei zehn Sekunden Prüfintervall. App und Sandbox verwenden `wget -T 4` mit
+`Connection: close`; Docker beendet die Prüfung spätestens nach sechs Sekunden.
+Beim Proxy haben beide alternativen HTTP-Prüfungen jeweils zwei Sekunden Zeit,
+bei ebenfalls sechs Sekunden äußerem Limit. Das gilt für Quell- und Delivery-Compose.
+Die `service_healthy`-Abhängigkeiten bleiben erhalten: Schon `compose up` kann bei
+anhaltenden Fehlern abbrechen. Nach erfolgreichem `up` prüft Setup zusätzlich bis zu
+180 Sekunden die Gesundheit aller erwarteten Dienste, bevor die Installation als
+erfolgreich gilt.
+
+Die lokale App-Healthprüfung wartet außerdem nicht mehr auf die DNS-Auflösung des
+Proxy-Containers, der seinerseits erst nach gesunder App startet. Für andere
+Anfragen bleibt die Proxy-Vertrauensprüfung unverändert. Der Manager zeigt eine
+verständliche Start-/Health-Fehlerursache zusätzlich zum Rollback-Ergebnis.
+Es werden keine zusätzlichen Diagnosearchive gespeichert.
+
+Validierung auf macOS: Im vorhandenen 6.1.3-Image ist `wget` BusyBox 1.37.0.
+Der echte Health-Endpunkt antwortete ohne DNS-Hook mit und ohne Close-Header in
+2–6 ms; ein Keepalive-Hänger wurde nicht reproduziert. Im AMD64-Image bestand die
+neue Prüfung eine um zwei Sekunden verzögerte HTTP-Antwort (2,06 s), beendete eine
+hängende Antwort nach 4,03 s und erkannte HTTP 500 sowie einen beendeten Server.
+Gezielte Tests prüfen langsamen Start, ausbleibende Gesundheit, App-Absturz,
+Rollback und Fehleranzeige; Typprüfung und Setup-Build waren erfolgreich.
+Der ursprüngliche Windows-Fehler bleibt mangels damaliger Health-Historie nicht
+abschließend zugeordnet. Ein erneuter Installationstest auf dem schwachen
+Windows-Rechner mit neu gebauten Images und Manager steht aus.
