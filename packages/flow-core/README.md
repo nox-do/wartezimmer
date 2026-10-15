@@ -138,6 +138,13 @@ Shared-Module (Domain, ohne DB) — vollständige Liste siehe `src/index.ts`.
 
 - `stepsForTemplate` (catalog-repository) vs. `stepsForJourneyTemplate` (visit-context) — kein Shared-Monolith
 
+## Offene Befunde (2026-10-15)
+
+Bewusst zurückgestellt; noch nicht behoben:
+
+- **Rollback verdeckt DB-Ursache:** Bei `SQLITE_FULL` kann SQLite die gesamte Transaktion bereits beendet haben. Der Fehlerhandler in [`unit-of-work.ts`](src/server/unit-of-work.ts) wirft dann beim erneuten Rollback bzw. Savepoint-Zugriff einen Folgefehler statt der Ursache. Der Host hat dasselbe Muster in [`database.ts`](../../app/src/shared/db/database.ts) (normaler Transaktionshandler, Session-Lesezugriffe, Entlassungsprobe); dabei kann auch Logging entfallen. In den Reproduktionen keine Teilaggregate, Verbindung anschließend nutzbar. Später: Transaktionszustand berücksichtigen, Originalfehler erhalten und Bereinigungsfehler separat erfassen; Savepoint-Verhalten, Session-Ablauf-Commit und zwingenden Probe-Rollback vor Dokumentbereinigung absichern.
+- **Redirect reaktiviert terminale Visits:** [`validateRedirectRequest`](src/shared/admin-validation.ts) sperrt `done`, `cancelled`, `no_show` nicht. Reproduziert: wieder `waiting`, aber `finishedAt` bleibt gesetzt; weitere Transitions sind möglich. Auch ein ersetzter Visit lässt sich so neben seinem Nachfolger aktivieren. Im aktuellen produktiven App-Pfad kein `runtime.redirect`-Aufruf gefunden. Später: terminale Status vor jeder Mutation mit `VISIT_TERMINAL` ablehnen und unveränderte Visits/Events per Regressionstest sichern.
+
 ## Bewusste Grenzen
 
 Keine Authentifizierung, keine Rollen, keine PVS-Anbindung, kein produktiver Migrationsverlauf, keine echten Patientendaten.
