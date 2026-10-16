@@ -205,7 +205,7 @@ Siehe [Routing](architecture/routing.md).
 
 ### Produktgrenze (WLAN / Captive)
 
-| Enthalten                                               | Nicht enthalten                                               |
+| Enthalten                                                 | Nicht enthalten                                                 |
 | --------------------------------------------------------- | --------------------------------------------------------------- |
 | Portal-UI (`/portal/*`), Wartenummer-Prüfung, Session-API | Router, APs, Captive-Portal-Hardware, eigenen Captive-Datenpfad |
 
@@ -217,11 +217,11 @@ Siehe [Routing](architecture/routing.md).
 
 **Vorsorge:** Pro Ticket gibt es nur **eine aktive Patient-Session**. Nach **Formular-Absenden** wird die Session serverseitig geschlossen (`sessions/submit`); beim **Upload** endet sie per TTL (Standard 30 Min). Alter Token ungueltig, keine Wiederaufnahme der alten Upload-Liste. Ein erneuter Einstieg mit gleicher Wartenummer erzeugt technisch eine neue, leere Session. Innerhalb einer aktiven Session duerfen mehrere Dateien/Formular-Dokumente abgelegt werden; "einmalig" meint den Abschluss der Session, nicht genau eine Datei.
 
-| Pfad                         | Ablauf                                                                     |
-| ---------------------------- | -------------------------------------------------------------------------- |
+| Pfad                         | Ablauf                                                                               |
+| ---------------------------- | ------------------------------------------------------------------------------------ |
 | **Einstieg (optional)**      | Praxis-Gast-WLAN → fremdes Captive (IT/Vendor) → Redirect auf das Wartezimmer-Portal |
-| **Session**                  | Portal → **Wartenummer** (+ Nutzungsbedingungen) → Menü                    |
-| **Dokumente / Erstanamnese** | Browser, Session = Nummer                                                  |
+| **Session**                  | Portal → **Wartenummer** (+ Nutzungsbedingungen) → Menü                              |
+| **Dokumente / Erstanamnese** | Browser, Session = Nummer                                                            |
 
 **Warum voller Browser für Upload?** Captive-Mini-WebViews sind oft eingeschränkt (Datei-Picker, Kamera). Nach Freischaltung: Redirect in Safari/Chrome — volle Upload-APIs. Ohne Captive reicht der direkte Portal-Aufruf (Praxis- oder Patientennetz).
 

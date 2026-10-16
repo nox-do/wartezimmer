@@ -14,6 +14,7 @@
     deletePatientDocument,
     fetchPatientDocuments,
     intakePatientDocument,
+    isPatientUploadTypeAllowed,
     MAX_FILE_BYTES,
   } from '$lib/portal/patient-document-api';
   import {
@@ -95,6 +96,11 @@
     let uploadedCount = 0;
 
     for (const file of files) {
+      if (!isPatientUploadTypeAllowed(file)) {
+        uploadFeedback = t('portal.unsupportedFileType');
+        toastStore.error(uploadFeedback);
+        continue;
+      }
       const sizeBytes = Math.max(1, Math.floor(file.size));
       if (sizeBytes > uploadMaxBytes) {
         uploadFeedback = t('portal.fileTooLarge');
@@ -105,7 +111,14 @@
       const result = await intakePatientDocument(activeSession.sessionToken, file);
 
       if (!result.ok) {
-        uploadFeedback = result.error.message || t('portal.uploadError');
+        const details = result.error.details;
+        uploadFeedback =
+          details != null &&
+          typeof details === 'object' &&
+          'reason' in details &&
+          details.reason === 'UNSUPPORTED_FILE_TYPE'
+            ? t('portal.unsupportedFileType')
+            : result.error.message || t('portal.uploadError');
         toastStore.error(uploadFeedback);
         continue;
       }
@@ -196,7 +209,7 @@
         class="sr-only"
         type="file"
         multiple
-        accept="image/*,application/pdf,.pdf"
+        accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png"
         disabled={uploading || busyDocumentId != null}
         onchange={onFilesSelected}
       />

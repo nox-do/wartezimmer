@@ -90,7 +90,8 @@ export function registerIntakeRoutes(
           message === 'SANDBOX_INTAKE_INVALID_SIZE'
         ) {
           return reply.code(400).send({
-            code: 'SANDBOX_INVALID_ARGUMENT',
+            code:
+              message === 'SANDBOX_INTAKE_MIME_NOT_ALLOWED' ? message : 'SANDBOX_INVALID_ARGUMENT',
             message: 'File type or size is not allowed.',
           });
         }

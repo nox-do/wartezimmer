@@ -22,11 +22,7 @@ export type IntakeRecord = {
   sourcePath: string;
 };
 
-function inferExtension(fileName: string, mimeType: string): string {
-  const fromName = path.extname(fileName).toLowerCase();
-  if (/^\.[a-z0-9]{1,10}$/.test(fromName)) {
-    return fromName;
-  }
+function inferExtension(mimeType: string): string {
   const byMime: Record<string, string> = {
     'application/pdf': '.pdf',
     'image/jpeg': '.jpg',
@@ -46,12 +42,8 @@ export class IntakeStore {
     return path.join(this.documentDir(documentId), 'meta.json');
   }
 
-  private async sourcePathFor(
-    documentId: string,
-    fileName: string,
-    mimeType: string,
-  ): Promise<string> {
-    const extension = inferExtension(fileName, mimeType);
+  private async sourcePathFor(documentId: string, mimeType: string): Promise<string> {
+    const extension = inferExtension(mimeType);
     return path.join(this.documentDir(documentId), `source${extension}`);
   }
 
@@ -70,7 +62,7 @@ export class IntakeStore {
 
     const dir = this.documentDir(documentId);
     await fs.mkdir(dir, { recursive: true });
-    const sourcePath = await this.sourcePathFor(documentId, fileName, mimeType);
+    const sourcePath = await this.sourcePathFor(documentId, mimeType);
     const handle = await fs.open(sourcePath, 'wx');
     try {
       await handle.writeFile(buffer);
@@ -104,7 +96,7 @@ export class IntakeStore {
 
     const dir = this.documentDir(documentId);
     await fs.mkdir(dir, { recursive: true });
-    const sourcePath = await this.sourcePathFor(documentId, fileName, mimeType);
+    const sourcePath = await this.sourcePathFor(documentId, mimeType);
     const hash = createHash('sha256');
     let sizeBytes = 0;
 

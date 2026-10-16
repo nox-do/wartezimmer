@@ -1022,6 +1022,8 @@ export const dict = {
     uploadPartial:
       'Nicht alle Dokumente konnten hochgeladen werden. Bitte prüfen Sie die Liste und versuchen Sie fehlende Dokumente erneut.',
     uploadError: 'Upload fehlgeschlagen.',
+    unsupportedFileType:
+      'Dieses Dateiformat wird nicht unterstützt. Bitte laden Sie eine PDF-Datei oder ein Bild als JPG oder PNG hoch.',
     fileTooLarge: 'Datei ist zu groß (max. 25 MB).',
     fileListLabel: 'Ihre Dateien (nur Namen sichtbar)',
     fileListEmpty: 'Noch keine Dateien ausgewählt.',

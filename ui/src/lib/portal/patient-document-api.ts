@@ -31,6 +31,10 @@ export async function fetchPatientDocuments(sessionToken: string) {
   );
 }
 
+export function isPatientUploadTypeAllowed(file: Pick<File, 'type'>): boolean {
+  return ['application/pdf', 'image/jpeg', 'image/png'].includes(file.type);
+}
+
 export async function intakePatientDocument(sessionToken: string, file: File) {
   const formData = new FormData();
   formData.append('file', file, file.name);

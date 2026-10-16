@@ -38,6 +38,13 @@ import {
 } from './session-auth.js';
 import { createRequirePortalEnabledPreHandler } from './portal-access.js';
 
+const UPLOAD_FILE_TYPE_ERROR = {
+  code: 'INVALID_ARGUMENT',
+  message:
+    'Dieses Dateiformat wird nicht unterstützt. Bitte laden Sie eine PDF-Datei oder ein Bild als JPG oder PNG hoch.',
+  details: { reason: 'UNSUPPORTED_FILE_TYPE' },
+};
+
 const patientDocumentSchema = {
   type: 'object',
   required: [
@@ -408,10 +415,14 @@ export function registerPatientDocumentRoutes(app: FastifyInstance, db: CoreData
         });
       }
 
+      const mimeType = part.mimetype?.trim() || 'application/octet-stream';
+      if (!['application/pdf', 'image/jpeg', 'image/png'].includes(mimeType)) {
+        part.file.resume();
+        return reply.code(400).send(UPLOAD_FILE_TYPE_ERROR);
+      }
+
       const buffer = await part.toBuffer();
       const fileName = normalizePatientUploadFileName(part.filename?.trim() || 'upload.bin');
-      const mimeType = part.mimetype?.trim() || 'application/octet-stream';
-
       if (buffer.length < 1 || buffer.length > PATIENT_UPLOAD_MAX_BYTES) {
         return reply.code(400).send({
           code: 'INVALID_ARGUMENT',
@@ -453,6 +464,9 @@ export function registerPatientDocumentRoutes(app: FastifyInstance, db: CoreData
           db.getPatientSession(token).visitId,
         );
       } catch (error) {
+        if (error instanceof Error && error.message === 'SANDBOX_INTAKE_MIME_NOT_ALLOWED') {
+          return reply.code(400).send(UPLOAD_FILE_TYPE_ERROR);
+        }
         if (
           sendResolvedDomainError(reply, error, {
             byApiCode: {

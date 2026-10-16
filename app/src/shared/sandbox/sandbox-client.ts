@@ -451,6 +451,12 @@ export class SandboxClient {
     }
 
     if (!response.ok) {
+      if (response.status === 400) {
+        const error: unknown = await response.json().catch(() => null);
+        if (isRecord(error) && error.code === 'SANDBOX_INTAKE_MIME_NOT_ALLOWED') {
+          throw new Error('SANDBOX_INTAKE_MIME_NOT_ALLOWED');
+        }
+      }
       throw new Error(`SANDBOX_INTAKE_FAILED:${response.status}`);
     }
 

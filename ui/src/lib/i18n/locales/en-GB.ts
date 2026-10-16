@@ -42,6 +42,8 @@ export const dict = {
     uploadPartial:
       'Not all documents could be uploaded. Please check the list and try uploading the missing documents again.',
     uploadError: 'Upload failed.',
+    unsupportedFileType:
+      'This file format is not supported. Please upload a PDF file or a JPG or PNG image.',
     fileTooLarge: 'File is too large (max. 25 MB).',
     fileListLabel: 'Your files (names only)',
     fileListEmpty: 'No files selected yet.',

@@ -42,6 +42,8 @@ export const dict = {
     uploadPartial:
       'Tüm belgeler yüklenemedi. Lütfen listeyi kontrol edin ve eksik belgeleri yeniden yüklemeyi deneyin.',
     uploadError: 'Yükleme başarısız.',
+    unsupportedFileType:
+      'Bu dosya biçimi desteklenmiyor. Lütfen bir PDF dosyası veya JPG ya da PNG biçiminde bir resim yükleyin.',
     fileTooLarge: 'Dosya çok büyük (en fazla 25 MB).',
     fileListLabel: 'Dosyalarınız (yalnızca adlar)',
     fileListEmpty: 'Henüz dosya seçilmedi.',
