@@ -19,7 +19,7 @@
 <section class="wizard-panel recovery-panel" aria-busy={wizardIsBusy(snapshot)}>
   {#if snapshot.recoveryPhase === 'prerequisites' && snapshot.status}
     <h2>Docker vorbereiten</h2>
-    <p>Für die Einrichtung muss Docker Desktop bereit sein. Danach prüfen wir, ob bereits eine Installation vorhanden ist.</p>
+    <p>Für die Einrichtung muss Docker Desktop bereit sein. Danach wird geprüft, ob bereits eine Installation vorhanden ist.</p>
     <ul class="checklist">
           {#each dockerPrerequisiteChecks(snapshot.status.docker) as check (check.id)}
             <li class={check.state}>

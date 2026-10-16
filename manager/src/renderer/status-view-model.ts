@@ -159,7 +159,7 @@ export function setupEntryContent(status: HostStatus, tone: SetupEntryTone): Set
   if (tone === 'fresh') {
     return {
       eyebrow,
-      copy: 'Wir führen Schritt für Schritt durch Docker, Software-Paket, Host-Adresse im Praxisnetz und Start des lokalen Wartezimmer-Stacks.',
+      copy: 'Der Assistent führt Schritt für Schritt durch Docker, Software-Paket, Host-Adresse im Praxisnetz und Start des lokalen Wartezimmer-Stacks.',
       note: '',
       showReleasePicker: false,
     };

@@ -201,15 +201,15 @@ Siehe [Routing](architecture/routing.md).
 
 ## Flow 2 — Patientenportal (Upload / Erstanamnese)
 
-**Ziel:** Optional Dokumente und Erstanamnese sicher übergeben — ohne dass Praxis-Personal Patientendaten am Portal _einsehen_ kann. Einstieg oft über Gast-WLAN der Praxis; **Captive-Hardware und Freischaltung sind nicht unser Produkt** ([`integrations.md`](operations/integrations.md)).
+**Ziel:** Optional Dokumente und Erstanamnese sicher übergeben — ohne dass Praxis-Personal Patientendaten am Portal _einsehen_ kann. Einstieg oft über Gast-WLAN der Praxis; **Captive-Hardware und Freischaltung sind nicht Teil von Wartezimmer** ([`integrations.md`](operations/integrations.md)).
 
 ### Produktgrenze (WLAN / Captive)
 
-| Wir liefern                                               | Wir liefern nicht                                               |
+| Enthalten                                               | Nicht enthalten                                               |
 | --------------------------------------------------------- | --------------------------------------------------------------- |
 | Portal-UI (`/portal/*`), Wartenummer-Prüfung, Session-API | Router, APs, Captive-Portal-Hardware, eigenen Captive-Datenpfad |
 
-**Praxis-IT** stellt Gast-WLAN / Captive. Nach Freischaltung (oder ohne Captive: direkter Browser-Aufruf der Portal-URL) läuft unser Portal. Dev/Test ohne WLAN: `/portal` direkt im Browser. Kurzvertrag: [`integrations.md`](operations/integrations.md).
+**Praxis-IT** stellt Gast-WLAN / Captive. Nach Freischaltung (oder ohne Captive: direkter Browser-Aufruf der Portal-URL) läuft das Wartezimmer-Portal. Dev/Test ohne WLAN: `/portal` direkt im Browser. Kurzvertrag: [`integrations.md`](operations/integrations.md).
 
 ### Schritte (Screen-Ablauf)
 
@@ -219,7 +219,7 @@ Siehe [Routing](architecture/routing.md).
 
 | Pfad                         | Ablauf                                                                     |
 | ---------------------------- | -------------------------------------------------------------------------- |
-| **Einstieg (optional)**      | Praxis-Gast-WLAN → fremdes Captive (IT/Vendor) → Redirect auf unser Portal |
+| **Einstieg (optional)**      | Praxis-Gast-WLAN → fremdes Captive (IT/Vendor) → Redirect auf das Wartezimmer-Portal |
 | **Session**                  | Portal → **Wartenummer** (+ Nutzungsbedingungen) → Menü                    |
 | **Dokumente / Erstanamnese** | Browser, Session = Nummer                                                  |
 

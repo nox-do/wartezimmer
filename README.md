@@ -175,7 +175,7 @@ Frühere Website-Entwürfe und Originalbilder liegen im [Website-Archiv](docs/ar
 
 ## Kontakt und Support
 
-Für technische Fragen und Fehler nutzt bitte die [GitHub Issues](https://github.com/nox-do/wartezimmer/issues). Als Anwender erreicht ihr uns unter [info@notaus.de](mailto:info@notaus.de). Ich betreue beide Kontaktwege selbst.
+Technische Fragen und Fehler: [GitHub Issues](https://github.com/nox-do/wartezimmer/issues). Kontakt für Anwender: [info@notaus.de](mailto:info@notaus.de). Ich betreue beide Kontaktwege selbst.
 
 Sicherheitsprobleme bitte vertraulich an [info@notaus.de](mailto:info@notaus.de) melden; siehe [Sicherheitsmeldungen](SECURITY.md). Öffentliche Issues dürfen keine Patienteninformationen, Zugangsdaten oder unbereinigten Diagnosepakete enthalten.
 

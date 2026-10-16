@@ -15,7 +15,7 @@ Lokales Praxis-System für Check-in, Warteschlange und Wartezimmer — **ohne Cl
 - **Kostenlose Nutzung im eigenen Betrieb:** nach der [Projektlizenz](../LICENSE).
 - **Routing nach Bedarf:** einfache Zuordnung von Thema zu Raum oder mehrstufige Journeys.
 
-## Was wir haben (Kern)
+## Kernfunktionen
 
 | Bereich        | Inhalt                                                                                                                                                                |
 | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -31,7 +31,7 @@ Lokales Praxis-System für Check-in, Warteschlange und Wartezimmer — **ohne Cl
 vorhanden). Dieser Schalter ersetzt nicht die Projektlizenz. Eine Runtime, zwei Config-Modi —
 [`flows.md`](flows.md).
 
-## Was wir nicht sind / nicht liefern
+## Abgrenzung des Produktumfangs
 
 | Thema                      | Abgrenzung                                                                                          |
 | -------------------------- | --------------------------------------------------------------------------------------------------- |

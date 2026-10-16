@@ -8,8 +8,8 @@ Nicht: LAN-TLS/Proxy → [`tls.md`](tls.md) · Compose-Alltag → [`runtime.md`]
 
 |                       |                                                                                                                                                                                                                                                                                   |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Wir liefern**       | Portal-UI (`/portal/*`), Wartenummer-Prüfung, Session-API                                                                                                                                                                                                                         |
-| **Wir liefern nicht** | Router, AP, Captive-Hardware, eigenen Captive-Datenpfad (DHCP/Firewall/`ndsctl`)                                                                                                                                                                                                  |
+| **Enthalten**       | Portal-UI (`/portal/*`), Wartenummer-Prüfung, Session-API                                                                                                                                                                                                                         |
+| **Nicht enthalten** | Router, AP, Captive-Hardware, eigenen Captive-Datenpfad (DHCP/Firewall/`ndsctl`)                                                                                                                                                                                                  |
 | **Session-Hooks**     | `sessions/captive-authorize` (Portal → App; `wlanAuthorized` immer `false` bis Adapter), `sessions/verify-ticket-code` (S2S Bearer `AUTH_KEY_CAPTIVE` / Rolle `captive`)                                                                                                          |
 | **Manager heute**     | Gateway stets `enabled: false` (`DISABLED_GATEWAY_PLAN`); Fokus Restricted-Netz / Portal-URL — kein Captive-Wizard in Portal-v1                                                                                                                                                   |
 | **Lab**               | openNDS-Gateway-Stack **entfernt** aus dem Repo (Compose/`gateway/`); Historie: [`../archive/gateway-captive-portal.md`](../archive/gateway-captive-portal.md); Adapter-Entwurf: [`../archive/roadmap-captive-portal-adapters.md`](../archive/roadmap-captive-portal-adapters.md) |
@@ -20,12 +20,12 @@ Restricted-IP-/Listener-Grenze (Portal-v1) ist davon getrennt und wird unter
 
 ## 2. SMS / WhatsApp — Rückholbenachrichtigungen
 
-**Release 6.1.3:** Wir haben SMS mit echtem Empfang erfolgreich getestet.
-WhatsApp haben wir noch nicht praktisch getestet, auch den SMS-Fallback nicht.
+**Release 6.1.3:** SMS wurde mit echtem Empfang erfolgreich getestet.
+WhatsApp wurde noch nicht praktisch getestet, auch der SMS-Fallback nicht.
 Die Funktion bleibt optional, experimentell und standardmäßig deaktiviert.
-Bei WhatsApp haben wir außerdem Datenschutzbedenken. Wer es ausprobieren möchte,
+Bei WhatsApp bestehen außerdem Datenschutzbedenken. Wer es ausprobieren möchte,
 sollte vorab den Datenschutz klären und den Versand mit Testempfängern prüfen.
-Wir freuen uns über Feedback; bitte keine Zugangsdaten oder Patienteninformationen
+Feedback ist willkommen; bitte keine Zugangsdaten oder Patienteninformationen
 mitschicken.
 
 | Provider         | Stand                                         |

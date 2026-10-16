@@ -2,7 +2,7 @@
 
 > Wartezimmer organisiert Patientenbesuche in Arztpraxen: Anmeldung, Warteliste, Räume, Aufruf und ein optionales Patientenportal. Anwendung und Datenverarbeitung laufen lokal in der Praxis.
 
-Wir entwickeln Wartezimmer für Einzel- und Gemeinschaftspraxen. Das Team arbeitet
+Ich entwickle Wartezimmer für Einzel- und Gemeinschaftspraxen. Das Team arbeitet
 im Browser. Terminal, Wartezimmeranzeige, Raum-Panels und Patientenportal lassen
 sich nach Bedarf ergänzen. Die Reihenfolge und medizinische Prioritäten bestimmt
 das Praxisteam.
@@ -18,10 +18,10 @@ das Praxisteam.
 ## Betrieb
 
 Der Wartezimmer Manager verwaltet die Installation auf einem Praxisrechner mit
-Docker Desktop. Wir bieten Manager für macOS Apple Silicon, macOS Intel und
-Windows 11 x64 an. Die Arbeitsplätze nutzen aktuelle Browser im Praxisnetz.
+Docker Desktop. Der Manager ist für macOS Apple Silicon, macOS Intel und
+Windows 11 x64 verfügbar. Die Arbeitsplätze nutzen aktuelle Browser im Praxisnetz.
 
-Für den Praxisbetrieb mit personenbezogenen Daten empfehlen wir HTTPS. Der
+Für den Praxisbetrieb mit personenbezogenen Daten empfehle ich HTTPS. Der
 selbstständige Patientenzugang benötigt eine zweite Netzwerkkarte, eine eigene
 HTTPS-Adresse und eine vor Ort geprüfte Trennung von Praxis- und Patientennetz.
 Netzwerk und Firewall plant und betreut die Praxis-IT.
@@ -35,16 +35,16 @@ allein bedeutet keine pauschale Datenschutzkonformität.
 Version 6.1.3 ist mit Quellcode und installierbaren Paketen auf GitHub verfügbar.
 Die Manager-Installer sind unsigniert, die macOS-Apps nicht notarisiert. Bei der
 Installation oder beim ersten Öffnen können Betriebssystemwarnungen erscheinen.
-Wir sparen uns diese Kosten, damit wir Wartezimmer kostenlos anbieten können.
+Ich spare mir diese Kosten, damit ich Wartezimmer kostenlos anbieten kann.
 
 - `.pfinstall` dient der Erstinstallation, `.pfupdate` bestehenden Installationen; beide werden für ARM64 und AMD64 angeboten und enthalten ihre Prüfsummen.
-- Den praktischen Update-Test haben wir für 6.1.3 noch nicht abgeschlossen. Details stehen in den Release Notes.
-- Windows ARM bleibt Early Access; ein natives Windows-ARM64-Releasepaket bieten wir derzeit nicht an.
-- SMS haben wir mit echtem Empfang getestet. WhatsApp und der zugehörige SMS-Fallback bleiben optional, experimentell und ungetestet. Wir haben Datenschutzbedenken und freuen uns über Feedback von Interessierten.
+- Den praktischen Update-Test habe ich für 6.1.3 noch nicht abgeschlossen. Details stehen in den Release Notes.
+- Windows ARM bleibt Early Access; ein natives Windows-ARM64-Releasepaket ist derzeit nicht verfügbar.
+- SMS habe ich mit echtem Empfang getestet. WhatsApp und der zugehörige SMS-Fallback bleiben optional, experimentell und ungetestet. Ich habe Datenschutzbedenken und freue mich über Feedback von Interessierten.
 
 ## Lizenz und Kontakt
 
-Wartezimmer steht unter unserer eigenen Wartezimmer-Lizenz 1.1 vom
+Wartezimmer steht unter der eigenen Wartezimmer-Lizenz 1.1 vom
 13. Oktober 2026. Das Projekt ist Source-available, keine Open-Source-Software.
 Nutzung, Anpassung, Weitergabe und Dienstleistungen richten sich nach dem
 vollständigen Lizenztext. Die Lizenz der Software gilt nicht automatisch für

@@ -257,7 +257,7 @@ export const dict = {
       contactsSample: 'Nein — Beispieldatei (Mustermann) verwenden',
       contactsChooseMode: 'Bitte eine Option wählen.',
       contactsSampleHint:
-        'Wir legen eine Demo-CSV im Import-Ordner an und konfigurieren das Mapping automatisch (Terminal-Test ohne echte PVS-Daten).',
+        'Eine Demo-CSV wird im Import-Ordner angelegt und das Mapping automatisch konfiguriert (Terminal-Test ohne echte PVS-Daten).',
       contactsSampleReady: 'Beispieldatei ist aktiv — Sie können weitergehen.',
       contactsSampleOk: 'Beispieldatei wurde angelegt und konfiguriert.',
       contactsReloadFolders: 'Ordnerliste aktualisieren',
@@ -286,7 +286,7 @@ export const dict = {
         'Offene Pflichtpunkte — zurück zu den Schritten oder in den Systemeinstellungen nachjustieren.',
       verifyTitle: 'Abschluss',
       verifyBody:
-        'Wir prüfen Ordner, Kontakt-CSV und Konfiguration automatisch. Wenn alles grün ist, können Sie die Einrichtung abschließen. Nach .env-Änderungen Container neu starten und „Erneut prüfen“ wählen.',
+        'Ordner, Kontakt-CSV und Konfiguration werden automatisch geprüft. Wenn alles grün ist, können Sie die Einrichtung abschließen. Nach .env-Änderungen Container neu starten und „Erneut prüfen“ wählen.',
       verifyRunning: 'Prüfung läuft …',
       verifyRefresh: 'Erneut prüfen',
       verifyFailed: 'Es fehlen noch Pflichtpunkte — siehe Überblick oder vorherige Schritte.',
@@ -418,7 +418,7 @@ export const dict = {
     checkinPhoneLabel: 'Telefonnummer (optional)',
     checkinPhonePlaceholder: 'z. B. 0172..., +49... oder 00...',
     checkinPhoneHint:
-      'Die Suche akzeptiert Name oder Telefonnummer in einem Feld. Nummern können mit 0..., +49... oder 00... eingegeben werden; wir gleichen über ein normalisiertes Format ab.',
+      'Die Suche akzeptiert Name oder Telefonnummer in einem Feld. Nummern können mit 0..., +49... oder 00... eingegeben werden; der Abgleich erfolgt über ein normalisiertes Format.',
     checkinBirthDateOnlyHint:
       'Geburtsdatum allein sucht nicht. Bitte Name oder Telefonnummer ergänzen.',
     checkinLookupLoading: 'Suche läuft…',

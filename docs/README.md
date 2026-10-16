@@ -34,7 +34,7 @@ Details und Ausnahmen regelt die Lizenz. Das Projekt ist Source-available.
 
 | Datei                      | Inhalt                                     |
 | -------------------------- | ------------------------------------------ |
-| [`product.md`](product.md) | Was wir sind / nicht sind, Abgrenzungen    |
+| [`product.md`](product.md) | Produktumfang und Abgrenzungen    |
 | [`flows.md`](flows.md)     | Patienten- und MFA-Abläufe; Betrieb-Rahmen |
 
 Geplant: [PVS-Patientenzuordnung und Dokumentübergabe](pvs-plan.md) (fachlicher Entwurf).
