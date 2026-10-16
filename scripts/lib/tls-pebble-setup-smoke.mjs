@@ -824,13 +824,11 @@ export async function runTlsPebbleSetupSmoke(kind) {
   writeRuntimeEnv(lanIp, ownDomain);
 
   let composeAttempted = false;
-  let startedCompose = false;
   let setupChild = null;
   try {
     console.log(`Starting lab + app + proxy (project ${PROJECT}) …`);
     composeAttempted = true;
     compose(['up', '-d', '--pull', 'missing'], { stdio: 'inherit' });
-    startedCompose = true;
 
     await waitFor('Pebble management root', () => fetchPebbleRoot());
     await waitFor('acme-dns API', async () => {
@@ -996,5 +994,5 @@ export async function runTlsPebbleSetupSmoke(kind) {
     );
     return;
   }
-  cleanupRuntime(startedCompose);
+  cleanupRuntime(composeAttempted);
 }

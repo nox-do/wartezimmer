@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import path from 'node:path';
 import { loadRepoDotEnv } from './dotenv.mjs';
 import { assert, requestJson, smokeStaffAuth } from './smoke-helpers.mjs';
 

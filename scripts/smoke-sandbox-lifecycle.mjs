@@ -8,7 +8,11 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const name = `pf-sandbox-check-${randomUUID().slice(0, 8)}`;
 const volume = `${name}-signatures`;
-const image = process.env.SANDBOX_TEST_IMAGE || 'wartezimmer/sandbox:6.1.1';
+const image = process.env.SANDBOX_TEST_IMAGE?.trim();
+if (!image)
+  throw new Error(
+    'SANDBOX_TEST_IMAGE ist erforderlich: das zu prüfende lokale Image explizit angeben.',
+  );
 const docker = (...args) =>
   execFileSync('docker', args, {
     encoding: 'utf8',

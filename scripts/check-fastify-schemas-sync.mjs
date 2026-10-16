@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { spawnSync } from 'node:child_process';
-import fs from 'node:fs';
 import path from 'node:path';
 import { assertGeneratedFilesTracked, repoRootFromImportMeta } from './openapi-lib.mjs';
 
@@ -16,46 +15,14 @@ const generatedFiles = [
   'app/src/api/generated/ops.fastify-schemas.ts',
 ];
 
-const before = new Map(
-  generatedFiles.map((file) => [
-    file,
-    fs.existsSync(path.join(root, file)) ? fs.readFileSync(path.join(root, file)) : null,
-  ]),
-);
-
-const generate = spawnSync(
+const result = spawnSync(
   process.execPath,
-  [path.join(root, 'scripts/generate-fastify-schemas.mjs')],
-  {
-    cwd: root,
-    stdio: 'inherit',
-  },
+  [path.join(root, 'scripts/generate-fastify-schemas.mjs'), '--check'],
+  { cwd: root, stdio: 'inherit' },
 );
-
-if (generate.status !== 0) {
-  process.exit(generate.status ?? 1);
+if (result.error) throw result.error;
+if (result.status !== 0) process.exitCode = result.status ?? 1;
+else {
+  assertGeneratedFilesTracked(generatedFiles, 'check-fastify-schemas-sync', root);
+  console.log('check-fastify-schemas-sync: OK');
 }
-
-let failed = false;
-for (const relativePath of generatedFiles) {
-  if (!fs.existsSync(path.join(root, relativePath))) {
-    console.error(`check-fastify-schemas-sync: missing ${relativePath}`);
-    failed = true;
-    continue;
-  }
-  const previous = before.get(relativePath);
-  if (!previous || !previous.equals(fs.readFileSync(path.join(root, relativePath)))) {
-    failed = true;
-    console.error(
-      `check-fastify-schemas-sync: ${relativePath} out of date — run npm run generate:api-schemas`,
-    );
-  }
-}
-
-if (failed) {
-  process.exit(1);
-}
-
-assertGeneratedFilesTracked(generatedFiles, 'check-fastify-schemas-sync', root);
-
-console.log('check-fastify-schemas-sync: OK');

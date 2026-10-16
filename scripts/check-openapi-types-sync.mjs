@@ -5,5 +5,4 @@ import { checkOpenApiTypesSync } from './openapi-types-lib.mjs';
 await checkOpenApiTypesSync({
   group: 'ui',
   label: 'check-openapi-types-sync',
-  generateHint: 'npm run generate:openapi-types',
 });

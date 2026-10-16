@@ -1,8 +1,9 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { assertGeneratedFilesTracked, repoRootFromImportMeta } from './openapi-lib.mjs';
-import { formatFileInPlace } from './prettier-write.mjs';
+import { writePrettierFile } from './prettier-write.mjs';
 
 const root = repoRootFromImportMeta(import.meta.url);
 
@@ -70,7 +71,7 @@ function jobsForGroup(group) {
   return jobs;
 }
 
-export async function generateOpenApiTypes({ group, label }) {
+export async function generateOpenApiTypes({ group, label, check = false }) {
   const bin = path.join(root, 'ui/node_modules/.bin/openapi-typescript');
   if (!fs.existsSync(bin)) {
     console.error(`${label}: run npm install in ui workspace first (openapi-typescript).`);
@@ -78,47 +79,24 @@ export async function generateOpenApiTypes({ group, label }) {
   }
 
   const jobs = jobsForGroup(group);
-  for (const spec of jobs) {
-    fs.mkdirSync(path.dirname(spec.output), { recursive: true });
-    const result = spawnSync(bin, [spec.input, '-o', spec.output], { cwd: root, stdio: 'inherit' });
-    if (result.status !== 0) {
-      process.exit(result.status ?? 1);
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-openapi-types-'));
+  try {
+    for (const spec of jobs) {
+      const output = path.join(temporary, path.basename(spec.output));
+      const result = spawnSync(bin, [spec.input, '-o', output], { cwd: root, stdio: 'inherit' });
+      if (result.error) throw result.error;
+      if (result.status !== 0) throw new Error(`${label}: generator failed (${result.status}).`);
+      if (!check) fs.mkdirSync(path.dirname(spec.output), { recursive: true });
+      await writePrettierFile(spec.output, fs.readFileSync(output, 'utf8'), { check });
     }
-    await formatFileInPlace(spec.output);
+  } finally {
+    fs.rmSync(temporary, { recursive: true, force: true });
   }
-
-  if (group === 'app') {
-    console.log(`${label}: wrote ${jobs.length} files under app/src/api/generated/`);
-  }
+  console.log(`${label}: ${check ? 'checked' : 'wrote'} ${jobs.length} files.`);
 }
 
-export async function checkOpenApiTypesSync({ group, label, generateHint }) {
-  const generatedFiles = listOpenApiTypeOutputs(group);
-  const before = new Map(
-    generatedFiles.map((file) => [
-      file,
-      fs.existsSync(path.join(root, file)) ? fs.readFileSync(path.join(root, file)) : null,
-    ]),
-  );
-  await generateOpenApiTypes({ group, label });
-  let failed = false;
-  for (const relativePath of generatedFiles) {
-    if (!fs.existsSync(path.join(root, relativePath))) {
-      console.error(`${label}: missing ${relativePath}`);
-      failed = true;
-      continue;
-    }
-    const previous = before.get(relativePath);
-    if (!previous || !previous.equals(fs.readFileSync(path.join(root, relativePath)))) {
-      failed = true;
-      console.error(`${label}: ${relativePath} is out of date — run ${generateHint} and commit.`);
-    }
-  }
-
-  if (failed) {
-    process.exit(1);
-  }
-
-  assertGeneratedFilesTracked(generatedFiles, label, root);
+export async function checkOpenApiTypesSync({ group, label }) {
+  await generateOpenApiTypes({ group, label, check: true });
+  assertGeneratedFilesTracked(listOpenApiTypeOutputs(group), label, root);
   console.log(`${label}: OK`);
 }

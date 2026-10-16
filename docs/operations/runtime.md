@@ -151,7 +151,7 @@ Vor der erstmaligen Umstellung alle offenen Dokumente exportieren oder verwerfen
 
 Das bisherige benannte Volume `sandbox_intake_data` wird nicht mehr eingebunden. Docker entfernt es beim Wechsel nicht automatisch. Nach abgeschlossener Umstellung anhand der Compose-Projekt- und Volume-Labels das zu dieser Installation gehörende alte Volume ermitteln und gezielt entfernen; niemals pauschal `docker volume prune` oder `compose down -v` verwenden. Die übrigen Datenvolumes und Exporte bleiben erhalten. Es werden durch tägliche Neustarts keine neuen Images oder Container angesammelt; die Aufbewahrung alter Release-Images gehört zum Softwareupdate, nicht zum Tagesreset.
 
-Verifikation ohne Änderung der Installation: `npm run build:server-shared`, `npm run -w @wartezimmer/sandbox build`, anschließend `SANDBOX_TEST_IMAGE=wartezimmer/sandbox:<lokaler-Tag> node scripts/smoke-sandbox-lifecycle.mjs`. Der Test erzeugt ausschließlich einen eigenen kurzlebigen Container samt Testvolume und entfernt beides anschließend. Er prüft Schreibschutz, Dokumentverlust beim Neustart, erhaltenen Cache und die Schreibrechte des realen FreshClam-Updaters offline.
+Verifikation ohne Änderung der Installation: `npm run build:server-shared`, `npm run -w @wartezimmer/sandbox build`, anschließend `SANDBOX_TEST_IMAGE=wartezimmer/sandbox:<lokaler-Tag> npm run smoke:sandbox-lifecycle`. Die Image-Angabe ist verpflichtend; es gibt keinen festen Versions-Fallback. Der Test erzeugt ausschließlich einen eigenen kurzlebigen Container samt Testvolume und entfernt beides anschließend. Er prüft Schreibschutz, Dokumentverlust beim Neustart, erhaltenen Cache und die Schreibrechte des realen FreshClam-Updaters offline.
 
 ## Windows-Betriebsgrenzen
 

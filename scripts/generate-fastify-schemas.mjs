@@ -15,6 +15,7 @@ import {
 import { writePrettierFile } from './prettier-write.mjs';
 
 const root = repoRootFromImportMeta(import.meta.url);
+const check = process.argv.includes('--check');
 const outDir = path.join(root, 'app/src/api/generated');
 
 const DOMAIN_FILES = [
@@ -34,7 +35,7 @@ const DOMAIN_FILES = [
   { spec: 'ops.yaml', exportName: 'opsSchemas', componentsOnly: false },
 ];
 
-fs.mkdirSync(outDir, { recursive: true });
+if (!check) fs.mkdirSync(outDir, { recursive: true });
 
 for (const entry of DOMAIN_FILES) {
   const {
@@ -86,8 +87,8 @@ for (const entry of DOMAIN_FILES) {
   );
 
   const outFile = path.join(outDir, `${outSpec}.fastify-schemas.ts`);
-  await writePrettierFile(outFile, parts.join('\n'));
+  await writePrettierFile(outFile, parts.join('\n'), { check });
   console.log(
-    `generate-fastify-schemas: wrote ${path.relative(root, outFile)} (${schemaNames.length} schemas)`,
+    `generate-fastify-schemas: ${check ? 'checked' : 'wrote'} ${path.relative(root, outFile)} (${schemaNames.length} schemas)`,
   );
 }
