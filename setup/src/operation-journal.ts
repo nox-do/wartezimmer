@@ -104,7 +104,7 @@ function readJournal<T>(file: string, validate: (value: unknown) => T): T | null
 }
 
 function operationStatus(
-  read: () => { id: string; phase: string } | null,
+  read: () => { id: string; phase: string; updateError?: string; lastError?: string } | null,
 ): HostOperationStatus | null {
   try {
     const op = read();
@@ -113,6 +113,8 @@ function operationStatus(
           kind: op.phase === 'recovery-failed' ? 'recovery-failed' : 'pending',
           id: op.id,
           phase: op.phase,
+          ...(op.updateError ? { updateError: op.updateError } : {}),
+          ...(op.lastError ? { lastError: op.lastError } : {}),
         }
       : null;
   } catch {

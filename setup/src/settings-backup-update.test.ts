@@ -145,7 +145,10 @@ function mockDeps(appDataDir: string, backupPath: string) {
         { name: 'sandbox', service: 'sandbox', state: 'running', health: 'healthy' },
       ],
     }),
-    runHealthChecks: async () => ({ ok: true, errors: [] }),
+    runHealthChecks: async ({ lanAppBaseUrl }: { lanAppBaseUrl: string | null }) => {
+      assert.equal(lanAppBaseUrl, null, 'updates must not depend on device DNS');
+      return { ok: true, errors: [] };
+    },
     appDataAccess: createLocalAppDataAccess(appDataDir),
   };
 }

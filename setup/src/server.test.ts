@@ -378,7 +378,8 @@ test('host config survives Compose failure while runtime endpoints retain safe e
 });
 
 test('startup update recovery keeps reads available, runs once and blocks every mutation family', async (t) => {
-  const { writeUpdateOperation, readUpdateOperation } = await import('./update-operation.js');
+  const { writeUpdateOperation, readUpdateOperation, finishUpdateOperation } =
+    await import('./update-operation.js');
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'update-server-'));
   t.after(() => fs.rmSync(home, { recursive: true, force: true }));
   writeUpdateOperation(home, {
@@ -399,6 +400,13 @@ test('startup update recovery keeps reads available, runs once and blocks every 
     recoverUpdateOperation: async () => {
       calls++;
       await pending;
+      if (calls > 1) {
+        const { atPhase } = await import('./operation-journal.js');
+        const recovered = atPhase(readUpdateOperation(home)!, 'recovered');
+        writeUpdateOperation(home, recovered);
+        finishUpdateOperation(home, recovered);
+        return { ok: true, errors: [] };
+      }
       writeUpdateOperation(home, {
         ...readUpdateOperation(home)!,
         phase: 'recovery-failed',
@@ -415,6 +423,10 @@ test('startup update recovery keeps reads available, runs once and blocks every 
   assert.equal((await fetch(`${server.baseUrl}/api/setup/health`)).status, 200);
   const during = await fetch(`${server.baseUrl}/api/setup/host/update/apply`, { method: 'POST' });
   assert.equal((await during.json()).error.code, 'host_mutation_conflict');
+  const concurrentRetry = await fetch(`${server.baseUrl}/api/setup/host/update/recover`, {
+    method: 'POST',
+  });
+  assert.equal((await concurrentRetry.json()).error.code, 'host_mutation_conflict');
   finish();
   // A read request is not a recovery trigger and does not discard failed evidence.
   assert.equal((await fetch(`${server.baseUrl}/api/setup/health`)).status, 200);
@@ -435,6 +447,16 @@ test('startup update recovery keeps reads available, runs once and blocks every 
     assert.equal((await response.json()).error.code, 'update_operation_inconsistent', route);
   }
   assert.equal(calls, 1);
+  const retry = await fetch(`${server.baseUrl}/api/setup/host/update/recover`, { method: 'POST' });
+  assert.equal(retry.status, 200);
+  assert.equal((await retry.json()).ok, true);
+  assert.equal(calls, 2);
+  assert.equal(readUpdateOperation(home), null);
+  const unlocked = await fetch(`${server.baseUrl}/api/setup/host/storage`, {
+    method: 'POST',
+    body: '{}',
+  });
+  assert.notEqual((await unlocked.json()).error?.code, 'update_operation_inconsistent');
 });
 
 test('restore startup recovery leaves status readable, runs once and releases mutations after cleanup', async (t) => {

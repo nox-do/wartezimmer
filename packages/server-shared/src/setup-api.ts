@@ -531,6 +531,7 @@ export type TlsActionResult = {
 export type TlsRenewInput = Partial<TlsCustomCertificateInput>;
 
 export type HostNetworkStatus = {
+  configuredTlsLanIp?: string | null;
   configuredLanIp: string | null;
   currentLanCandidates: LanCandidate[];
   lanIpStale: boolean;
@@ -795,7 +796,13 @@ export type InstallationState =
 /** Public journal evidence; payloads and recovery secrets remain in Setup. */
 export type HostOperationStatus =
   | { kind: 'unreadable' }
-  | { kind: 'pending' | 'recovery-failed'; id: string; phase: string };
+  | {
+      kind: 'pending' | 'recovery-failed';
+      id: string;
+      phase: string;
+      updateError?: string;
+      lastError?: string;
+    };
 export type UpdateOperationStatus = HostOperationStatus;
 export type RestoreOperationStatus = HostOperationStatus;
 export type TlsOperationStatus = HostOperationStatus;

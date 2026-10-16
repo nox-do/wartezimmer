@@ -535,11 +535,13 @@ export function createSetupRequestHandler(
 ) {
   configureMaintenanceAuthHome(ctx.home, ctx.mode);
   const mutationLock = hostMutationLock(ctx.home);
-  const routes = createSetupRoutes(
-    ctx,
-    tlsDeps,
-    options.buildId ?? resolveSetupBuildId(),
-    mutationLock,
+  const routes = new Map(
+    createSetupRoutes(ctx, tlsDeps, options.buildId ?? resolveSetupBuildId(), mutationLock),
+  );
+  routes.set('POST /api/setup/host/update/recover', async () =>
+    mutationLock.run('update-recovery', async () =>
+      routeResult(await (options.recoverUpdateOperation ?? recoverUpdateOperation)(ctx)),
+    ),
   );
   const bindingPending = readBindingOperationStatus(ctx.home);
   const tlsPending = readTlsOperationStatus(ctx.home);

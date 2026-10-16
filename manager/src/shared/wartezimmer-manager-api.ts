@@ -82,6 +82,7 @@ export type WartezimmerManagerSetupApi = {
     archivePath: string;
     restartCompose?: boolean;
   }): Promise<LoadDeliveryImagesResult>;
+  recoverUpdate(): Promise<{ ok: boolean; errors: string[] }>;
   applyPfupdate(body: PfupdateApplyInput): Promise<PfupdateApplyResult>;
   inspectPfupdate(body: PfupdateInspectInput): Promise<PfupdateInspectResult>;
 };

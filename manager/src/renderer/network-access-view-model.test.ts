@@ -10,6 +10,7 @@ const service = { name: 'app', service: 'app', state: 'running', health: 'health
 test('initial HTTP use does not require HTTPS and keeps its open scope explicit', () => {
   const status = minimalHostStatus({
     lifecycle: knownLifecycle(),
+    probes: [{ id: 'app.health.lan', ok: true, message: 'Erreichbar' }],
     compose: { running: true, services: [service] },
   });
   const view = networkAccessSummary(status);
@@ -127,7 +128,10 @@ test('unknown configuration does not claim HTTP or open publication on all NICs'
 });
 
 test('compact status keeps actionable network warnings without routine explanations', () => {
-  const status = minimalHostStatus({ lifecycle: knownLifecycle() });
+  const status = minimalHostStatus({
+    lifecycle: knownLifecycle(),
+    probes: [{ id: 'app.health.lan', ok: true, message: 'Erreichbar' }],
+  });
   assert.deepEqual(networkAccessAlerts(status), []);
   status.network.lanIpStale = true;
   assert.match(networkAccessAlerts(status).join(' '), /Praxisadresse.*nicht vorhanden/);
@@ -161,4 +165,37 @@ test('inconsistent installation does not expose a purported confirmed operating 
   assert.equal(summary.tls, null);
   assert.equal(summary.proxy, null);
   assert.equal(summary.connection, 'Nicht sicher bestimmbar');
+});
+
+test('failed and unobserved device reachability cannot produce an all-clear', () => {
+  const status = minimalHostStatus({
+    networkBindings: [{ id: 'staff.binding.app', ok: true, message: 'OK' }],
+    probes: [
+      { id: 'app.health.lan', ok: false, message: 'Geräte kommen nicht an', detail: 'timeout' },
+    ],
+  });
+  assert.match(networkAccessAlerts(status).join(' '), /Geräte kommen nicht an: timeout/);
+  assert.equal(networkAccessSummary(status).dnsWarning, null);
+  status.probes = [];
+  assert.match(networkAccessSummary(status).diagnosis, /noch nicht geprüft/);
+  assert.equal(networkAccessSummary(status).needsAttention, true);
+  assert.doesNotMatch(networkAccessSummary(status).diagnosis, /Keine Abweichung/);
+});
+
+test('saved HTTPS IP mismatch remains visible independently of device probes', () => {
+  const status = minimalHostStatus();
+  status.network.configuredTlsLanIp = '192.168.1.100';
+  status.tls = {
+    state: 'active',
+    mode: 'managed',
+    hostname: 'staff.example.test',
+    installationId: null,
+    tokenConsumed: true,
+    applyReady: false,
+    cutoverApplied: true,
+    certificate: null,
+    lastError: null,
+    acmeCnameTarget: null,
+  };
+  assert.match(networkAccessAlerts(status).join(' '), /192.168.1.100.*192.168.1.10/);
 });

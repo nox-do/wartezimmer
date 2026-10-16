@@ -830,6 +830,7 @@ export function buildHostNetworkStatus(envMap: Map<string, string>): HostNetwork
     configuredLanIp,
     currentLanCandidates,
     lanIpStale: isLanIpStale(configuredLanIp, currentLanCandidates),
+    configuredTlsLanIp: envMap.get('TLS_LAN_IP')?.trim() || null,
   };
 }
 

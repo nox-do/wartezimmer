@@ -37,8 +37,10 @@ export function tabDisabled(
   if (!config) {
     return tab === 'status' || tab === 'wizard' ? null : 'Noch nicht verfügbar';
   }
-  if (tab !== 'status' && hasBlockingMaintenanceOperation(config))
-    return 'Offenen Wartungsvorgang zuerst klären; siehe Status und Diagnose';
+  if (hasBlockingMaintenanceOperation(config))
+    return tab === 'wizard'
+      ? 'Offenen Wartungsvorgang zuerst klären; siehe Status und Diagnose'
+      : null;
   if (tab === 'wizard' && !config.installation) {
     return 'Laufzustand nicht prüfbar – bitte den Status erneut prüfen';
   }

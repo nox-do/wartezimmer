@@ -231,3 +231,38 @@ test('confirmed configuration follows the update decision and rejects missing re
   fs.writeFileSync(updateOperationPath(f.home), 'broken');
   assert.equal(readConfirmedHostConfig(f.home).unknown, true);
 });
+
+test('update recovery ignores device DNS but preserves a failed local-health decision and sanitized evidence across restarts', async (t) => {
+  const f = fixture(t);
+  fs.appendFileSync(path.join(f.home, '.env'), '\nCANONICAL_BASE_URL=https://staff.invalid\n');
+  await f.snapshot();
+  f.mutate();
+  const failed = await recoverUpdateOperation(f.ctx, {
+    ...f.deps,
+    runHealthChecks: async (input) => {
+      assert.equal(input.lanAppBaseUrl, null);
+      return { ok: false, errors: ['API lokal nicht erreichbar: password=private-value'] };
+    },
+  });
+  assert.equal(failed.ok, false);
+  const persisted = readUpdateOperation(f.home)!;
+  assert.match(persisted.lastError!, /lokale App-/);
+  assert.doesNotMatch(fs.readFileSync(updateOperationPath(f.home), 'utf8'), /private-value/);
+  const status = readUpdateOperationStatus(f.home);
+  assert.ok(status && status.kind !== 'unreadable');
+  assert.equal(status.lastError, persisted.lastError);
+  assert.equal(
+    (
+      await recoverUpdateOperation(f.ctx, {
+        ...f.deps,
+        runHealthChecks: async ({ lanAppBaseUrl }) => ({
+          ok: lanAppBaseUrl === null,
+          errors: ['DNS unavailable'],
+        }),
+      })
+    ).ok,
+    true,
+  );
+  assert.equal(readUpdateOperationStatus(f.home), null);
+  f.assertOld();
+});

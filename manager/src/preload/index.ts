@@ -301,6 +301,10 @@ async function inspectPfupdate(body: PfupdateInspectInput): Promise<PfupdateInsp
   });
 }
 
+async function recoverUpdate(): Promise<{ ok: boolean; errors: string[] }> {
+  return callSetupApi({ method: 'POST', path: '/api/setup/host/update/recover' });
+}
+
 async function applyPfupdate(body: PfupdateApplyInput): Promise<PfupdateApplyResult> {
   return callSetupApi<PfupdateApplyResult>({
     method: 'POST',
@@ -450,6 +454,7 @@ const api = serializeManagerApiErrors({
   inspectPfupdate,
   loadDeliveryImages,
   applyPfupdate,
+  recoverUpdate,
   saveStorageFolders,
   saveHostNetwork,
   prepareHostTls,

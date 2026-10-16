@@ -119,7 +119,11 @@ export function setupApiTimeoutMs(request: SetupApiCallRequest): number {
     return RESTORE_TIMEOUT_MS;
   }
 
-  if (request.method === 'POST' && request.path === '/api/setup/host/update/apply') {
+  if (
+    request.method === 'POST' &&
+    (request.path === '/api/setup/host/update/apply' ||
+      request.path === '/api/setup/host/update/recover')
+  ) {
     return UPDATE_APPLY_TIMEOUT_MS;
   }
 

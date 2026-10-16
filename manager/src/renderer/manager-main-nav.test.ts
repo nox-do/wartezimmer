@@ -79,3 +79,15 @@ test('diagnosis states keep mutation tabs closed and reinstall remains accessibl
     null,
   );
 });
+
+test('failed maintenance keeps diagnostic tabs readable even with a stopped or inconsistent stack', () => {
+  for (const kind of ['stopped', 'inconsistent'] as const) {
+    const status = minimalHostStatus({
+      installation: kind === 'stopped' ? { kind } : { kind, reasons: [] },
+      updateOperation: { kind: 'recovery-failed', id: 'test', phase: 'recovery-failed' },
+    });
+    assert.equal(tabDisabled('network', status), null);
+    assert.equal(tabDisabled('maintenance', status), null);
+    assert.ok(tabDisabled('wizard', status));
+  }
+});

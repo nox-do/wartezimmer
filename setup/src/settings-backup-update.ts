@@ -1,3 +1,5 @@
+import { summarizeUpdateFailure } from './update-error-summary.js';
+import { auditUpdateRuntimePostcondition } from './update-runtime-postcondition.js';
 import { waitForCompatibleMaintenanceApp } from './settings-format-version.js';
 import { syncMaintenanceHostFiles } from './maintenance-files.js';
 import { atPhase, needsRollback as operationNeedsRollback } from './operation-journal.js';
@@ -18,7 +20,7 @@ import {
 } from './update-operation.js';
 import { managerStatePath } from './manager-state.js';
 import { durableWrite } from './restricted-operation.js';
-import { createRuntimePostcondition, auditRuntimePostcondition } from './runtime-postcondition.js';
+import { createRuntimePostcondition } from './runtime-postcondition.js';
 import { releasePortalContract, installReleaseProxyContract } from './release-proxy-contract.js';
 import { composeExec, recoverRestrictedOperation } from './docker.js';
 import { auditRestrictedListeners } from './restricted-listener-probe.js';
@@ -179,6 +181,7 @@ type CutoverRuntime = {
   exportDbSnapshot: NonNullable<PfupdateApplyDeps['exportDbSnapshot']>;
   composeStatus: MaintenanceStackRuntime['composeStatus'];
   runHealthChecks: MaintenanceStackRuntime['runHealthChecks'];
+  auditRuntime: typeof auditUpdateRuntimePostcondition;
 };
 
 type PreparedUpdate = {
@@ -240,7 +243,13 @@ function resolveCutoverRuntime(deps: PfupdateApplyDeps): CutoverRuntime {
     exportDbSnapshot:
       deps.exportDbSnapshot ?? ((baseUrl) => fetchSettingsDbSnapshotFromApp(baseUrl)),
     composeStatus: deps.composeStatus ?? composePs,
-    runHealthChecks: deps.runHealthChecks ?? runDefaultMaintenanceHealthChecks,
+    // Device DNS is observed by Network; update correctness is checked directly at the host.
+    runHealthChecks: (input) =>
+      (deps.runHealthChecks ?? runDefaultMaintenanceHealthChecks)({
+        ...input,
+        lanAppBaseUrl: null,
+      }),
+    auditRuntime: auditUpdateRuntimePostcondition,
   };
 }
 
@@ -704,6 +713,7 @@ export async function recoverUpdateOperation(
         ...operation,
         phase: 'recovery-failed',
         recovery: needsRollback ? 'rollback' : 'restart',
+        lastError: summarizeUpdateFailure(result.errors),
       });
       logger.error(
         { errors: result.errors, updateId: operation.id },
@@ -826,7 +836,7 @@ async function commitPreparedUpdate(input: {
       cutoverResult.errors,
     );
   }
-  const audit = await auditRuntimePostcondition(postcondition, cutoverResult.compose, {
+  const audit = await input.runtime.auditRuntime(postcondition, cutoverResult.compose, {
     auditListeners: input.runtime.auditProxyContract,
   });
   if (!audit.ok) throw new UpdatePhaseError(UPDATE_PHASES.healthCheck, audit.errors);
@@ -923,7 +933,14 @@ async function applyPreparedUpdate(input: {
     // journal write, determines which recovery path is actually attempted.
     let rollbackAttempted = false;
     try {
-      rollbackAttempted = operationNeedsRollback(readUpdateOperation(input.ctx.home));
+      const stored = readUpdateOperation(input.ctx.home);
+      rollbackAttempted = operationNeedsRollback(stored);
+      if (stored && !['committed', 'recovered'].includes(stored.phase)) {
+        writeUpdateOperation(input.ctx.home, {
+          ...stored,
+          updateError: `Phase ${failure.phase}: ${summarizeUpdateFailure(failure.errors)}`,
+        });
+      }
     } catch {
       // An unreadable journal cannot prove that rollback was attempted.
     }

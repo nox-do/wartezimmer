@@ -73,6 +73,9 @@
     ? evaluateHostLifecycleAction(configSnapshot.lifecycle, 'stack-start') : null);
   let diagnosisOpen = $state(false);
   const networkDisabled = $derived(tabDisabled('network', configSnapshot, runtimeSnapshot));
+  const updateCleanupOnly = $derived(configSnapshot?.updateOperation &&
+    configSnapshot.updateOperation.kind !== 'unreadable' &&
+    ['committed', 'recovered'].includes(configSnapshot.updateOperation.phase));
   let actionBusy = $state(false);
   let actionError = $state<string | null>(null);
   async function runAction(action: () => void | Promise<void>) {
@@ -86,6 +89,12 @@
     const result = await window.wartezimmerManager.startStoppedInstallation();
     if (!result.installation || result.installation.kind === 'healthy') await onRefresh();
     else startInstallation = result.installation;
+  }
+  async function retryUpdateRecovery() {
+    try {
+      const result = await window.wartezimmerManager.recoverUpdate();
+      if (!result.ok) throw new Error(result.errors.join('\n'));
+    } finally { await onRefresh(); }
   }
   function openDiagnosis() {
     const target = primary.area === 'network' || primary.area === 'tls' || primary.code === 'proxy-unavailable' ? 'network' : 'maintenance';
@@ -123,6 +132,20 @@
       {#if networkDisabled}<p class="hint">{networkDisabled}</p>{/if}
     {:else if primary.recommendedAction === 'repair' || primary.recommendedAction === 'inspect-configuration'}
       <button type="button" onclick={openDiagnosis}>Diagnose öffnen</button>
+    {/if}
+    {#if configSnapshot.updateOperation && configSnapshot.updateOperation.kind !== 'unreadable'}
+      <div class="hint" role="status">
+        {#if configSnapshot.updateOperation.updateError}<p>Update fehlgeschlagen: {configSnapshot.updateOperation.updateError}</p>{/if}
+        {#if updateCleanupOnly}
+          <p>Der Softwarezustand wurde erfolgreich geprüft. Der Vorgang muss noch abgeschlossen werden.</p>
+        {:else}
+          <p>Die Wiederherstellung ist noch nicht abgeschlossen und verifiziert.</p>
+          {#if configSnapshot.updateOperation.lastError}<p>Letzte Wiederherstellungsprüfung: {configSnapshot.updateOperation.lastError}</p>
+          {:else}<p>Für diesen Vorgang ist keine konkrete Fehlerursache gespeichert.</p>{/if}
+          <p>Ein erneuter Versuch stellt bei begonnenem Update Daten und Konfiguration aus der Rückfallsicherung wieder her. Andere Änderungen bleiben bis zum erfolgreichen Abschluss gesperrt.</p>
+        {/if}
+        <button type="button" disabled={actionBusy || Boolean(statusError)} onclick={() => void runAction(retryUpdateRecovery)}>{updateCleanupOnly ? 'Vorgang abschließen' : 'Wiederherstellung erneut versuchen'}</button>
+      </div>
     {/if}
     {#if actionError}<p class="error">{actionError}</p>{/if}
     {#if configSnapshot.lifecycle && configSnapshot.installation?.kind !== 'inconsistent'}

@@ -29,12 +29,13 @@ test('failed update recovery is shown as a blocking diagnosis and prevents the i
   assert.equal(view.primary.recommendedAction, 'inspect-configuration');
   assert.equal(shouldAutoStartFullscreenWizard(status), false);
   assert.equal(tabDisabled('status', status), null);
-  for (const tab of ['wizard', 'network', 'maintenance'] as const)
-    assert.ok(tabDisabled(tab, status));
+  assert.ok(tabDisabled('wizard', status));
+  for (const tab of ['network', 'maintenance'] as const)
+    assert.equal(tabDisabled(tab, status), null);
   assert.equal(setupEntryContent(status, setupEntryTone(status)).showReleasePicker, false);
 });
 
-test('restore diagnosis locks navigation and installation entry through the shared gate', async () => {
+test('restore diagnosis keeps diagnostics readable but blocks installation entry', async () => {
   const { tabDisabled } = await import('./manager-main-nav.js');
   const { shouldAutoStartFullscreenWizard } = await import('./manager-navigation.js');
   const { setupEntryContent, setupEntryTone } = await import('./status-view-model.js');
@@ -52,13 +53,14 @@ test('restore diagnosis locks navigation and installation entry through the shar
     );
     assert.equal(shouldAutoStartFullscreenWizard(status), false);
     assert.equal(tabDisabled('status', status), null);
-    for (const tab of ['wizard', 'network', 'maintenance'] as const)
-      assert.ok(tabDisabled(tab, status));
+    assert.ok(tabDisabled('wizard', status));
+    for (const tab of ['network', 'maintenance'] as const)
+      assert.equal(tabDisabled(tab, status), null);
     assert.equal(setupEntryContent(status, setupEntryTone(status)).showReleasePicker, false);
   }
 });
 
-test('tlsOperation diagnosis locks navigation and installation entry through the shared gate', async () => {
+test('tlsOperation diagnosis keeps diagnostics readable but blocks installation entry', async () => {
   const { tabDisabled } = await import('./manager-main-nav.js');
   const { shouldAutoStartFullscreenWizard } = await import('./manager-navigation.js');
   const { setupEntryContent, setupEntryTone } = await import('./status-view-model.js');
@@ -76,8 +78,9 @@ test('tlsOperation diagnosis locks navigation and installation entry through the
     );
     assert.equal(shouldAutoStartFullscreenWizard(status), false);
     assert.equal(tabDisabled('status', status), null);
-    for (const tab of ['wizard', 'network', 'maintenance'] as const)
-      assert.ok(tabDisabled(tab, status));
+    assert.ok(tabDisabled('wizard', status));
+    for (const tab of ['network', 'maintenance'] as const)
+      assert.equal(tabDisabled(tab, status), null);
     assert.equal(setupEntryContent(status, setupEntryTone(status)).showReleasePicker, false);
   }
 });

@@ -4,6 +4,7 @@ import { auditStaffPublishedBindings } from './network-bindings.js';
 import { auditRestrictedListeners } from './restricted-listener-probe.js';
 
 export type RuntimePostcondition = {
+  staffHostname: string | null;
   bindings: Omit<Parameters<typeof auditStaffPublishedBindings>[0], 'compose'>;
   restrictedEnabled: boolean;
   listeners: Parameters<typeof auditRestrictedListeners>[0] | null;
@@ -33,6 +34,7 @@ export function createRuntimePostcondition(
     : null;
   const staffHttpsPort = port(env, 'PROXY_HTTPS_PORT', 443);
   return {
+    staffHostname: tls.staffHostname ?? tls.hostname,
     bindings: {
       staffIp,
       proxyEnabled: enabled(env.get('PROXY_ENABLED')),

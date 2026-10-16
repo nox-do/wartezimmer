@@ -38,15 +38,13 @@ test('setupApiTimeoutMs uses extended timeout for backup restore', () => {
   );
 });
 
-test('setupApiTimeoutMs uses extended timeout for software update apply', () => {
-  assert.equal(
-    setupApiTimeoutMs({
-      method: 'POST',
-      path: '/api/setup/host/update/apply',
-      body: { archivePath: '/tmp/update.pfupdate' },
-    }),
-    15 * 60 * 1000,
-  );
+test('setupApiTimeoutMs gives update and recovery the same extended timeout', () => {
+  for (const action of ['apply', 'recover']) {
+    assert.equal(
+      setupApiTimeoutMs({ method: 'POST', path: `/api/setup/host/update/${action}` }),
+      15 * 60 * 1000,
+    );
+  }
 });
 
 test('setupApiTimeoutMs uses extended timeout for TLS obtain', () => {

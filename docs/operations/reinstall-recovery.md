@@ -158,3 +158,41 @@ Rollback und Fehleranzeige; Typprüfung und Setup-Build waren erfolgreich.
 Der ursprüngliche Windows-Fehler bleibt mangels damaliger Health-Historie nicht
 abschließend zugeordnet. Ein erneuter Installationstest auf dem schwachen
 Windows-Rechner mit neu gebauten Images und Manager steht aus.
+
+## Fehlgeschlagenes Softwareupdate bei falscher Geräteadresse
+
+Update und Update-Rollback prüfen die lokale App, Dienstgesundheit, Portbindungen
+und den lokalen Proxyzugang. HTTPS verwendet dabei weiterhin den tatsächlichen
+Hostnamen und Zertifikatsprüfung; bei separatem Patientenzugang bleibt die volle
+Listener- und Isolationprüfung erhalten. Eine ausschließlich falsche externe
+DNS-Adresse löst keinen Rollback oder Stack-Stopp mehr aus. Restore und TLS behalten
+ihre bisherigen Abschlussbedingungen.
+
+Bei offenen Wartungsvorgängen bleiben Netzwerk und Wartung lesbar. Ändernde
+Aktionen und der Assistent bleiben gesperrt, auch serverseitig. Im Status nutzt
+„Wiederherstellung erneut versuchen“ den vorhandenen Update-Rollback unter demselben
+Mutation-Lock (`POST /api/setup/host/update/recover`). Ein begonnener Update-Cutover
+führt dabei erneut zur Rücksicherung von Daten und Konfiguration; es handelt sich
+nicht bloß um einen Healthcheck. Erst erfolgreiche Prüfung erlaubt den regulären
+Journalabschluss. Bei bereits bestätigtem Abschluss wird nur noch aufgeräumt.
+
+Das vorhandene Journal speichert optional getrennte, begrenzte Fehlerbeschreibungen
+für Update und Recovery. Dafür werden kontrollierte Fehlertypen verwendet, keine
+rohen Docker-Ausgaben, Umgebungen oder Secrets. Alte Journale ohne Fehlertext bleiben
+lesbar. Fehlgeschlagene und ungeprüfte Geräte-Erreichbarkeit sowie abweichende
+konfigurierte HTTPS-/Praxis-IP werden im Netzwerkstatus angezeigt. DNS und
+Konfiguration werden nicht automatisch korrigiert.
+
+Lokale Validierung am 16.10.2026: Ausgangszustand war ein fehlgeschlagener Rollback
+auf 6.1.3 mit gestoppten Diensten, Praxis-IP .94, Patientenzugang .83 und TLS-/DNS-IP
+.100. Nach zusätzlicher Sicherung der Rückfalldaten und aktuellen Datenbank wurde
+die bestehende Recovery mit dem korrigierten Code erfolgreich ausgeführt und das
+Journal regulär abgeschlossen. DNS blieb unverändert. Die ursprüngliche
+Update-Fehlerkette bleibt mangels gespeicherter damaliger Fehlerursache unbewiesen.
+
+Prüfungen: vollständige Setup-Suite (612 bestanden, zwei übersprungen),
+Manager-Suite einschließlich Packaging, Typprüfung, Lint, Manager-Build und
+Electron-Smoke-Test. Bestehende Tests wurden um Recovery-Wiederholung,
+Mutationssperren, persistente bereinigte Fehler und Netzwerkdarstellung ergänzt;
+die lokale HTTP-/HTTPS-Prüfung ohne Patientenzugang hat eigene Regressionstests.
+Kein Release und kein Austausch installierter Manager-Pakete.

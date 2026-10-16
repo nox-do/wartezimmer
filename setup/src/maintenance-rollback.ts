@@ -18,6 +18,7 @@ import { waitForExpectedStackHealth, type WaitForStackHealthOptions } from './st
 const TLS_STATE_ROLLBACK_DIR = 'tls-state';
 
 export type MaintenanceStackRuntime = {
+  auditRuntime?: typeof auditRuntimePostcondition;
   auditProxyContract?: typeof auditRestrictedListeners;
   stopStack: (runOptions: ComposeRunOptions) => Promise<{ ok: boolean; log: string }>;
   startFullStack: (
@@ -159,9 +160,13 @@ export async function verifyMaintenanceRollback(
       input.runtime.stackHealthWaitOptions,
     );
     if (!stackHealth.ok) throw new Error(stackHealth.errors.join('\n'));
-    const audit = await auditRuntimePostcondition(request, stackHealth.compose, {
-      auditListeners: input.runtime.auditProxyContract,
-    });
+    const audit = await (input.runtime.auditRuntime ?? auditRuntimePostcondition)(
+      request,
+      stackHealth.compose,
+      {
+        auditListeners: input.runtime.auditProxyContract,
+      },
+    );
     if (!audit.ok) throw new Error(audit.errors.join('\n'));
     const health = await input.runtime.runHealthChecks({
       localAppBaseUrl: input.localAppBaseUrl,

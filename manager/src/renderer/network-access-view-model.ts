@@ -20,13 +20,31 @@ export function networkAccessSummary(
   const adapter = status.network.currentLanCandidates.find((item) => item.address === ip);
   const checks = status.networkBindings.filter((check) => !check.id.startsWith('gateway.'));
   const failure = checks.find((check) => !check.ok);
+  const tlsIp = status.network.configuredTlsLanIp;
+  const tlsIpWarning =
+    status.tls?.cutoverApplied && tlsIp && ip && tlsIp !== ip
+      ? `Gespeicherte HTTPS-IP ${tlsIp} weicht von der Praxis-IP ${ip} ab. DNS und HTTPS-Konfiguration prüfen.`
+      : null;
+  const lanProbe = (runtime?.probes ?? status.probes).find(
+    (probe) => probe.id === 'app.health.lan',
+  );
+  const reachability = runtimeError
+    ? 'Geräte-Erreichbarkeit aktuell nicht prüfbar'
+    : !lanProbe
+      ? 'Geräte-Erreichbarkeit noch nicht geprüft'
+      : !lanProbe.ok
+        ? `${lanProbe.message}${lanProbe.detail ? `: ${lanProbe.detail}` : ''}`
+        : null;
   const diagnosis = !ip
     ? 'Praxisadresse auswählen'
     : status.network.lanIpStale
       ? 'Die konfigurierte Praxisadresse ist am Rechner nicht vorhanden'
       : (failure?.message ??
+        tlsIpWarning ??
+        reachability ??
         (checks.length ? 'Keine Abweichung erkannt' : 'Host-Bindings noch nicht geprüft'));
   return {
+    tlsIpWarning,
     operatingMode: lifecycleSummary?.title ?? null,
     portalState: lifecycle
       ? (lifecycleSummary?.operation ??
@@ -53,6 +71,8 @@ export function networkAccessSummary(
       !ip ||
       status.network.lanIpStale ||
       failure ||
+      reachability ||
+      tlsIpWarning ||
       (lifecycle && lifecycle.assessment !== 'known'),
     ),
     address: status.configuredCanonicalBaseUrl || status.appBaseUrl,
@@ -90,6 +110,7 @@ export function networkAccessAlerts(
   else if (status.lifecycle && status.lifecycle.assessment !== 'known')
     alerts.push(summary.operatingMode ?? 'Netzwerkkonfiguration nicht sicher bestimmbar');
   else if (summary.needsAttention) alerts.push(summary.diagnosis);
+  if (summary.tlsIpWarning) alerts.push(summary.tlsIpWarning);
   if (summary.dnsWarning) alerts.push(summary.dnsWarning);
   if (status.restrictedNetwork) {
     const restricted = restrictedNetworkStatusSummary(status.restrictedNetwork);

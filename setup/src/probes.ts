@@ -56,7 +56,7 @@ export async function defaultDetectDnsRebind(
   }
 }
 
-function fetchStatus(url: string): Promise<{ ok: boolean; status: number; body: string }> {
+export function fetchStatus(url: string): Promise<{ ok: boolean; status: number; body: string }> {
   return new Promise((resolve) => {
     let parsed: URL;
     try {

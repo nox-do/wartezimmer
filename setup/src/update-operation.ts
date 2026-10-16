@@ -12,6 +12,8 @@ export type UpdateOperation = {
   createdAt: string;
   targetVersion: string;
   utilityImage: string;
+  updateError?: string;
+  lastError?: string;
 } & RecoveryPhase;
 
 export const updateRollbackDirectory = (home: string, id: string) =>
@@ -24,6 +26,9 @@ function validate(value: unknown): UpdateOperation {
   if (
     !op ||
     !validRecoveryHeader(op) ||
+    [op.updateError, op.lastError].some(
+      (text) => text !== undefined && (typeof text !== 'string' || text.length > 1000),
+    ) ||
     typeof op.targetVersion !== 'string' ||
     !op.targetVersion.trim() ||
     typeof op.utilityImage !== 'string' ||
