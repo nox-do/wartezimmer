@@ -7,6 +7,13 @@
   import { getAppSurface } from '$lib/layout/app-surface';
   import { page } from '$app/state';
   import { APP_TITLES, PRODUCT_NAME } from '$lib/brand';
+  import { onMount } from 'svelte';
+  import { mountStaffSessionSync } from '$lib/auth/staff-session-sync';
+  import { refreshAuthSession } from '$lib/auth/session-state.svelte';
+
+  onMount(() => mountStaffSessionSync((role) => {
+    void refreshAuthSession(role);
+  }));
 
   let { children } = $props();
   let bootstrapped = $state(false);

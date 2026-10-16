@@ -455,6 +455,20 @@ export function registerClientAuth(
       return;
     }
 
+    if (
+      request.staffSession?.pinChangeRequired &&
+      !(
+        (method === 'GET' && routePath === '/api/v1/auth/me') ||
+        (method === 'POST' && routePath === '/api/v1/auth/pin/change')
+      )
+    ) {
+      authError(reply, 403, {
+        code: 'AUTH_PIN_CHANGE_REQUIRED',
+        message: 'Change the default staff PIN before continuing.',
+      });
+      return;
+    }
+
     const allowedRoles = rule.roles ?? [];
     if (!allowedRoles.includes(role)) {
       app.log.warn({ role, method, routePath }, 'Role denied for API route');

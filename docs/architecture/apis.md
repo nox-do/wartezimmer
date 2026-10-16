@@ -186,3 +186,7 @@ SSE beobachten, REST mutieren — [`realtime.md`](realtime.md).
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `POST /identity/egk-lookup`       | skizziert in OpenAPI-Doku — kein produktiver Endpoint ([`../operations/integrations.md`](../operations/integrations.md)) |
 | Internet-Portal / Captive-Produkt | nicht Produkt; LAN-TLS schon — [`../operations/tls.md`](../operations/tls.md)                                            |
+
+### Ersteinrichtung der Staff-PINs
+
+MFA und Ops starten nach Installation oder Manager-PIN-Reset mit `0000`. Ein erfolgreicher Login damit erzeugt eine eingeschränkte Staff-Sitzung (`pinChangeRequired` in Login und `/auth/me`). Bis zum Wechsel der eigenen Staff-PIN sind geschützte Fach-APIs und Geräte-Pairing gesperrt (`403 AUTH_PIN_CHANGE_REQUIRED`); Sitzungsstatus, eigener PIN-Wechsel und Logout bleiben möglich. Die Raum-Panel-PIN kann mit dieser Sitzung nicht geändert werden. `0000` ist als neue Staff-PIN unzulässig (`400 AUTH_PIN_DEFAULT_FORBIDDEN`). MFA behält beim Wechsel die eigene Sitzung, Ops meldet sich anschließend erneut an. Die Wechselpflicht wird beim Login aus der erfolgreich geprüften PIN abgeleitet und nur in der Sitzung gespeichert; es gibt keine zusätzliche Datenbankmarkierung.

@@ -17,7 +17,11 @@ export async function load({ url }) {
     await loadAuthSession('ops');
   }
 
-  if (staffAuthSlots.ops.status !== 'authenticated' || staffAuthSlots.ops.user?.role !== 'ops') {
+  if (
+    staffAuthSlots.ops.status !== 'authenticated' ||
+    staffAuthSlots.ops.user?.role !== 'ops' ||
+    staffAuthSlots.ops.user.pinChangeRequired
+  ) {
     return {};
   }
 

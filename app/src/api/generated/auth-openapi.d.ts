@@ -219,6 +219,7 @@ export interface components {
       role: components['schemas']['StaffRole'];
     };
     StaffSessionResponse: {
+      pinChangeRequired: boolean;
       /** @constant */
       ok: true;
       sessionId: string;
@@ -315,6 +316,8 @@ export interface components {
       | 'NOT_FOUND'
       | 'AUTH_UNAUTHORIZED'
       | 'AUTH_FORBIDDEN'
+      | 'AUTH_PIN_CHANGE_REQUIRED'
+      | 'AUTH_PIN_DEFAULT_FORBIDDEN'
       | 'RATE_LIMITED'
       | 'VISIT_NOT_FOUND'
       | 'DOCUMENT_NOT_FOUND'

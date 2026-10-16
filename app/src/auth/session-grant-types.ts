@@ -8,6 +8,8 @@ export type RoomPanelGrantRole = Extract<ClientRole, 'room-panel'>;
 /** In-memory MFA/OPS session (idle + absolute TTL). */
 export type StaffSession = {
   kind: 'staff';
+  /** A verified default-PIN login can only complete its own PIN setup. */
+  pinChangeRequired: boolean;
   sessionId: string;
   role: StaffRole;
   createdAt: string;

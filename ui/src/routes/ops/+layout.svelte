@@ -12,7 +12,7 @@
 </script>
 
 <div class="staff-page">
-  <AuthGate requiredRole="ops" loginHref="/mfa/login?role=ops&redirect=/ops">
+  <AuthGate requiredRole="ops" loginHref="/mfa/login?role=ops">
     {#if isSetup}
       {@render children()}
     {:else}

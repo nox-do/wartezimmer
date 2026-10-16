@@ -201,6 +201,7 @@ import {
   type AuthPinTarget,
   type AuthSettings,
 } from './database-auth-settings.js';
+import type { StaffRole } from '../../auth/session-grant-types.js';
 import {
   authenticateDeviceAuthorization as authenticateDeviceAuthorizationInDb,
   createDeviceAuthorizationDeps,
@@ -286,6 +287,7 @@ export type {
 const log = createModuleLogger('db.core');
 
 export class CoreDatabase {
+  private readonly staffPinRestoreListeners = new Set<(roles: readonly StaffRole[]) => void>();
   private readonly boundEmitOutboxEvent: EmitOutboxEventFn;
   private readonly db: DatabaseSync;
   private readonly dischargingVisits = new Set<string>();
@@ -1842,7 +1844,23 @@ export class CoreDatabase {
     snapshot: unknown,
     options?: SettingsSnapshotImportOptions,
   ): SettingsSnapshotImportResult {
-    return importSettingsSnapshotIntoDb(this.db, snapshot, options);
+    const previous = this.getAuthSettingsStmt.get() as AuthSettings | undefined;
+    const result = importSettingsSnapshotIntoDb(this.db, snapshot, options);
+    const restored = result.snapshot.authSettings;
+    const changedRoles: StaffRole[] = [];
+    if (previous?.staffPinHashMfa !== restored.staffPinHashMfa) changedRoles.push('mfa');
+    if (previous?.staffPinHashOps !== restored.staffPinHashOps) changedRoles.push('ops');
+    if (changedRoles.length > 0) {
+      for (const listener of this.staffPinRestoreListeners) listener(changedRoles);
+    }
+    return result;
+  }
+
+  subscribeStaffPinRestore(listener: (roles: readonly StaffRole[]) => void): () => void {
+    this.staffPinRestoreListeners.add(listener);
+    return () => {
+      this.staffPinRestoreListeners.delete(listener);
+    };
   }
 
   async getSetupStatus(): Promise<SetupStatusSnapshot> {

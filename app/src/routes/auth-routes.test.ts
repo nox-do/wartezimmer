@@ -94,13 +94,13 @@ function tvSessionHeaders(cookie: string): Record<string, string> {
   return sameOriginCookieHeaders(cookie, 'tv');
 }
 
-function buildAuthSettingsStub(): {
+function buildAuthSettingsStub(pins = { mfa: '2468', ops: '1111' }): {
   getAuthSettings(): AuthSettings;
   updateAuthPinHash(target: AuthPinTarget, pinHash: string): AuthSettings;
 } {
   let authSettings: AuthSettings = {
-    staffPinHashMfa: hashStaffPinForConfig('0000'),
-    staffPinHashOps: hashStaffPinForConfig('1111'),
+    staffPinHashMfa: hashStaffPinForConfig(pins.mfa),
+    staffPinHashOps: hashStaffPinForConfig(pins.ops),
     roomPanelPinHash: TEST_ROOM_PANEL_PIN_HASH,
     updatedAt: new Date().toISOString(),
   };
@@ -121,12 +121,14 @@ function buildAuthSettingsStub(): {
   };
 }
 
-async function buildAuthApp(): Promise<ReturnType<typeof Fastify>> {
+async function buildAuthApp(
+  pins = { mfa: '2468', ops: '1111' },
+): Promise<ReturnType<typeof Fastify>> {
   const app = Fastify({ logger: false });
   const sessions = createStaffSessionManager({ sessionTtlMs: 60 * 60 * 1000 });
   const deviceGrants = createInMemoryDeviceGrantStore();
   const db = {
-    ...buildAuthSettingsStub(),
+    ...buildAuthSettingsStub(pins),
     ...deviceGrants,
     getOpsSettings: () => ({
       rooms: [
@@ -229,7 +231,7 @@ async function loginMfa(app: ReturnType<typeof Fastify>): Promise<string> {
   const login = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/login',
-    payload: { pin: '0000', role: 'mfa' },
+    payload: { pin: '2468', role: 'mfa' },
   });
   assert.equal(login.statusCode, 200);
   return readSetCookie(login);
@@ -525,7 +527,7 @@ test('MFA can rotate own PIN after entering current MFA PIN', async () => {
     method: 'POST',
     url: '/api/v1/auth/pin/change',
     headers: mfaSessionHeaders(cookie),
-    payload: { currentPin: '0000', target: 'mfa', newPin: '3333' },
+    payload: { currentPin: '2468', target: 'mfa', newPin: '3333' },
   });
   assert.equal(change.statusCode, 200);
   assert.equal(change.json().ok, true);
@@ -535,7 +537,7 @@ test('MFA can rotate own PIN after entering current MFA PIN', async () => {
   const oldLogin = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/login',
-    payload: { pin: '0000', role: 'mfa' },
+    payload: { pin: '2468', role: 'mfa' },
   });
   assert.equal(oldLogin.statusCode, 401);
 
@@ -559,7 +561,7 @@ test('MFA PIN rotation revokes other MFA sessions but preserves the current sess
     method: 'POST',
     url: '/api/v1/auth/pin/change',
     headers: mfaSessionHeaders(currentCookie),
-    payload: { currentPin: '0000', target: 'mfa', newPin: '3333' },
+    payload: { currentPin: '2468', target: 'mfa', newPin: '3333' },
   });
   assert.equal(change.statusCode, 200);
 
@@ -589,7 +591,7 @@ test('MFA PIN rotation rejects the current Ops PIN', async () => {
     method: 'POST',
     url: '/api/v1/auth/pin/change',
     headers: mfaSessionHeaders(cookie),
-    payload: { currentPin: '0000', target: 'mfa', newPin: '1111' },
+    payload: { currentPin: '2468', target: 'mfa', newPin: '1111' },
   });
   assert.equal(change.statusCode, 400);
   assert.equal(change.json().code, 'INVALID_ARGUMENT');
@@ -597,7 +599,7 @@ test('MFA PIN rotation rejects the current Ops PIN', async () => {
   const oldLogin = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/login',
-    payload: { pin: '0000', role: 'mfa' },
+    payload: { pin: '2468', role: 'mfa' },
   });
   assert.equal(oldLogin.statusCode, 200);
 
@@ -613,7 +615,7 @@ test('MFA cannot rotate Ops PIN', async () => {
     method: 'POST',
     url: '/api/v1/auth/pin/change',
     headers: mfaSessionHeaders(cookie),
-    payload: { currentPin: '0000', target: 'ops', newPin: '5555' },
+    payload: { currentPin: '2468', target: 'ops', newPin: '5555' },
   });
   assert.equal(change.statusCode, 403);
   assert.equal(change.json().code, 'AUTH_FORBIDDEN');
@@ -661,7 +663,7 @@ test('Ops PIN rotation rejects the current MFA PIN as new Ops PIN', async () => 
     method: 'POST',
     url: '/api/v1/auth/pin/change',
     headers: opsSessionHeaders(cookie),
-    payload: { currentPin: '1111', target: 'ops', newPin: '0000' },
+    payload: { currentPin: '1111', target: 'ops', newPin: '2468' },
   });
   assert.equal(change.statusCode, 400);
   assert.equal(change.json().code, 'INVALID_ARGUMENT');
@@ -692,7 +694,7 @@ test('MFA can rotate shared room panel PIN after entering current MFA PIN', asyn
     method: 'POST',
     url: '/api/v1/auth/pin/change',
     headers: mfaSessionHeaders(cookie),
-    payload: { currentPin: '0000', target: 'room-panel', newPin: '4444' },
+    payload: { currentPin: '2468', target: 'room-panel', newPin: '4444' },
   });
   assert.equal(change.statusCode, 200);
   assert.equal(change.json().target, 'room-panel');
@@ -799,7 +801,7 @@ test('PIN rotation treats SQL metacharacter current PIN as wrong credentials', a
   const unchangedLogin = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/login',
-    payload: { pin: '0000', role: 'mfa' },
+    payload: { pin: '2468', role: 'mfa' },
   });
   assert.equal(unchangedLogin.statusCode, 200);
 
@@ -999,7 +1001,7 @@ test('MFA PIN cannot create an ops staff session', async () => {
   const response = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/login',
-    payload: { pin: '0000', role: 'ops' },
+    payload: { pin: '2468', role: 'ops' },
   });
 
   assert.equal(response.statusCode, 401);
@@ -1085,7 +1087,7 @@ test('logout revokes staff session cookie', async () => {
   const login = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/login',
-    payload: { pin: '0000', role: 'mfa' },
+    payload: { pin: '2468', role: 'mfa' },
   });
   const cookie = readSetCookie(login);
 
@@ -1118,7 +1120,7 @@ test('staff cookie mutations require same-origin request headers', async () => {
   const login = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/login',
-    payload: { pin: '0000', role: 'mfa' },
+    payload: { pin: '2468', role: 'mfa' },
   });
   const cookie = readSetCookie(login);
 
@@ -1168,7 +1170,7 @@ test('production startup accepts default staff PIN seed', () => {
   const sessions = createStaffSessionManager({ sessionTtlMs: 60 * 60 * 1000 });
   assert.doesNotThrow(() =>
     registerAuthRoutes(app, sessions, {
-      ...buildAuthSettingsStub(),
+      ...buildAuthSettingsStub({ mfa: '0000', ops: '0000' }),
       getOpsSettings: () => ({ rooms: [] }),
     }),
   );
@@ -1643,4 +1645,130 @@ test('pairing confirm is rate limited per mfa session', async () => {
 
   assert.equal(lastStatus, 429);
   await app.close();
+});
+
+for (const role of ['mfa', 'ops'] as const) {
+  test(`${role} default PIN session is restricted until its own PIN changes`, async () => {
+    enableTestAuth();
+    // A fresh salted hash must behave just like the delivery seed.
+    const app = await buildAuthApp({ mfa: '0000', ops: '0000' });
+    try {
+      const login = async (pin = '0000') =>
+        app.inject({
+          method: 'POST',
+          url: '/api/v1/auth/login',
+          payload: { pin, role },
+        });
+      const initial = await login();
+      assert.equal(initial.statusCode, 200);
+      assert.equal(initial.json().pinChangeRequired, true);
+      const cookie = initial.cookies.map((c) => `${c.name}=${c.value}`).join('; ');
+      const headers = sameOriginCookieHeaders(cookie, role);
+      const me = await app.inject({ url: '/api/v1/auth/me', headers });
+      assert.equal(me.statusCode, 200);
+      assert.equal(me.json().pinChangeRequired, true);
+
+      const protectedUrl = role === 'mfa' ? '/api/v1/queue' : '/api/v1/ops/deployment/storage';
+      const denied = await app.inject({ url: protectedUrl, headers });
+      assert.equal(denied.statusCode, 403);
+      assert.equal(denied.json().code, 'AUTH_PIN_CHANGE_REQUIRED');
+      if (role === 'mfa') {
+        const transition = await app.inject({
+          method: 'POST',
+          url: '/api/v1/queue/visit/transition',
+          headers,
+          payload: {},
+        });
+        assert.equal(transition.statusCode, 403);
+        const pairing = await app.inject({
+          method: 'POST',
+          url: '/api/v1/auth/tv/pairing/confirm',
+          headers,
+          payload: { code: '1234' },
+        });
+        assert.equal(pairing.statusCode, 403);
+      }
+      const change = (target: AuthPinTarget, newPin: string) =>
+        app.inject({
+          method: 'POST',
+          url: '/api/v1/auth/pin/change',
+          headers,
+          payload: { target, newPin, currentPin: '0000' },
+        });
+      const panelChange = await change('room-panel', '4444');
+      assert.equal(panelChange.statusCode, 403);
+      const stillDefault = await change(role, '0000');
+      assert.equal(stillDefault.statusCode, 400);
+      assert.equal(stillDefault.json().code, 'AUTH_PIN_DEFAULT_FORBIDDEN');
+
+      const second = await login();
+      const secondCookie = second.cookies.map((c) => `${c.name}=${c.value}`).join('; ');
+      const changed = await change(role, '5555');
+      assert.equal(changed.statusCode, 200);
+      const secondMe = await app.inject({
+        url: '/api/v1/auth/me',
+        headers: sameOriginCookieHeaders(secondCookie, role),
+      });
+      assert.equal(secondMe.statusCode, 401);
+      const currentMe = await app.inject({ url: '/api/v1/auth/me', headers });
+      assert.equal(currentMe.statusCode, role === 'mfa' ? 200 : 401);
+      if (role === 'mfa') {
+        assert.equal(currentMe.json().pinChangeRequired, false);
+        assert.equal((await app.inject({ url: protectedUrl, headers })).statusCode, 200);
+      }
+      assert.equal((await login()).statusCode, 401);
+      const fresh = await login('5555');
+      assert.equal(fresh.statusCode, 200);
+      assert.equal(fresh.json().pinChangeRequired, false);
+      const other = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { pin: '0000', role: role === 'mfa' ? 'ops' : 'mfa' },
+      });
+      assert.equal(other.json().pinChangeRequired, true);
+    } finally {
+      await app.close();
+    }
+  });
+
+  test(`${role} can log out while a default PIN change is required`, async () => {
+    enableTestAuth();
+    const app = await buildAuthApp({ mfa: '0000', ops: '0000' });
+    try {
+      const login = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { pin: '0000', role },
+      });
+      const cookie = login.cookies.map((c) => `${c.name}=${c.value}`).join('; ');
+      const headers = sameOriginCookieHeaders(cookie, role);
+      assert.equal(
+        (await app.inject({ method: 'POST', url: '/api/v1/auth/logout', headers })).statusCode,
+        200,
+      );
+      assert.equal((await app.inject({ url: '/api/v1/auth/me', headers })).statusCode, 401);
+    } finally {
+      await app.close();
+    }
+  });
+}
+
+test('configured staff PINs cannot be changed back to the delivery default', async () => {
+  enableTestAuth();
+  const app = await buildAuthApp();
+  try {
+    for (const role of ['mfa', 'ops'] as const) {
+      const cookie = role === 'mfa' ? await loginMfa(app) : await loginOps(app);
+      const result = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/pin/change',
+        headers: sameOriginCookieHeaders(cookie, role),
+        payload: { target: role, currentPin: role === 'mfa' ? '2468' : '1111', newPin: '0000' },
+      });
+      assert.equal(result.statusCode, 400);
+      assert.equal(result.json().code, 'AUTH_PIN_DEFAULT_FORBIDDEN');
+    }
+  } finally {
+    await app.close();
+  }
 });

@@ -93,7 +93,7 @@ Vor dem Start die Platzhalter für `AUTH_KEY_CAPTIVE`, `MAINTENANCE_TOKEN` und `
 npm run docker:up
 ```
 
-Der Befehl baut und startet `app` und `sandbox`. Die Anwendung ist unter `http://localhost:8080` erreichbar. MFA und Ops verwenden nach Erststart die Standard-PIN `0000`; sie lässt sich in der Anwendung ändern. HTTP lokal mit fiktiven Daten verwenden; die Einrichtung für den Praxisbetrieb ist in der [Betriebsdokumentation](docs/operations/README.md) beschrieben.
+Der Befehl baut und startet `app` und `sandbox`. Die Anwendung ist unter `http://localhost:8080` erreichbar. MFA und Ops verwenden nach Erststart die Standard-PIN `0000`; vor der Nutzung muss für jede Rolle eine eigene PIN festgelegt werden. HTTP lokal mit fiktiven Daten verwenden; die Einrichtung für den Praxisbetrieb ist in der [Betriebsdokumentation](docs/operations/README.md) beschrieben.
 
 | Oberfläche          | Lokale URL                         |
 | ------------------- | ---------------------------------- |

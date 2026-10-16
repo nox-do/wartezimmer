@@ -1,5 +1,5 @@
 import type { StaffAuthRole } from '$lib/auth/session-client';
-import { markStaffAuthUnauthorized } from '$lib/auth/staff-auth-slot-state.svelte';
+import { markStaffAuthUnauthorized, staffAuthSlot } from '$lib/auth/staff-auth-slot-state.svelte';
 import {
   cookieAuthFetch,
   withCookieClientRole,
@@ -14,9 +14,13 @@ function staffAuthFetch<T>(
   init: RequestInit = {},
   options: StaffAuthFetchOptions = {},
 ) {
+  const slot = staffAuthSlot(role);
+  const sessionId = slot.user?.id;
   return cookieAuthFetch<T>(path, withCookieClientRole(init, role), {
     ...options,
-    onUnauthorized: () => markStaffAuthUnauthorized(role),
+    onUnauthorized: () => {
+      if (slot.user?.id === sessionId) markStaffAuthUnauthorized(role);
+    },
   });
 }
 

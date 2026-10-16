@@ -38,7 +38,10 @@ components:
         - sessionId
         - role
         - expiresAt
+        - pinChangeRequired
       properties:
+        pinChangeRequired:
+          type: boolean
         ok:
           type: boolean
           const: true

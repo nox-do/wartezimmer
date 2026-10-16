@@ -116,6 +116,7 @@ export function createStaffSessionManager(options: {
       const idleExpiresAt = idleExpiryFor(now, expiresAt);
       const session: StaffSession = {
         kind: 'staff',
+        pinChangeRequired: false,
         sessionId: randomUUID(),
         role,
         createdAt,

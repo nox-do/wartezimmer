@@ -48,10 +48,12 @@
       const result = await changeAuthPin({ target: 'ops', currentPin, newPin, role: 'ops' });
       if (!result.ok) {
         const currentPinWrong =
-          result.error.status === 400 && !result.error.message?.includes('must be different');
+          result.error.status === 400 && result.error.code !== 'AUTH_PIN_DEFAULT_FORBIDDEN' && !result.error.message?.includes('must be different');
         toastStore.error(
           result.error.status === 400
-            ? currentPinWrong
+            ? result.error.code === 'AUTH_PIN_DEFAULT_FORBIDDEN'
+              ? t('auth.pinSetupInvalid')
+              : currentPinWrong
               ? t('ops.pinChangeCurrentInvalid')
               : result.error.message
             : result.error.message || t('ops.loadError'),

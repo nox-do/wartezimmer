@@ -42,6 +42,7 @@ import {
   setDeviceSessionCookie,
   setRoomPanelSessionCookie,
   setStaffSessionCookie,
+  DEFAULT_STAFF_PIN,
   hashStaffPinForConfig,
   type StaffRole,
   type StaffSessionManager,
@@ -58,6 +59,7 @@ type AuthRoutesDb = {
   getOpsSettings(): Pick<OpsSettings, 'rooms'>;
   getAuthSettings(): AuthSettings;
   updateAuthPinHash(target: AuthPinTarget, pinHash: string): AuthSettings;
+  subscribeStaffPinRestore?(listener: (roles: readonly StaffRole[]) => void): () => void;
   replaceSlotDeviceAuthorization(input: {
     role: DeviceSessionRole;
     deviceId: string;
@@ -117,6 +119,13 @@ export function registerAuthRoutes(
   sessions: StaffSessionManager,
   db: AuthRoutesDb,
 ): void {
+  const unsubscribePinRestore = db.subscribeStaffPinRestore?.((roles) => {
+    for (const role of roles) sessions.revokeSessionsByRole(role);
+  });
+  app.addHook('onClose', async () => {
+    unsubscribePinRestore?.();
+  });
+
   const loginRateLimiter = createRateLimiter({
     maxRequests: Number.parseInt(process.env.STAFF_LOGIN_RATE_LIMIT_MAX ?? '20', 10) || 20,
     windowMs:
@@ -287,12 +296,14 @@ export function registerAuthRoutes(
       }
 
       const { token, session } = sessions.createStaffSession(role);
+      session.pinChangeRequired = pin === DEFAULT_STAFF_PIN;
       setStaffSessionCookie(reply, request, role, token, sessionConfig.sessionTtlMs);
       return reply.send({
         ok: true,
         sessionId: session.sessionId,
         role: session.role,
         expiresAt: session.expiresAt,
+        pinChangeRequired: session.pinChangeRequired,
       });
     },
   );
@@ -432,6 +443,19 @@ export function registerAuthRoutes(
           .send({ code: 'RATE_LIMITED', message: 'Too many PIN change attempts.' });
       }
 
+      if (staffSession.pinChangeRequired && target !== staffSession.role) {
+        return reply.code(403).send({
+          code: 'AUTH_PIN_CHANGE_REQUIRED',
+          message: 'Change your own staff PIN first.',
+        });
+      }
+      if (target !== 'room-panel' && newPin === DEFAULT_STAFF_PIN) {
+        return reply.code(400).send({
+          code: 'AUTH_PIN_DEFAULT_FORBIDDEN',
+          message: 'The default PIN cannot be used as a staff PIN.',
+        });
+      }
+
       const currentConfig = getCurrentAuthConfig(db);
       const currentPinHash =
         target === 'ops' ? currentConfig.pinHashesByRole.ops : currentConfig.pinHashesByRole.mfa;
@@ -456,6 +480,7 @@ export function registerAuthRoutes(
 
       const updated = db.updateAuthPinHash(target, hashStaffPinForConfig(newPin));
       if (target === 'mfa') {
+        staffSession.pinChangeRequired = false;
         sessions.revokeSessionsByRole('mfa', staffSession.sessionId);
       } else if (target === 'ops') {
         sessions.revokeSessionsByRole('ops');
@@ -490,6 +515,7 @@ export function registerAuthRoutes(
         sessionId: request.staffSession.sessionId,
         role: request.staffSession.role,
         expiresAt: request.staffSession.expiresAt,
+        pinChangeRequired: request.staffSession.pinChangeRequired,
       };
     },
   );

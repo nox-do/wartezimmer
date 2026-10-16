@@ -49,6 +49,20 @@ export const dict = {
     loginSubmitting: 'Anmeldung läuft…',
     loginFailed: 'Anmeldung fehlgeschlagen.',
     loginPinHint: 'PIN vergessen? Die IT kann die PIN zurücksetzen.',
+    pinSetupTitle: 'Eigene PIN festlegen',
+    pinSetupHint:
+      'Die Standard-PIN muss vor der ersten Nutzung geändert werden. MFA und Ops benötigen unterschiedliche PINs.',
+    pinSetupCurrent: 'Aktuelle PIN',
+    pinSetupNew: 'Neue PIN (4 bis 32 Ziffern)',
+    pinSetupRepeat: 'Neue PIN wiederholen',
+    pinSetupSubmit: 'PIN speichern',
+    pinSetupInvalid:
+      'Bitte eine PIN mit 4 bis 32 Ziffern wählen. Die Standard-PIN 0000 ist nicht zulässig.',
+    pinSetupMismatch: 'Die neuen PINs stimmen nicht überein.',
+    pinSetupCurrentInvalid: 'Die aktuelle PIN ist falsch.',
+    pinSetupDifferent: 'MFA und Ops benötigen unterschiedliche PINs.',
+    pinSetupOpsSaved: 'Ops-PIN gespeichert. Bitte mit der neuen PIN anmelden.',
+    logout: 'Abmelden',
   },
   ops: {
     hubTitle: 'Systemeinstellungen',

@@ -22,6 +22,7 @@
 
   const authenticated = $derived(
     authSlot.status === 'authenticated' &&
+      !authSlot.user?.pinChangeRequired &&
       (!requiredRole || authSlot.user?.role === requiredRole),
   );
 

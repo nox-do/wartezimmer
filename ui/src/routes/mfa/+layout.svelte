@@ -17,7 +17,8 @@
   let { children } = $props();
 
   const mfaAuthenticated = $derived(
-    staffAuthSlots.mfa.status === 'authenticated' && staffAuthSlots.mfa.user?.role === 'mfa',
+    staffAuthSlots.mfa.status === 'authenticated' && staffAuthSlots.mfa.user?.role === 'mfa' &&
+      !staffAuthSlots.mfa.user.pinChangeRequired,
   );
 
   $effect(() => {

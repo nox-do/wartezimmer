@@ -85,7 +85,7 @@ Staff-IP und prüft nach dem Apply die tatsächlichen Docker-Publishes.
 | Health                  | `GET /api/v1/ops/health` (Compose-Healthcheck + Support)                                    |
 | Update                  | Wartung → `.pfupdate` ([Manager](../../manager/README.md#wartung))                          |
 | Backup                  | Wartung → `.pfbackup` ([`backup.md`](backup.md))                                            |
-| Staff-PIN               | Standard nach Install **`0000`**; Reset in Manager-Wartung                                  |
+| Staff-PIN               | Nach Install/Manager-Reset **`0000`**; vor Nutzung je Rolle ändern                          |
 
 **Fachlicher Tagesreset** (MFA „Tag neu starten“ / Day-Lifecycle) ≠ Container neu spawnen — Tickets/Outbox/Sandbox-Intake, Stack bleibt stehen.
 

@@ -1,6 +1,7 @@
-import { cookieAuthFetch } from '$lib/api/cookie-auth-fetch';
+import { cookieAuthFetch, withCookieClientRole } from '$lib/api/cookie-auth-fetch';
 import { mfaAuthFetch, opsAuthFetch } from '$lib/api/staff-auth-fetch';
 import type { Result } from '$lib/types/result';
+import { notifyStaffSessionChanged } from './staff-session-sync';
 import type {
   AuthPinTarget,
   ChangePinResponse,
@@ -14,6 +15,7 @@ export type AuthSessionUser = {
   id: string;
   displayName?: string;
   role: StaffAuthRole;
+  pinChangeRequired: boolean;
 };
 
 export type AuthSessionStatus = StaffSessionResponse;
@@ -23,14 +25,14 @@ export type ChangeAuthPinResponse = ChangePinResponse;
 export type { AuthPinTarget };
 
 export async function fetchAuthStatus(role: StaffAuthRole): Promise<Result<AuthSessionStatus>> {
-  const fetch = role === 'ops' ? opsAuthFetch : mfaAuthFetch;
-  return fetch<AuthSessionStatus>('/api/v1/auth/me');
+  // The state loader applies 401 only if this response still belongs to its current request.
+  return cookieAuthFetch<AuthSessionStatus>('/api/v1/auth/me', withCookieClientRole({}, role));
 }
 
 export async function loginAuthSession(
   payload: AuthLoginRequest,
 ): Promise<Result<AuthSessionStatus>> {
-  return cookieAuthFetch<AuthSessionStatus>(
+  const result = await cookieAuthFetch<AuthSessionStatus>(
     '/api/v1/auth/login',
     {
       method: 'POST',
@@ -41,6 +43,15 @@ export async function loginAuthSession(
     },
     { includeClientOriginHeader: true },
   );
+  if (result.ok) notifyStaffSessionChanged(payload.role);
+  return result;
+}
+
+export async function logoutAuthSession(role: StaffAuthRole): Promise<Result<{ ok: true }>> {
+  const fetch = role === 'ops' ? opsAuthFetch : mfaAuthFetch;
+  const result = await fetch<{ ok: true }>('/api/v1/auth/logout', { method: 'POST' });
+  if (result.ok) notifyStaffSessionChanged(role);
+  return result;
 }
 
 export async function changeAuthPin(payload: {
@@ -50,7 +61,7 @@ export async function changeAuthPin(payload: {
   role: StaffAuthRole;
 }): Promise<Result<ChangeAuthPinResponse>> {
   const fetch = payload.role === 'ops' ? opsAuthFetch : mfaAuthFetch;
-  return fetch<ChangePinResponse>(
+  const result = await fetch<ChangePinResponse>(
     '/api/v1/auth/pin/change',
     {
       method: 'POST',
@@ -62,4 +73,6 @@ export async function changeAuthPin(payload: {
     },
     { includeClientOriginHeader: true },
   );
+  if (result.ok && payload.target !== 'room-panel') notifyStaffSessionChanged(payload.target);
+  return result;
 }
