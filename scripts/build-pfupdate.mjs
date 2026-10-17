@@ -28,14 +28,10 @@ import { releaseDirectory } from './release-output.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-function readManagerVersion() {
-  const managerPkgPath = path.join(root, 'manager', 'package.json');
-  const managerPkg = JSON.parse(fs.readFileSync(managerPkgPath, 'utf8'));
-  const version = String(managerPkg.version ?? '').trim();
-  if (!version) {
-    throw new Error('manager/package.json version fehlt.');
-  }
-  return version;
+function readMinimumManagerVersion() {
+  // Raise only when the package requires a new Manager capability or format.
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  return String(pkg.pfupdate?.minimumManagerVersion ?? '').trim();
 }
 
 function printHelp() {
@@ -46,7 +42,7 @@ Liefert eine Datei je Architektur für: Manager → Wartung → Software-Update 
 Options:
   --version <tag>              Release tag (default: package.json version or WARTEZIMMER_RELEASE_VERSION)
   --output <dir>               Output directory (default: dist/releases)
-  --minimum-manager-version    Minimum Manager semver (default: manager/package.json version)
+  --minimum-manager-version    Minimum Manager semver (default: package.json pfupdate.minimumManagerVersion)
   --platform <arch>            amd64, arm64 or all (default: all)
   --no-build                   Skip docker build; package existing local tags only
   --help                       Show this help
@@ -77,7 +73,7 @@ function parseArgs(argv) {
   let noBuild = false;
   let platformSelection;
   let outputRoot = path.join(root, 'dist', 'releases');
-  let minimumManagerVersion = readManagerVersion();
+  let minimumManagerVersion = readMinimumManagerVersion();
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -120,6 +116,10 @@ function parseArgs(argv) {
   if (!version || !/^[0-9A-Za-z][0-9A-Za-z._-]*$/.test(version)) {
     console.error('Invalid or missing --version (e.g. 2026.08.0).');
     process.exit(1);
+  }
+
+  if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(minimumManagerVersion)) {
+    throw new Error('Gültige minimumManagerVersion für das Update-Paket erforderlich.');
   }
 
   return {

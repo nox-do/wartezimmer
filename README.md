@@ -139,6 +139,11 @@ Die API-Dokumentation unter <http://localhost:8080/api/docs> ist für den native
 | `npm run dist:manager:mac` | Manager für macOS paketieren                                                               |
 | `npm run dist:manager:win` | Manager für Windows paketieren                                                             |
 
+Die Mindestversion des Managers für Updatepakete steht unabhängig von der
+Release-Version in `package.json` unter `pfupdate.minimumManagerVersion`.
+Sie wird nur angehoben, wenn Paketformat oder Updateablauf neue Manager-Fähigkeiten
+voraussetzen. `--minimum-manager-version` überschreibt sie für einen einzelnen Build.
+
 Build-Befehle und Plattformvoraussetzungen stehen in der [Manager-Dokumentation](manager/README.md). Weitere Entwicklungswerkzeuge sind unter [`docs/development/`](docs/development/README.md) beschrieben.
 
 ## Repository-Struktur

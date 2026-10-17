@@ -12,6 +12,8 @@ test(
   async () => {
     const { DEFAULT_PORTAL_PROXY_CONTRACT } =
       await import('../packages/server-shared/dist/portal-proxy-contract.js');
+    const { isManagerVersionCompatible } =
+      await import('../packages/server-shared/dist/pfupdate.js');
     const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-release-cli-'));
     try {
       const bin = path.join(temp, 'bin');
@@ -76,6 +78,9 @@ if(args[0]==='save') process.stdout.write('fake docker payload for '+platform);
         });
         assert.equal(manifest.status, 0, manifest.stderr);
         const parsed = JSON.parse(manifest.stdout);
+        assert.equal(parsed.minimumManagerVersion, '6.1.3');
+        assert.equal(isManagerVersionCompatible('6.1.3', parsed.minimumManagerVersion), true);
+        assert.equal(isManagerVersionCompatible('6.1.2', parsed.minimumManagerVersion), false);
         assert.equal(parsed.imageDigests.proxy.platform, platform);
         assert.ok(parsed.files.some((entry) => entry.path === 'images/wartezimmer-images.tar'));
         const license = spawnSync('tar', ['-xOf', archive, './LICENSE']);
@@ -90,12 +95,34 @@ if(args[0]==='save') process.stdout.write('fake docker payload for '+platform);
         assert.ok(sums.stdout.includes(`${licenseHash}  LICENSE`));
       }
       fs.writeFileSync(log, '');
-      const dedicated = invoke(['--no-build', '--platform', 'amd64']);
+      const dedicated = invoke([
+        '--no-build',
+        '--platform',
+        'amd64',
+        '--minimum-manager-version',
+        '6.1.4',
+      ]);
       assert.equal(dedicated.status, 0, dedicated.stderr);
+      const overriddenManifest = spawnSync(
+        'tar',
+        [
+          '-xOf',
+          path.join(output, '1.2.3', 'wartezimmer-update-1.2.3-linux-amd64.pfupdate'),
+          './manifest.json',
+        ],
+        { encoding: 'utf8' },
+      );
+      assert.equal(overriddenManifest.status, 0, overriddenManifest.stderr);
+      assert.equal(JSON.parse(overriddenManifest.stdout).minimumManagerVersion, '6.1.4');
       const dedicatedCalls = fs.readFileSync(log, 'utf8').trim().split('\n').map(JSON.parse);
       assert.equal(dedicatedCalls.filter((args) => args[0] === 'save').length, 1);
       assert.ok(!dedicatedCalls.some((args) => args[0] === 'buildx'));
       assert.notEqual(invoke(['--platform', 'invalid']).status, 0);
+      for (const minimum of ['', 'newest']) {
+        fs.writeFileSync(log, '');
+        assert.notEqual(invoke(['--minimum-manager-version', minimum]).status, 0);
+        assert.equal(fs.readFileSync(log, 'utf8'), '', 'invalid minimum must fail before Docker');
+      }
     } finally {
       fs.rmSync(temp, { recursive: true, force: true });
     }
