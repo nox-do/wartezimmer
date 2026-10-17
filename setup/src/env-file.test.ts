@@ -5,12 +5,152 @@ import path from 'node:path';
 import test from 'node:test';
 import {
   escapeEnvValueForCompose,
+  ensureEnvComposeEscaping,
   findLatestEnvBackupPath,
   readEnvMap,
+  removeEnvKeys,
   unescapeEnvValueFromCompose,
+  updateEnvKeys,
   writeEnvFromExample,
   writeEnvRecordAtomically,
 } from './env-file.js';
+
+test('plain env values keep spaces, Windows paths and dollar escaping without quotes', (t) => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-env-plain-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  const file = path.join(home, '.env');
+  fs.writeFileSync(file, '');
+  const values = {
+    PRACTICE_DISPLAY_NAME: 'Praxis Dr. Meier',
+    IMPORTS_HOST_PATH: String.raw`C:\Users\Müller\Praxis Meier\imports`,
+    AUTH_KEY_CAPTIVE: 'one$two$$three',
+    TLS_CERT_NAMES: '["staff.example.test","*.portal.example.test"]',
+  };
+  updateEnvKeys(file, { ...values, PRACTICE_DISPLAY_NAME: '  Praxis Dr. Meier  ' });
+  assert.deepEqual(Object.fromEntries(readEnvMap(file)), values);
+  assert.match(
+    fs.readFileSync(file, 'utf8'),
+    /IMPORTS_HOST_PATH=C:\\Users\\Müller\\Praxis Meier\\imports\n/,
+  );
+  writeEnvRecordAtomically(file, values, { replace: true });
+  assert.deepEqual(Object.fromEntries(readEnvMap(file)), values);
+  assert.throws(
+    () => updateEnvKeys(file, { TLS_CERT_NAMES: '["invalid #name"]' }),
+    /ENV_INVALID_VALUE/,
+  );
+});
+
+test('env mutations keep comments and literal dollars, normalize the end and preserve permissions', (t) => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-env-writes-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  const file = path.join(home, '.env');
+  fs.writeFileSync(
+    path.join(home, '.env.example'),
+    '# header\n\nKEY=old\nSECRET=keep$$literal\n\n\n',
+  );
+  const mutations = [
+    () =>
+      writeEnvFromExample(home, {
+        practiceDisplayName: 'Praxis',
+        secrets: {
+          AUTH_KEY_CAPTIVE: 'a',
+          MAINTENANCE_TOKEN: 'b',
+          SANDBOX_INTERNAL_TOKEN: 'c',
+          OPENNDS_FAS_KEY: 'd',
+        },
+        extra: { KEY: 'new' },
+      }),
+    () => updateEnvKeys(file, { KEY: 'updated' }),
+    () => writeEnvRecordAtomically(file, { KEY: 'atomic' }),
+    () => removeEnvKeys(file, ['KEY']),
+    () => {
+      fs.appendFileSync(file, 'ESCAPE=one$dollar\n\n\n');
+      assert.equal(ensureEnvComposeEscaping(home), true);
+    },
+  ];
+  for (const mutate of mutations) {
+    const expectedMode = fs.existsSync(file) ? 0o640 : 0o666 & ~process.umask();
+    if (fs.existsSync(file)) fs.chmodSync(file, expectedMode);
+    mutate();
+    const first = fs.readFileSync(file, 'utf8');
+    if (mutate !== mutations[0] && mutate !== mutations[mutations.length - 1]) {
+      mutate();
+      assert.equal(fs.readFileSync(file, 'utf8'), first);
+    }
+    const content = fs.readFileSync(file, 'utf8');
+    assert.match(content, /^# header\n\n/);
+    assert.match(content, /[^\n]\n$/);
+    assert.equal(readEnvMap(file).get('SECRET'), 'keep$literal');
+    if (process.platform !== 'win32') assert.equal(fs.statSync(file).mode & 0o777, expectedMode);
+  }
+  const before = fs.readFileSync(file, 'utf8');
+  assert.equal(ensureEnvComposeEscaping(home), false);
+  assert.equal(fs.readFileSync(file, 'utf8'), before);
+  assert.deepEqual(fs.readdirSync(home).sort(), ['.env', '.env.example']);
+});
+
+test('a failed env replacement preserves the original file and removes the temporary file', (t) => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-env-replace-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  const file = path.join(home, '.env');
+  const original = 'KEY=original\n';
+  fs.writeFileSync(file, original);
+  t.mock.method(fs, 'renameSync', () => {
+    throw Object.assign(new Error('replacement denied'), { code: 'EACCES' });
+  });
+  assert.throws(() => updateEnvKeys(file, { KEY: 'updated' }), /replacement denied/);
+  assert.equal(fs.readFileSync(file, 'utf8'), original);
+  assert.deepEqual(fs.readdirSync(home), ['.env']);
+});
+
+test('invalid env inputs leave the file and backup set untouched without disclosing values', (t) => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-env-invalid-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  const file = path.join(home, '.env');
+  const original = 'KEY=original\n';
+  fs.writeFileSync(file, original);
+  fs.writeFileSync(path.join(home, '.env.example'), original);
+  for (const value of [
+    'secret\rinjected',
+    'secret\ninjected',
+    'secret\0injected',
+    'secret"injected',
+    "secret'injected",
+    'secret#injected',
+  ]) {
+    const merge = {
+      practiceDisplayName: 'Praxis',
+      secrets: {
+        AUTH_KEY_CAPTIVE: 'a',
+        MAINTENANCE_TOKEN: 'b',
+        SANDBOX_INTERNAL_TOKEN: 'c',
+        OPENNDS_FAS_KEY: 'd',
+      },
+      extra: { KEY: value },
+    };
+    for (const mutate of [
+      () => updateEnvKeys(file, { KEY: value }),
+      () => writeEnvRecordAtomically(file, { KEY: value }),
+      () => writeEnvFromExample(home, merge),
+      () => writeEnvFromExample(home, { ...merge, extra: {}, practiceDisplayName: value }),
+      () =>
+        writeEnvFromExample(home, {
+          ...merge,
+          extra: {},
+          secrets: { ...merge.secrets, MAINTENANCE_TOKEN: value },
+        }),
+    ]) {
+      assert.throws(mutate, (error: Error) => {
+        assert.match(error.message, /ENV_INVALID_VALUE/);
+        assert.doesNotMatch(error.message, /secret|injected/);
+        return true;
+      });
+      assert.equal(fs.readFileSync(file, 'utf8'), original);
+      assert.deepEqual(fs.readdirSync(home).sort(), ['.env', '.env.example']);
+    }
+  }
+  assert.throws(() => updateEnvKeys(file, { ['KEY\nINJECTED']: 'value' }), /ENV_INVALID_KEY/);
+});
 
 test('findLatestEnvBackupPath returns newest backup by timestamp suffix', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-env-backup-'));

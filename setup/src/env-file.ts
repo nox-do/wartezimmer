@@ -46,8 +46,39 @@ export function envKeysNeedingComposeEscaping(content: string): string[] {
   return [...keys];
 }
 
+function validateEnvEntry(key: string, value: string): void {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) {
+    throw new Error('ENV_INVALID_KEY');
+  }
+  if (/[\r\n\0]/.test(value)) {
+    throw new Error(`ENV_INVALID_VALUE: ${key} darf kein CR, LF oder NUL enthalten.`);
+  }
+  // Existing manager-owned JSON list; hostname characters cannot introduce env syntax.
+  if (
+    key === 'TLS_CERT_NAMES' &&
+    /^\[(?:"[A-Za-z0-9*.-]+"(?:,"[A-Za-z0-9*.-]+")*)?\]$/.test(value)
+  ) {
+    return;
+  }
+  if (/["'#]/.test(value)) {
+    throw new Error(
+      `ENV_INVALID_VALUE: ${key} darf keine Anführungszeichen, Apostrophe oder # enthalten.`,
+    );
+  }
+}
+
+function writeEnvLines(envPath: string, lines: string[]): void {
+  let end = lines.length;
+  while (end > 0 && lines[end - 1]!.trim() === '') end--;
+  // Keep the previous writeFile creation policy (0666 & umask) and existing POSIX modes.
+  durableWrite(envPath, `${lines.slice(0, end).join('\n')}\n`, 0o666, {
+    preserveExistingMode: true,
+  });
+}
+
 function formatEnvLine(key: string, value: string): string {
-  return `${key}=${escapeEnvValueForCompose(value)}`;
+  validateEnvEntry(key, value);
+  return `${key}=${escapeEnvValueForCompose(value.trim())}`;
 }
 
 export function readEnvMap(envPath: string): Map<string, string> {
@@ -83,10 +114,9 @@ export function writeEnvFromExample(
 
   let backupPath: string | null = null;
   const existing = readEnvMap(envPath);
-  if (fs.existsSync(envPath)) {
-    backupPath = buildEnvBackupPath(envPath);
-    fs.copyFileSync(envPath, backupPath);
-  }
+  validateEnvEntry('PRACTICE_DISPLAY_NAME', merge.practiceDisplayName);
+  for (const [key, value] of Object.entries(merge.secrets)) validateEnvEntry(key, value);
+  for (const [key, value] of Object.entries(merge.extra)) validateEnvEntry(key, value);
 
   const preserve = new Set(options?.preserveExistingKeys ?? []);
   const overrides = new Map<string, string>([
@@ -154,7 +184,11 @@ export function writeEnvFromExample(
     }
   }
 
-  fs.writeFileSync(envPath, `${output.join('\n')}\n`, 'utf8');
+  if (fs.existsSync(envPath)) {
+    backupPath = buildEnvBackupPath(envPath);
+    fs.copyFileSync(envPath, backupPath);
+  }
+  writeEnvLines(envPath, output);
   return { envPath, backupPath, keysWritten };
 }
 
@@ -167,6 +201,7 @@ export function writeEnvRecordAtomically(
   record: Record<string, string>,
   options: { replace?: boolean } = {},
 ): { keysWritten: string[] } {
+  for (const [key, value] of Object.entries(record)) validateEnvEntry(key, value);
   const recordMap = new Map(Object.entries(record));
   const keysWritten: string[] = [];
   const keysSeen = new Set<string>();
@@ -196,7 +231,7 @@ export function writeEnvRecordAtomically(
     keysSeen.add(key);
   }
 
-  durableWrite(envPath, `${output.join('\n')}\n`);
+  writeEnvLines(envPath, output);
   return { keysWritten };
 }
 
@@ -208,6 +243,7 @@ export function updateEnvKeys(
     throw new Error('ENV_MISSING');
   }
 
+  for (const [key, value] of Object.entries(updates)) validateEnvEntry(key, value);
   const updateMap = new Map(Object.entries(updates));
   const keysWritten: string[] = [];
   const keysSeen = new Set<string>();
@@ -230,7 +266,7 @@ export function updateEnvKeys(
     }
   }
 
-  fs.writeFileSync(envPath, `${output.join('\n')}\n`, 'utf8');
+  writeEnvLines(envPath, output);
   return { keysWritten };
 }
 
@@ -251,7 +287,7 @@ export function removeEnvKeys(envPath: string, keys: string[]): { keysRemoved: s
     return false;
   });
 
-  fs.writeFileSync(envPath, `${output.join('\n')}\n`, 'utf8');
+  writeEnvLines(envPath, output);
   return { keysRemoved };
 }
 
@@ -307,7 +343,7 @@ export function ensureEnvComposeEscaping(projectRoot: string): boolean {
   });
 
   if (changed) {
-    fs.writeFileSync(envPath, `${output.join('\n')}\n`, 'utf8');
+    writeEnvLines(envPath, output);
   }
   return changed;
 }

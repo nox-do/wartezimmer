@@ -2,7 +2,8 @@
 # Include build-stage packages in SBOM (multi-stage; Docker Scout / Desktop analysis).
 ARG BUILDKIT_SBOM_SCAN_STAGE=true
 
-FROM node:22-alpine AS build
+# Keep build/runtime pins aligned in both service Dockerfiles; update deliberately.
+FROM node:22.23.3-alpine3.24@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS build
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -79,7 +80,7 @@ RUN set -eu; for workspace in app packages/domain packages/server-shared package
   node scripts/strip-dependency-artifacts.mjs "$workspace/node_modules"; \
   done
 
-FROM node:22-alpine AS runtime
+FROM node:22.23.3-alpine3.24@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 

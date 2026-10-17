@@ -14,6 +14,66 @@ import {
 import { composeUp, composeRestart, composeValidateConfig } from './docker.js';
 import { readEnvMap } from './env-file.js';
 
+for (const method of ['writeFileSync', 'fsyncSync'] as const) {
+  test(`durableWrite cleans up after ${method} fails`, (t) => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-durable-failure-'));
+    t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+    const file = path.join(home, '.env');
+    fs.writeFileSync(file, 'KEY=old\n');
+    const originalWrite = fs.writeFileSync;
+    t.mock.method(fs, method, (...args: Parameters<typeof fs.writeFileSync>) => {
+      if (method === 'writeFileSync') originalWrite(...args);
+      throw Object.assign(new Error('disk full'), { code: 'ENOSPC' });
+    });
+    assert.throws(() => durableWrite(file, 'KEY=new-secret\n'), /disk full/);
+    assert.equal(fs.readFileSync(file, 'utf8'), 'KEY=old\n');
+    assert.deepEqual(fs.readdirSync(home), ['.env']);
+  });
+}
+
+test(
+  'mode preservation never writes secrets into a more permissive temporary file',
+  {
+    skip: process.platform === 'win32',
+  },
+  (t) => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-durable-temp-mode-'));
+    t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+    const file = path.join(home, '.env');
+    fs.writeFileSync(file, 'old', { mode: 0o600 });
+    const originalWrite = fs.writeFileSync;
+    t.mock.method(fs, 'writeFileSync', (...args: Parameters<typeof fs.writeFileSync>) => {
+      assert.equal(fs.fstatSync(args[0] as number).mode & 0o077, 0);
+      return originalWrite(...args);
+    });
+    durableWrite(file, 'new secret', 0o666, { preserveExistingMode: true });
+  },
+);
+
+test(
+  'durableWrite keeps its secure default and preserves modes only when requested',
+  {
+    skip: process.platform === 'win32',
+  },
+  (t) => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-durable-mode-'));
+    t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+    const file = path.join(home, '.env');
+    durableWrite(file, 'initial');
+    assert.equal(fs.statSync(file).mode & 0o777, 0o600);
+    fs.chmodSync(file, 0o664);
+    const previousUmask = process.umask(0o077);
+    try {
+      durableWrite(file, 'preserved', 0o666, { preserveExistingMode: true });
+      assert.equal(fs.statSync(file).mode & 0o777, 0o664);
+      durableWrite(file, 'secure default');
+      assert.equal(fs.statSync(file).mode & 0o777, 0o600);
+    } finally {
+      process.umask(previousUmask);
+    }
+  },
+);
+
 for (const enable of [true, false])
   test(`SIGKILL during ${enable ? 'apply' : 'remove'} is recovered closed before ordinary start`, async () => {
     const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-crash-'));

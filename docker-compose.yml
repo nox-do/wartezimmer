@@ -19,6 +19,7 @@ services:
       sbom: true
       provenance: mode=max
     restart: unless-stopped
+    security_opt: ['no-new-privileges:true']
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       # Container images omit swagger/devDeps; docs are for host `npm run dev:app` (or explicit true + rebuild with deps).

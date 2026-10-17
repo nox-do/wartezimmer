@@ -11,6 +11,7 @@ services:
     # Images come from a verified release package (docker load); never pull from a registry.
     pull_policy: never
     restart: unless-stopped
+    security_opt: ['no-new-privileges:true']
     environment:
       LOG_LEVEL: ${LOG_LEVEL:-warn}
       HOST: 0.0.0.0

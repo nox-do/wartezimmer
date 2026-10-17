@@ -23,6 +23,7 @@ services:
     # Caddy is supplied by a verified Wartezimmer release; customer systems never pull it implicitly.
     pull_policy: never
     restart: unless-stopped
+    security_opt: ['no-new-privileges:true']
     environment:
       PROXY_MODE: ${PROXY_MODE:-http}
       PROXY_HTTP_PORT: ${PROXY_HTTP_PORT:-80}

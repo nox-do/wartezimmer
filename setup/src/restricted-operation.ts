@@ -21,17 +21,31 @@ export type RestrictedOperation = {
   previousCaddyfile: string | null;
 };
 
-export function durableWrite(file: string, content: string, mode = 0o600): void {
+export function durableWrite(
+  file: string,
+  content: string,
+  mode = 0o600,
+  options: { preserveExistingMode?: boolean } = {},
+): void {
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  const temporary = `${file}.${randomUUID()}.tmp`;
-  const fd = fs.openSync(temporary, 'wx', mode);
-  try {
-    fs.writeFileSync(fd, content);
-    fs.fsyncSync(fd);
-  } finally {
-    fs.closeSync(fd);
+  let existingMode: number | undefined;
+  if (options.preserveExistingMode && process.platform !== 'win32') {
+    try {
+      existingMode = fs.statSync(file).mode & 0o777;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
   }
+  const temporary = `${file}.${randomUUID()}.tmp`;
+  const fd = fs.openSync(temporary, 'wx', existingMode ?? mode);
   try {
+    try {
+      fs.writeFileSync(fd, content);
+      if (existingMode !== undefined) fs.fchmodSync(fd, existingMode);
+      fs.fsyncSync(fd);
+    } finally {
+      fs.closeSync(fd);
+    }
     replaceFile(temporary, file);
     syncDirectory(path.dirname(file));
   } finally {
