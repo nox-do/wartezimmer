@@ -254,6 +254,13 @@ async function checkBindingPreflight(
   env: Map<string, string>,
   hooks?: HostWriteRuntimeHooks,
 ): Promise<void> {
+  if (options.withProxy) {
+    try {
+      resolveProxyImageRef(env, options.delivery ?? isDeliveryProfile(options.projectRoot));
+    } catch (error) {
+      mapProxyError(error);
+    }
+  }
   try {
     const check = await (hooks?.composeValidateConfig ?? composeValidateConfig)(options);
     if (!check.ok) throw new Error(check.log);
@@ -262,7 +269,11 @@ async function checkBindingPreflight(
   }
   if (options.withProxy) {
     try {
-      await ensureProxyImageForCompose(env, hooks);
+      await ensureProxyImageForCompose(
+        env,
+        hooks,
+        options.delivery ?? isDeliveryProfile(options.projectRoot),
+      );
     } catch (error) {
       throw new BindingPreflightError('Proxy-Image-Prüfung', error);
     }
@@ -516,10 +527,11 @@ function mapProxyError(error: unknown): never {
 async function ensureProxyImageForCompose(
   env: Map<string, string>,
   hooks?: HostWriteRuntimeHooks,
+  delivery = false,
 ): Promise<void> {
   const ensure = hooks?.ensureProxyImageAvailable ?? ensureProxyImageAvailable;
   try {
-    await ensure(env);
+    await ensure(env, { delivery });
   } catch (error) {
     mapProxyError(error);
   }
@@ -926,7 +938,11 @@ export async function getHostRuntimeHealth(ctx: SetupContext): Promise<HostRunti
       const used = proxy.enabled || Boolean(container);
       // Enabled proxy always gets a header tile (even if the image is missing), so a
       // configured-but-broken state is visible. Optional image gate only for leftover containers.
-      if (used && (proxy.enabled || (await dockerImageExists(resolveProxyImageRef(envMap))))) {
+      if (
+        used &&
+        (proxy.enabled ||
+          (await dockerImageExists(resolveProxyImageRef(envMap, isDeliveryProfile(ctx.home)))))
+      ) {
         proxyServer = { enabled: proxy.enabled, container };
       }
     } catch {
@@ -1485,7 +1501,7 @@ async function mutateRestrictedNetwork(
   }
   if (enable || stackWasRunning) {
     assertStaffIpAvailable(staffIp, hooks);
-    await ensureProxyImageForCompose(existing, hooks);
+    await ensureProxyImageForCompose(existing, hooks, runOptions.delivery);
   }
 
   const backup = backupEnvFile(ctx.home);

@@ -334,10 +334,16 @@ export function planProxyComposeActions(input: {
   return { removeProxyFirst: false, composeUp: true };
 }
 
-export function resolveProxyImageRef(env?: EnvLike): string {
-  return (
-    readEnvValue(env, PROXY_IMAGE_ENV_KEY)?.trim() || WARTEZIMMER_PROXY_IMAGE_COMPOSE_DEFAULT_REF
-  );
+export function resolveProxyImageRef(env?: EnvLike, delivery = false): string {
+  const imageRef = readEnvValue(env, PROXY_IMAGE_ENV_KEY)?.trim();
+  if (imageRef) return imageRef;
+  if (delivery) {
+    throw new ProxyConfigError(
+      'WARTEZIMMER_PROXY_IMAGE fehlt in der Delivery-Konfiguration. ' +
+        'Ein geprüftes Wartezimmer-Release-Paket importieren.',
+    );
+  }
+  return WARTEZIMMER_PROXY_IMAGE_COMPOSE_DEFAULT_REF;
 }
 
 export type EnsureProxyImageResult = {
@@ -353,9 +359,10 @@ export async function ensureProxyImageAvailable(
   env?: EnvLike,
   deps?: {
     imageExists?: (ref: string) => Promise<boolean>;
+    delivery?: boolean;
   },
 ): Promise<EnsureProxyImageResult> {
-  const imageRef = resolveProxyImageRef(env);
+  const imageRef = resolveProxyImageRef(env, deps?.delivery);
   const imageExists =
     deps?.imageExists ??
     (async (ref: string) => {

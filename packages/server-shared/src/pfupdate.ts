@@ -31,7 +31,7 @@ export const WARTEZIMMER_PROXY_IMAGE_ALLOWED_REFS = [
   WARTEZIMMER_PROXY_IMAGE_LEGACY_REF,
 ] as const;
 
-/** Compose HTTP default when `WARTEZIMMER_PROXY_IMAGE` is unset (`:-caddy:2.11.7`). */
+/** Dev Compose HTTP default when `WARTEZIMMER_PROXY_IMAGE` is unset (`:-caddy:2.11.7`). */
 export const WARTEZIMMER_PROXY_IMAGE_COMPOSE_DEFAULT_REF = WARTEZIMMER_PROXY_BASE_IMAGE_REF;
 
 /** First allowed proxy tag present in a docker-load result (custom preferred over stock). */

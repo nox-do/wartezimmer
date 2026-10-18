@@ -445,6 +445,46 @@ test('ensureProxyImageAvailable accepts the release-supplied local image', async
   assert.equal(result.imageRef, 'caddy:test');
 });
 
+test('delivery rejects a missing image reference even when stock Caddy is locally available', async () => {
+  for (const env of [
+    undefined,
+    new Map<string, string>(),
+    new Map([['WARTEZIMMER_PROXY_IMAGE', '']]),
+    new Map([['WARTEZIMMER_PROXY_IMAGE', '   ']]),
+  ]) {
+    assert.throws(() => resolveProxyImageRef(env, true), /WARTEZIMMER_PROXY_IMAGE fehlt/);
+    let inspected = false;
+    await assert.rejects(
+      () =>
+        ensureProxyImageAvailable(env, {
+          delivery: true,
+          imageExists: async () => {
+            inspected = true;
+            return true;
+          },
+        }),
+      /WARTEZIMMER_PROXY_IMAGE fehlt/,
+    );
+    assert.equal(inspected, false);
+  }
+});
+
+test('delivery uses an explicit offline image reference unchanged', async () => {
+  for (const imageRef of ['wartezimmer-proxy:2.11.7-acmedns', 'caddy:2.11.4']) {
+    const env = new Map([['WARTEZIMMER_PROXY_IMAGE', imageRef]]);
+    assert.deepEqual(
+      await ensureProxyImageAvailable(env, {
+        delivery: true,
+        imageExists: async (ref) => {
+          assert.equal(ref, imageRef);
+          return true;
+        },
+      }),
+      { imageRef },
+    );
+  }
+});
+
 test('ensureProxyImageAvailable requires a verified release package when missing', async () => {
   await assert.rejects(
     () =>

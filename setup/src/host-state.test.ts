@@ -1611,6 +1611,7 @@ for (const delivery of [false, true]) {
         SETUP_LAN_APP_IP: '192.168.1.10',
         WARTEZIMMER_APP_IMAGE: 'wartezimmer/app:0.4.0',
         WARTEZIMMER_SANDBOX_IMAGE: 'wartezimmer/sandbox:0.4.0',
+        ...(delivery ? { WARTEZIMMER_PROXY_IMAGE: 'wartezimmer-proxy:2.11.7-acmedns' } : {}),
       });
       const profiles: (boolean | undefined)[] = [];
       await saveHostNetwork(
@@ -1642,6 +1643,43 @@ for (const delivery of [false, true]) {
     });
   });
 }
+
+test('delivery repair without a proxy image reference preserves env and never starts Compose', async () => {
+  await withRoot(async (root) => {
+    fs.writeFileSync(path.join(root, 'docker-compose.delivery.yml'), 'services: {}\n');
+    writeEnv(root, { ...proxyOn, SETUP_LAN_APP_IP: '192.168.1.10' });
+    const before = fs.readFileSync(path.join(root, '.env'), 'utf8');
+    await assert.rejects(
+      () =>
+        saveHostNetwork(
+          ctx(root),
+          {
+            lanAppIp: '192.168.1.10',
+            gateway: gwOff('192.168.1.10'),
+            repairProxy: true,
+          },
+          {
+            ...allowProxyPort,
+            composePs: async () => ({ running: false, services: [] }),
+            composeValidateConfig: async () => {
+              assert.fail('must reject before Compose validation');
+            },
+            composeUp: async () => {
+              assert.fail('must not start containers');
+            },
+          },
+        ),
+      (error: unknown) => {
+        assert.ok(error instanceof ManagerApiError);
+        assert.equal(error.code, 'setup_preflight_failed');
+        assert.ok(error.cause instanceof Error);
+        assert.match(error.cause.message, /WARTEZIMMER_PROXY_IMAGE fehlt/);
+        return true;
+      },
+    );
+    assert.equal(fs.readFileSync(path.join(root, '.env'), 'utf8'), before);
+  });
+});
 
 for (const action of ['repair', 'disable', 'setup', 'fresh-setup', 'throw'] as const) {
   test(`Compose preflight failure during ${action} restores env without touching containers or images`, async () => {
