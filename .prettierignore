@@ -11,3 +11,4 @@ openapi/bundle.json
 ui/src/lib/mfa/vendor/
 .tmp/
 docs/archive/website/
+vendor/staticseal/

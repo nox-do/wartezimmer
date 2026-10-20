@@ -2,6 +2,7 @@ import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkPages } from './check-pages.mjs';
+import { sealPage } from './seal-pages.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const source = path.join(root, 'website');
@@ -16,6 +17,10 @@ const pages = [
   'lizenzen.html',
   'lizenz.html',
 ];
+const sealedPages = new Map([
+  ['impressum.html', 'Impressum'],
+  ['datenschutz.html', 'Datenschutz'],
+]);
 // Render the legal text from its canonical source; HTML declares UTF-8 explicitly.
 const licenseText = await readFile(path.join(root, 'LICENSE'), 'utf8');
 const escapeHtml = (value) =>
@@ -103,7 +108,9 @@ if (siteBase) {
       .replaceAll('<', '&lt;')
       .replaceAll('>', '&gt;')
       .replaceAll('"', '&quot;');
-  const urls = pages.map((page) => new URL(page === 'index.html' ? './' : page, siteBase).href);
+  const urls = pages
+    .filter((page) => !sealedPages.has(page))
+    .map((page) => new URL(page === 'index.html' ? './' : page, siteBase).href);
   await writeFile(
     path.join(output, 'sitemap.xml'),
     '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
@@ -115,6 +122,12 @@ if (siteBase) {
     path.join(output, 'robots.txt'),
     `${robots}\nSitemap: ${new URL('sitemap.xml', siteBase).href}\n`,
   );
+}
+await checkPages(output);
+// Validate original content and its links before packaging, then validate wrappers.
+for (const [page, title] of sealedPages) {
+  const html = await readFile(path.join(output, page), 'utf8');
+  await writeFile(path.join(output, page), sealPage(html, page, title));
 }
 await checkPages(output);
 console.log(`${preview ? 'Vorschau' : 'GitHub-Pages-Artefakt'}: ${output}`);

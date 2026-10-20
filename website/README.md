@@ -67,6 +67,27 @@ Betreiber- und Kontaktdaten wurden unverändert aus dem bisherigen Impressum
 übernommen. Die bisherigen Veröffentlichungsmarkierungen sind durch die bestätigten Angaben ersetzt.
 Keine fehlenden URLs, Lizenzentscheidungen oder rechtlichen Angaben erfinden.
 
+## Schutz vor einfachen Crawlern
+
+Der Build verpackt `impressum.html` und `datenschutz.html` mit dem lokal eingebundenen
+StaticSeal-Runtime-Stand aus `vendor/staticseal/`. Besucher öffnen die vollständige
+Seite mit einem Button ohne Passwort. JavaScript ist erforderlich; ein Hinweis
+erscheint bei deaktiviertem JavaScript. Beide Seiten bleiben unter ihren bisherigen
+URLs erreichbar, bitten um `noindex,nofollow,noarchive` und stehen nicht in der Sitemap.
+Die übrigen Seiten, einschließlich Lizenz, bleiben direkt lesbar.
+
+Startseite und `llms.txt` verweisen für Kontaktdaten auf das Impressum. Auch die
+kanonische Root-Lizenz verweist für gesonderte Vereinbarungen auf das Impressum;
+der Lizenztext und sein Download werden weiterhin aus dieser Datei erzeugt.
+
+Die Pakete enthalten Base64-kodiertes HTML, keine Verschlüsselung. Crawler, die
+die Pakete dekodieren oder den Öffnen-Button auslösen, können die Inhalte lesen.
+Quellen und Git-Historie des öffentlichen Repositorys bleiben ebenfalls lesbar.
+Die Quellen in `website/` dienen der Bearbeitung; lokal immer den Build aus
+`dist/pages/` ansehen. Beide Vorschau- und Veröffentlichungsbuilds verpacken die Seiten.
+HTML und Links werden vor und nach dem Verpacken geprüft. Die CSP erlaubt den
+Inline-Code des Öffnungsbildschirms über exakt berechnete SHA-256-Hashes.
+
 Das Git-Remote ist `git@github.com:nox-do/wartezimmer.git`. Für die Veröffentlichung
 GitHub Pages auf GitHub Actions einstellen und den Workflow manuell
 starten. Mit Repository-Variable `PAGES_BASE_URL` (vollständiger URL einschließlich

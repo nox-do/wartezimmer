@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import test from 'node:test';
 import { checkPages } from './check-pages.mjs';
+import { sealPage } from './seal-pages.mjs';
 
 async function fixture(t, html) {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'pf-pages-check-'));
@@ -64,10 +65,15 @@ test('Pages build renders the canonical license, project sitemap and blocks inco
   const script = await readFile(new URL('./build-pages.mjs', import.meta.url), 'utf8');
   await writeFile(
     path.join(directory, 'scripts/build-pages.mjs'),
-    script.replace(
-      "'./check-pages.mjs'",
-      JSON.stringify(new URL('./check-pages.mjs', import.meta.url).href),
-    ),
+    script
+      .replace(
+        "'./check-pages.mjs'",
+        JSON.stringify(new URL('./check-pages.mjs', import.meta.url).href),
+      )
+      .replace(
+        "'./seal-pages.mjs'",
+        JSON.stringify(new URL('./seal-pages.mjs', import.meta.url).href),
+      ),
   );
   await cp(new URL('../website/', import.meta.url), path.join(directory, 'website'), {
     recursive: true,
@@ -99,6 +105,18 @@ test('Pages build renders the canonical license, project sitemap and blocks inco
     await readFile(path.join(output, 'robots.txt'), 'utf8'),
     /Sitemap: https:\/\/example.org\/project\/sitemap.xml/,
   );
+  const sitemap = await readFile(path.join(output, 'sitemap.xml'), 'utf8');
+  assert.doesNotMatch(sitemap, /impressum\.html|datenschutz\.html/);
+  for (const page of ['impressum.html', 'datenschutz.html']) {
+    const sealed = await readFile(path.join(output, page), 'utf8');
+    assert.match(sealed, /noindex,nofollow,noarchive/);
+    assert.match(sealed, /id="encrypted-payload"/);
+    assert.doesNotMatch(sealed, /Schickenberg|info@notaus|15678/);
+  }
+  const homepage = await readFile(path.join(output, 'index.html'), 'utf8');
+  assert.match(homepage, /Kontaktdaten öffnen/);
+  assert.doesNotMatch(homepage, /mailto:|tel:/);
+  assert.doesNotMatch(await readFile(path.join(output, 'llms.txt'), 'utf8'), /info@notaus/);
   const publicationPage = path.join(directory, 'website/datenschutz.html');
   const completePage = await readFile(publicationPage, 'utf8');
   await writeFile(
@@ -122,6 +140,38 @@ test('Pages build renders the canonical license, project sitemap and blocks inco
 
 // jsdom is a declared test dependency of the UI workspace.
 const { JSDOM } = createRequire(new URL('../ui/package.json', import.meta.url))('jsdom');
+for (const page of ['impressum.html', 'datenschutz.html']) {
+  test(`StaticSeal restores ${page} only after opening, retaining text and project links`, async () => {
+    const source = await readFile(new URL(`../website/${page}`, import.meta.url), 'utf8');
+    const dom = new JSDOM(sealPage(source, page, 'Test'), {
+      url: `https://example.org/project/${page}`,
+      runScripts: 'outside-only',
+    });
+    try {
+      const { window } = dom;
+      window.TextDecoder = TextDecoder;
+      const document = window.document;
+      assert.doesNotMatch(document.body.textContent, /Schickenberg|info@notaus/);
+      for (const script of document.querySelectorAll('script:not([type])')) {
+        window.eval(script.textContent);
+      }
+      assert.equal(document.querySelector('#password'), null);
+      assert.equal(document.querySelector('address'), null);
+      document.querySelector('#unlock-button').click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      assert.match(document.body.textContent, /Schickenberg 41/);
+      assert.equal(document.querySelector('a[href^="mailto:"]').href, 'mailto:info@notaus.de');
+      assert.equal(document.querySelector('.brand').href, 'https://example.org/project/index.html');
+      assert.equal(
+        document.querySelector('meta[name="robots"]').content,
+        'noindex,nofollow,noarchive',
+      );
+      assert.equal(document.querySelector('#unlock-button'), null);
+    } finally {
+      dom.window.close();
+    }
+  });
+}
 test('Website tabs, dialog and gallery work by keyboard and with reduced motion', async () => {
   const dom = new JSDOM(await readFile(new URL('../website/index.html', import.meta.url), 'utf8'), {
     url: 'https://example.org/project/index.html#visit-aufruf',

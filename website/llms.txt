@@ -50,7 +50,8 @@ Nutzung, Anpassung, Weitergabe und Dienstleistungen richten sich nach dem
 vollständigen Lizenztext. Die Lizenz der Software gilt nicht automatisch für
 sämtliche Website-Inhalte.
 
-Anwender und vertrauliche Sicherheitsmeldungen: info@notaus.de.
+Kontakt für Anwender und vertrauliche Sicherheitsmeldungen: über das Impressum
+unter https://nox-do.github.io/wartezimmer/impressum.html.
 Entwickler nutzen GitHub Issues. Beiträge bitte zuerst in einem Issue besprechen.
 Keine Patientendaten, Zugangsdaten oder unbereinigten Diagnosepakete öffentlich
 in Issues einstellen.

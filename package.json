@@ -77,7 +77,7 @@
     "dump:notifications": "node ./scripts/dump.mjs notifications",
     "dist:manager:win": "npm run -w @wartezimmer/manager dist:win",
     "dev:seed": "node scripts/dev-seed.mjs",
-    "lint:website": "eslint website/site.js scripts/build-pages.mjs scripts/check-pages.mjs && stylelint website/styles.css && node scripts/check-unused-css.mjs website",
+    "lint:website": "eslint website/site.js scripts/build-pages.mjs scripts/check-pages.mjs scripts/seal-pages.mjs && stylelint website/styles.css && node scripts/check-unused-css.mjs website",
     "build:website": "node scripts/build-pages.mjs",
     "preview:website": "node scripts/build-pages.mjs --preview",
     "check:repository": "node scripts/check-repository-hygiene.mjs",
