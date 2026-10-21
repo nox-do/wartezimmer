@@ -35,6 +35,14 @@ export function sealPage(html, filename, title) {
       '</main>',
       '<noscript><p>Zum Öffnen dieser Seite benötigen Sie JavaScript.</p></noscript></main>',
     );
+  // Warm the site's styles and fonts while the opening screen is visible.
+  // Preload does not apply the website styles to StaticSeal's opening screen.
+  wrapper = wrapper.replace(
+    '</head>',
+    '<link rel="preload" href="./styles.css" as="style">' +
+      '<link rel="preload" href="./fonts/dm-sans.ttf" as="font" type="font/ttf" crossorigin>' +
+      '<link rel="preload" href="./fonts/manrope.ttf" as="font" type="font/ttf" crossorigin></head>',
+  );
   // Hash only this wrapper's exact inline code; keep the site's CSP restrictions.
   const hash = (value) => `'sha256-${createHash('sha256').update(value).digest('base64')}'`;
   const scripts = [...wrapper.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)]

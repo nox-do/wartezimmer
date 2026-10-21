@@ -85,7 +85,10 @@ die Pakete dekodieren oder den Öffnen-Button auslösen, können die Inhalte les
 Quellen und Git-Historie des öffentlichen Repositorys bleiben ebenfalls lesbar.
 Die Quellen in `website/` dienen der Bearbeitung; lokal immer den Build aus
 `dist/pages/` ansehen. Beide Vorschau- und Veröffentlichungsbuilds verpacken die Seiten.
-HTML und Links werden vor und nach dem Verpacken geprüft. Die CSP erlaubt den
+HTML und Links werden vor und nach dem Verpacken geprüft. Der Öffnungsbildschirm lädt das gemeinsame CSS und die beiden lokalen Schriften
+vor, ohne die Website-Styles bereits anzuwenden. Das reduziert nachträgliche
+Layoutwechsel beim Öffnen; bei sehr frühem Klick können Ressourcen noch laden.
+Die CSP erlaubt den
 Inline-Code des Öffnungsbildschirms über exakt berechnete SHA-256-Hashes.
 
 Das Git-Remote ist `git@github.com:nox-do/wartezimmer.git`. Für die Veröffentlichung

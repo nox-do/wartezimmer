@@ -157,6 +157,19 @@ for (const page of ['impressum.html', 'datenschutz.html']) {
       }
       assert.equal(document.querySelector('#password'), null);
       assert.equal(document.querySelector('address'), null);
+      assert.deepEqual(
+        [...document.querySelectorAll('link[rel="preload"]')].map((link) => [
+          link.getAttribute('href'),
+          link.getAttribute('as'),
+        ]),
+        [
+          ['./styles.css', 'style'],
+          ['./fonts/dm-sans.ttf', 'font'],
+          ['./fonts/manrope.ttf', 'font'],
+        ],
+      );
+      assert.equal(document.querySelectorAll('link[as="font"][crossorigin]').length, 2);
+      assert.equal(document.querySelector('link[rel="stylesheet"]'), null);
       document.querySelector('#unlock-button').click();
       await new Promise((resolve) => setTimeout(resolve, 0));
       assert.match(document.body.textContent, /Schickenberg 41/);
