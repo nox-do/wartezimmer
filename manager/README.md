@@ -2,6 +2,14 @@
 
 Electron-Hülle für Host-Setup, Status und Wartung. Docker-Stack steuern (Start/Stop/Neustart), Container/Logs, `.pfbackup`, Erreichbarkeit (Poll) — alles über Setup-API + IPC.
 
+## Bekannte Sicherheitslücke offen
+
+**CVE-2026-111497 betrifft die eingebettete Electron-/Node-Runtime und das darin
+gestartete Setup.** Der lokale Betrieb reduziert die Exposition; der externe
+ACME-DNS-Aufruf beim TLS-Setup bleibt relevant. Die Behebung ist bis zu einem
+bestätigten stabilen Electron-Fix zurückgestellt. Vor Electron-Updates und Releases
+[KNOWN_VULNERABILITIES.md](../KNOWN_VULNERABILITIES.md) lesen und aktualisieren.
+
 ## Lizenz
 
 Für Manager und Setup gilt die [Wartezimmer-Lizenz, Version 1.1](../LICENSE). Installation,

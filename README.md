@@ -4,6 +4,9 @@ Wartezimmer ist ein lokal betriebenes System zur Organisation von Patientenbesuc
 
 Diese README richtet sich an Entwickler und die Praxis-IT. Die [Projektwebsite](https://nox-do.github.io/wartezimmer/) erklärt die Anwendung im Praxisalltag; die [Dokumentation](docs/README.md) beschreibt Fachlichkeit, Architektur und Betrieb.
 
+**Bekannte Sicherheitslücken:** [KNOWN_VULNERABILITIES.md](KNOWN_VULNERABILITIES.md)
+enthält die offene Brotli-Schwachstelle im Manager und die Kriterien für deren Behebung.
+
 ## Fachlicher Umfang
 
 | Bereich                | Funktion                                                                                                    |
@@ -73,7 +76,7 @@ zu den Betriebssystemmeldungen stehen in der [Manager-Dokumentation](manager/REA
 
 ### Voraussetzungen
 
-- Node.js 22 oder neuer und npm
+- Node.js 22.23.4 und npm (Projekt- und CI-Version mit Brotli-Sicherheitsfix)
 - Docker Desktop mit Docker Compose v2 für den vollständigen lokalen Stack
 - Freier Host-Port `8080`
 - Import- und Exportordner; standardmäßig `~/wartezimmer-imports` und `~/wartezimmer-exports`
