@@ -8,7 +8,8 @@ zurückgestellt. Dies ist keine Einstufung als „nicht betroffen“.
 
 Stand und letzte Bewertung: **27. Oktober 2026**. Dieser Eintrag muss bei
 Electron-Updates, Änderungen der Netzwerkzugriffe und vor Manager-Releases erneut
-geprüft werden. Die Angaben zu verfügbaren Electron-Versionen sind eine Momentaufnahme.
+geprüft werden. Für Release 6.1.6 erneut geprüft: Runtime und Netzwerkpfade sind unverändert;
+die Lücke bleibt offen. Die Angaben zu verfügbaren Electron-Versionen sind eine Momentaufnahme.
 
 ## CVE-2026-111497 im Manager und Setup
 

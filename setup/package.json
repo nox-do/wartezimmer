@@ -1,7 +1,7 @@
 {
   "name": "@wartezimmer/setup",
   "private": true,
-  "version": "6.1.5",
+  "version": "6.1.6",
   "type": "module",
   "scripts": {
     "build": "node ../scripts/build-typescript.mjs tsconfig.build.json",

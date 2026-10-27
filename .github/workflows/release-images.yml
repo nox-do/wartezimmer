@@ -52,6 +52,33 @@ jobs:
           WARTEZIMMER_RELEASE_VERSION: ${{ steps.version.outputs.value }}
         run: npm run release:images
 
+      - name: Pack update archives from the same images
+        env:
+          WARTEZIMMER_RELEASE_VERSION: ${{ steps.version.outputs.value }}
+        run: npm run release:pfupdate:current
+
+      - name: Check shipped Node runtimes on both architectures
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          for arch in amd64 arm64; do
+            for service in app sandbox; do
+              docker run --rm --network none --platform "linux/$arch" \
+                --entrypoint node -e EXPECTED_VERSION="$RELEASE_VERSION" \
+                "wartezimmer/$service:$RELEASE_VERSION-$arch" -e '
+                  const assert = require("node:assert/strict");
+                  const zlib = require("node:zlib");
+                  assert.equal(process.version, "v22.23.4");
+                  assert.equal(require("./package.json").version, process.env.EXPECTED_VERSION);
+                  assert.equal(zlib.brotliDecompressSync(zlib.brotliCompressSync(Buffer.from("smoke"))).toString(), "smoke");
+                  const db = new (require("node:sqlite").DatabaseSync)(":memory:");
+                  assert.equal(db.prepare("SELECT 42 AS value").get().value, 42);
+                  db.close();
+                  console.log(process.arch, process.version, process.env.EXPECTED_VERSION, "SQLite/Brotli OK");
+                '
+            done
+          done
+
       - name: Upload release artifact
         uses: actions/upload-artifact@v7
         with:

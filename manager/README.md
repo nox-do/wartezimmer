@@ -338,7 +338,11 @@ für den festgelegten electron-builder 26.15.3 übernimmt die NSIS-Uninstaller-
 Icon-Patches, die dessen `UninstallerReader` auslässt. Die ursprüngliche CRC
 bleibt unverändert und muss passen; die Integritätsprüfung wird nicht deaktiviert.
 Nach dem Build werden sowohl die Setup.exe als auch der daraus extrahierte
-Deinstaller geprüft. Fehler lassen den Build scheitern. Nur nach erfolgreicher
+Deinstaller geprüft. Die Prüfung liest die nicht-solid zlib-komprimierten
+NSIS-Datenblöcke direkt mit Node und prüft die unveränderten gespeicherten CRCs.
+Eine separat installierte 7-Zip-Anwendung ist dafür nicht erforderlich.
+Fehlende, mehrdeutige oder beschädigte Uninstaller lassen den Build scheitern.
+Nur nach erfolgreicher
 Prüfung wird die Setup.exe in den gemeinsamen Release-Ordner kopiert.
 Eine zusätzliche `.exe.sha256`-Datei wird nicht erzeugt.
 Bei einem Builder-Versionswechsel muss der Workaround neu bewertet werden.

@@ -32,13 +32,13 @@ allein bedeutet keine pauschale Datenschutzkonformität.
 
 ## Veröffentlichung und bekannte Grenzen
 
-Version 6.1.3 ist mit Quellcode und installierbaren Paketen auf GitHub verfügbar.
+Version 6.1.6 ist mit Quellcode und installierbaren Paketen auf GitHub verfügbar.
 Die Manager-Installer sind unsigniert, die macOS-Apps nicht notarisiert. Bei der
 Installation oder beim ersten Öffnen können Betriebssystemwarnungen erscheinen.
 Ich spare mir diese Kosten, damit ich Wartezimmer kostenlos anbieten kann.
 
 - `.pfinstall` dient der Erstinstallation, `.pfupdate` bestehenden Installationen; beide werden für ARM64 und AMD64 angeboten und enthalten ihre Prüfsummen.
-- Den praktischen Update-Test habe ich für 6.1.3 noch nicht abgeschlossen. Details stehen in den Release Notes.
+- Ein vollständiger Update-Test mit dem ausgelieferten Manager 6.1.3 steht noch aus. Details stehen in den Release Notes.
 - Windows ARM bleibt Early Access; ein natives Windows-ARM64-Releasepaket ist derzeit nicht verfügbar.
 - SMS habe ich mit echtem Empfang getestet. WhatsApp und der zugehörige SMS-Fallback bleiben optional, experimentell und ungetestet. Ich habe Datenschutzbedenken und freue mich über Feedback von Interessierten.
 
@@ -70,7 +70,7 @@ in Issues einstellen.
 ## Quellcode und Dokumentation
 
 - [Quellcode und Entwickler-README](https://github.com/nox-do/wartezimmer).
-- [Release 6.1.3](https://github.com/nox-do/wartezimmer/releases/tag/v6.1.3): Pakete, Prüfsummen und Release Notes.
+- [Release 6.1.6](https://github.com/nox-do/wartezimmer/releases/tag/v6.1.6): Pakete, Prüfsummen und Release Notes.
 - [Dokumentationsübersicht](https://github.com/nox-do/wartezimmer/blob/main/docs/README.md): Fachlichkeit, Architektur und Betrieb.
 - [Installation und Recovery](https://github.com/nox-do/wartezimmer/blob/main/docs/operations/reinstall-recovery.md).
 - [Backup und Wiederherstellung](https://github.com/nox-do/wartezimmer/blob/main/docs/operations/backup.md).

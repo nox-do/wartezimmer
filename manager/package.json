@@ -1,7 +1,7 @@
 {
   "name": "@wartezimmer/manager",
   "private": true,
-  "version": "6.1.5",
+  "version": "6.1.6",
   "productName": "Wartezimmer Manager",
   "type": "module",
   "main": "./out/main/index.js",

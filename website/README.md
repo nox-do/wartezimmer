@@ -45,7 +45,7 @@ aktive Website nach `dist/pages/`. Alle bisherigen Veröffentlichungsplatzhalter
 `data-publish-placeholder`-Markierungen sperren den regulären Build:
 
 - `downloads.html`: sieben Downloadlinks für Manager, Erstinstallation und Updates
-  der Version 6.1.3 zeigen auf `nox-do/wartezimmer`, Release `v6.1.3`.
+  der Version 6.1.6 zeigen auf `nox-do/wartezimmer`, Release `v6.1.6`.
   Prüfsummen und Releaseübersicht sind ebenfalls verlinkt. Vor dem Website-Publish
   die Release-Assets bereitstellen und die tatsächliche Erreichbarkeit prüfen.
   Bei späteren Releases Versionen und URLs gemeinsam aktualisieren.

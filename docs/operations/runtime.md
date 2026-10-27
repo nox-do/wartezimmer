@@ -61,7 +61,7 @@ ebenfalls keine Zombies. Der Init-Prozess übernimmt und bereinigt verwaiste
 Kindprozesse; das Timeout der Healthchecks allein verhindert diesen Fehler nicht.
 
 **Die veröffentlichten Pakete bis einschließlich 6.1.5 enthalten diesen Fix noch
-nicht.** Er ist in beiden Proxy-Compose-Dateien im Quellstand vorbereitet. Beim
+nicht.** Ab 6.1.6 ist er in beiden Proxy-Compose-Dateien enthalten. Beim
 Ausrollen muss der Proxy mit der aktualisierten Compose-Konfiguration neu
 erstellt werden. Ein bloßer Neustart beseitigt die angesammelten Zombies, aktiviert
 aber keinen Init-Prozess und verhindert deshalb den erneuten Anstieg nicht.

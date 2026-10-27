@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { crc32, deflateRawSync } from 'node:zlib';
-import { inspectNsis, reconstructUninstaller } from './nsis-integrity.mjs';
+import {
+  extractEmbeddedUninstaller,
+  inspectNsis,
+  reconstructUninstaller,
+} from './nsis-integrity.mjs';
 
 const signature = Buffer.from('efbeadde4e756c6c736f6674496e7374', 'hex');
 function header(size, flags = 0) {
@@ -67,4 +71,40 @@ test('checks the declared CRC boundary even with trailing signature data', () =>
   const bad = Buffer.from(installer);
   bad.writeUInt32LE(4, 1024);
   assert.throws(() => inspectNsis(bad), /disabled CRC/);
+});
+
+function finalInstaller(entries) {
+  const { stub } = fixture();
+  const blocks = Buffer.concat(entries.map(block));
+  return appendCrc(Buffer.concat([stub, header(28 + blocks.length + 4), blocks]));
+}
+
+test('extracts the final embedded EXE and preserves its original bytes and CRC', () => {
+  const { expected } = fixture();
+  const plugin = Buffer.alloc(1024);
+  plugin.write('MZ');
+  assert.deepEqual(
+    extractEmbeddedUninstaller(finalInstaller([plugin, expected, Buffer.from('other data')])),
+    expected,
+  );
+});
+
+test('rejects absent, duplicate, corrupt and wrong-kind embedded NSIS executables', () => {
+  const { expected, installer } = fixture();
+  assert.throws(() => extractEmbeddedUninstaller(finalInstaller([])), /not found/);
+  assert.throws(
+    () => extractEmbeddedUninstaller(finalInstaller([expected, expected])),
+    /ambiguous/,
+  );
+  const corrupt = Buffer.from(expected);
+  corrupt[700] ^= 1;
+  // The outer CRC is valid: the unchanged inner CRC must still reject corruption.
+  assert.throws(() => extractEmbeddedUninstaller(finalInstaller([corrupt])), /CRC mismatch/);
+  assert.throws(
+    () => extractEmbeddedUninstaller(finalInstaller([installer])),
+    /not an uninstaller/,
+  );
+  const outer = finalInstaller([expected]);
+  outer[700] ^= 1;
+  assert.throws(() => extractEmbeddedUninstaller(outer), /CRC mismatch/);
 });

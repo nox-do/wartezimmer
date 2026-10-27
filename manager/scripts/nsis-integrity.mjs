@@ -24,16 +24,9 @@ export function inspectNsis(buffer) {
   return { offset, end, flags };
 }
 
-/**
- * electron-builder 26.15.3's macOS UninstallerReader copies the installer stub
- * but omits NSIS's uninstall-icon patches. Reproduce EW_WRITEUNINSTALLER from
- * NSIS 3.0.4 exec.c: patch the stub, then append the compiled uninstall payload.
- * Never rewrite a checksum to make corrupt bytes pass.
- */
-export function reconstructUninstaller(buffer) {
+/** The pinned builder emits non-solid zlib blocks; reject other formats. */
+function* nsisBlocks(buffer) {
   const { offset, end } = inspectNsis(buffer);
-  let previous = null;
-  let result = null;
   for (let position = offset + 28; position < end - 4; ) {
     if (position + 4 > end - 4) throw new Error('NSIS: truncated block');
     const encodedSize = buffer.readUInt32LE(position);
@@ -46,6 +39,40 @@ export function reconstructUninstaller(buffer) {
         ? inflateRawSync(bytes, { maxOutputLength: 32 * 1024 * 1024 })
         : bytes;
     position += size;
+    yield block;
+  }
+}
+
+/** Read the complete embedded EXE in electron-builder's final non-solid zlib NSIS archive. */
+export function extractEmbeddedUninstaller(buffer) {
+  let result = null;
+  for (const block of nsisBlocks(buffer)) {
+    if (block.toString('ascii', 0, 2) !== 'MZ') continue;
+    // Other embedded executables are plugins, not NSIS archives. Once a header
+    // is present, validation errors must propagate, including a bad original CRC.
+    for (let offset = 512; offset + 28 <= block.length; offset += 512) {
+      if (!block.subarray(offset + 4, offset + 20).equals(signature)) continue;
+      if (!(inspectNsis(block).flags & 1)) throw new Error('NSIS: not an uninstaller');
+      if (result) throw new Error('NSIS: ambiguous embedded uninstaller');
+      result = block;
+      break;
+    }
+  }
+  if (!result) throw new Error('NSIS: embedded uninstaller not found');
+  return result;
+}
+
+/**
+ * electron-builder 26.15.3's macOS UninstallerReader copies the installer stub
+ * but omits NSIS's uninstall-icon patches. Reproduce EW_WRITEUNINSTALLER from
+ * NSIS 3.0.4 exec.c: patch the stub, then append the compiled uninstall payload.
+ * Never rewrite a checksum to make corrupt bytes pass.
+ */
+export function reconstructUninstaller(buffer) {
+  const { offset } = inspectNsis(buffer);
+  let previous = null;
+  let result = null;
+  for (const block of nsisBlocks(buffer)) {
     if (block.subarray(4, 20).equals(signature)) {
       if (result || !previous) throw new Error('NSIS: ambiguous uninstall payload');
       const stub = Buffer.from(buffer.subarray(0, offset));
