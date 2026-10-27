@@ -43,6 +43,30 @@ TLS-Overlay nur nach Proxy-Overlay. Default-Compose-Projektname typisch `wartezi
 
 Leitplanken: `restart: unless-stopped`, Healthchecks, **feste Image-Tags** (kein `latest` im Praxisbetrieb).
 
+### Prozess-Reaper für den Proxy
+
+Der Proxy benötigt `init: true`: Erfolgreiche HTTPS-Healthchecks mit BusyBox
+`wget` können beendete `ssl_client`-Hilfsprozesse hinterlassen, die Caddy als PID 1
+nicht aufräumt. Bei einem Check alle zehn Sekunden können so auch ohne
+Benutzerzugriffe bis zu 8.640 Zombie-Prozesse pro Tag entstehen und später neue
+Docker-Prozesse beziehungsweise Builds blockieren. App und Sandbox zeigten
+diesen Anstieg bei der Untersuchung nicht.
+
+Am 27. Oktober 2026 wurden am lokalen Proxy 49.744 Tasks gemessen; nach seinem
+Neustart waren es 16. Danach stieg die Zahl bei weiterhin erfolgreichen
+Healthchecks wieder an. Im isolierten Test mit dem Release-Proxy aus 6.1.5
+erzeugten 40 erfolgreiche HTTPS-Checks ohne Init-Prozess genau 40 zusätzliche
+`ssl_client`-Zombies, mit `init: true` keinen. Eine HTTP-only-Kontrolle erzeugte
+ebenfalls keine Zombies. Der Init-Prozess übernimmt und bereinigt verwaiste
+Kindprozesse; das Timeout der Healthchecks allein verhindert diesen Fehler nicht.
+
+**Die veröffentlichten Pakete bis einschließlich 6.1.5 enthalten diesen Fix noch
+nicht.** Er ist in beiden Proxy-Compose-Dateien im Quellstand vorbereitet. Beim
+Ausrollen muss der Proxy mit der aktualisierten Compose-Konfiguration neu
+erstellt werden. Ein bloßer Neustart beseitigt die angesammelten Zombies, aktiviert
+aber keinen Init-Prozess und verhindert deshalb den erneuten Anstieg nicht.
+Die Prüfung erfordert keine Änderung von Praxisdaten oder Volumes.
+
 ## 4. Persistenz & Host-Pfade
 
 | Name                                  | Inhalt                                                                   |

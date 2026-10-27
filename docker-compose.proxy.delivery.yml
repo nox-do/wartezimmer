@@ -23,6 +23,8 @@ services:
     # Caddy is supplied by a verified Wartezimmer release; customer systems never pull it implicitly.
     pull_policy: never
     restart: unless-stopped
+    # Reap orphaned BusyBox ssl_client children from HTTPS healthchecks.
+    init: true
     security_opt: ['no-new-privileges:true']
     environment:
       PROXY_MODE: ${PROXY_MODE:-http}
