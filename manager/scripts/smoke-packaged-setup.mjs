@@ -7,10 +7,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import electronPath from 'electron';
 
 const manager = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const executable = process.argv[2] ? path.resolve(process.argv[2]) : electronPath;
+const executable = process.argv[2]
+  ? path.resolve(process.argv[2])
+  : (await import('electron')).default;
 const resources = process.argv[3]
   ? path.resolve(process.argv[3])
   : path.join(manager, 'build-resources');
@@ -21,8 +22,13 @@ let child;
 try {
   fs.cpSync(resources, path.join(temporary, 'resources'), { recursive: true });
   const isolated = path.join(temporary, 'resources');
+  const serverEntry = path.join(isolated, 'setup', 'dist', 'server.js');
+  assert.ok(
+    fs.existsSync(serverEntry),
+    `Packaged setup entry missing. Source: ${resources}; files: ${fs.readdirSync(isolated, { recursive: true }).join(', ')}`,
+  );
   for (let attempt = 0; attempt < 2; attempt++) {
-    child = spawn(executable, [path.join(isolated, 'setup/dist/server.js')], {
+    child = spawn(executable, [serverEntry], {
       cwd: temporary,
       env: {
         ...process.env,
