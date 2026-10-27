@@ -42,12 +42,25 @@ const installer = installers[0];
 const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'pf-nsis-check-'));
 try {
   inspectNsis(await fs.readFile(installer));
-  execFileSync(
-    await getPath7za(),
-    ['e', installer, '$R0/UninstallWartezimmerManager.exe', `-o${temporary}`, '-y'],
-    { stdio: 'pipe' },
+  const sevenZip = await getPath7za();
+  const listing = execFileSync(sevenZip, ['l', '-slt', installer], { encoding: 'utf8' });
+  // 7-Zip reports native Windows separators on Windows and POSIX separators on
+  // macOS. Match the actual member instead of assuming a platform-specific path.
+  const uninstallers = listing
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith('Path = '))
+    .map((line) => line.slice('Path = '.length))
+    .filter((entry) => /^Uninstall.*\.exe$/i.test(path.win32.basename(entry)));
+  if (uninstallers.length !== 1) {
+    throw new Error(`Expected one embedded NSIS uninstaller, found ${uninstallers.length}`);
+  }
+  const uninstallerEntry = uninstallers[0];
+  execFileSync(sevenZip, ['e', installer, uninstallerEntry, `-o${temporary}`, '-y'], {
+    stdio: 'pipe',
+  });
+  const uninstaller = await fs.readFile(
+    path.join(temporary, path.win32.basename(uninstallerEntry)),
   );
-  const uninstaller = await fs.readFile(path.join(temporary, 'UninstallWartezimmerManager.exe'));
   if (!(inspectNsis(uninstaller).flags & 1)) throw new Error('Expected NSIS uninstaller');
   console.log(`Verified installer AND embedded uninstaller CRC: ${installer}`);
   publishReleaseArtifacts([installer]);
