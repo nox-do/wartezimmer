@@ -20,12 +20,17 @@ const home = path.join(temporary, 'Daten');
 const token = 'isolated-packaged-smoke-token';
 let child;
 try {
-  fs.cpSync(resources, path.join(temporary, 'resources'), { recursive: true });
+  fs.cpSync(resources, path.join(temporary, 'resources'), {
+    recursive: true,
+    // Exercise the Unicode/metacharacter path through Node's JS traversal.
+    // The native cpSync directory fast path left no destination on Windows CI.
+    filter: () => true,
+  });
   const isolated = path.join(temporary, 'resources');
   const serverEntry = path.join(isolated, 'setup', 'dist', 'server.js');
   assert.ok(
     fs.existsSync(serverEntry),
-    `Packaged setup entry missing. Source: ${resources}; files: ${fs.readdirSync(isolated, { recursive: true }).join(', ')}`,
+    `Packaged setup entry missing. Source: ${resources}; files: ${fs.existsSync(isolated) ? fs.readdirSync(isolated, { recursive: true }).join(', ') : '(destination directory missing)'}`,
   );
   for (let attempt = 0; attempt < 2; attempt++) {
     child = spawn(executable, [serverEntry], {
