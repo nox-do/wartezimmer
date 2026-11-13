@@ -18,7 +18,10 @@ Die Header- und Footer-Navigation auf allen Seiten gemeinsam pflegen.
 ## Ratgeber und Vergleich
 
 `patientenaufruf-vergleich.html` ist eine eigenständige Entscheidungshilfe für
-Praxisinhaber, MFA-Leitung und Praxis-IT. Sie führt vom konkreten Engpass über
+Praxisinhaber, MFA-Leitung und Praxis-IT. Der Einstieg bleibt ein kompakter
+Artikelkopf mit klarer Leserfrage und einer Einleitung zu Inhalt und Nutzen:
+keine Hero-Sektion, kein dekoratives Einstiegsschaubild und keine Start-CTAs.
+Die Seite führt vom konkreten Engpass über
 vorhandene PVS-Funktionen und einen nach Aufgaben gegliederten Anbietervergleich
 zur Erprobung eines vollständigen Ablaufs. Herstellerangaben, empirische Befunde
 und eigene Produktangaben werden getrennt und unmittelbar verlinkt. Die
