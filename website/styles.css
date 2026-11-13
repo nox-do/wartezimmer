@@ -913,14 +913,40 @@ html:has(.overview-dialog[open]) {
   color: var(--muted);
 }
 /* Editorial guide: a complete decision path, readable without JavaScript. */
+.guide-page article {
+  display: grid;
+  grid-template-columns: minmax(0, 850px) 210px;
+  column-gap: 60px;
+  width: min(1120px, calc(100% - 80px));
+  margin-inline: auto;
+}
+.guide-page article > .wrap,
+.guide-product-band > .wrap {
+  width: 100%;
+  margin-inline: 0;
+}
+.guide-page article > header,
+.guide-page article > section,
+.guide-page article > footer,
+.guide-meta {
+  grid-column: 1;
+  min-width: 0;
+}
+.guide-nav-label {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
 .guide-article-heading {
-  padding-block: 38px 24px;
+  padding-block: 38px 20px;
 }
 .guide-article-heading h1 {
-  max-width: 960px;
-  font-size: clamp(29px, 3.3vw, 42px);
+  font-size: clamp(28px, 3vw, 38px);
   font-weight: 650;
-  line-height: 1.23;
+  line-height: 1.25;
   letter-spacing: -0.035em;
   margin-bottom: 22px;
 }
@@ -929,10 +955,10 @@ html:has(.overview-dialog[open]) {
   margin-top: 12px;
 }
 .guide-hook {
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 600;
   color: var(--ink);
-  line-height: 1.5;
+  line-height: 1.55;
 }
 .guide-small-label {
   display: block;
@@ -951,21 +977,22 @@ html:has(.overview-dialog[open]) {
   font-size: 12px;
 }
 .guide-nav {
+  grid-column: 2;
+  grid-row: 1 / span 10;
+  align-self: start;
   position: sticky;
-  top: 0;
-  z-index: 5;
+  top: 28px;
   display: flex;
-  gap: 27px;
-  padding-block: 18px;
-  border-block: 1px solid var(--line);
-  background: var(--paper);
-  overflow-x: auto;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 42px;
+  padding: 0 0 0 22px;
+  border-left: 1px solid var(--line);
 }
 .guide-nav a {
-  white-space: nowrap;
-  color: var(--ink);
+  color: var(--muted);
   font-size: 13px;
-  font-weight: 600;
+  line-height: 1.45;
   text-decoration: none;
 }
 .guide-nav a:hover {
@@ -976,52 +1003,46 @@ html:has(.overview-dialog[open]) {
   scroll-margin-top: 76px;
 }
 .guide-section {
-  padding-block: 52px;
+  padding-block: 38px;
 }
 .guide-section-lined {
   border-top: 1px solid var(--line);
 }
 .guide-section-heading {
-  display: flex;
-  align-items: flex-start;
-  gap: 24px;
-  margin-bottom: 26px;
-}
-.guide-number {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-style: italic;
-  font-size: 48px;
-  line-height: 1;
-  color: #547c67;
-  min-width: 55px;
-}
-.guide-section-heading .eyebrow {
-  margin-bottom: 12px;
+  margin-bottom: 18px;
 }
 .guide-section-heading h2 {
-  font-size: clamp(27px, 2.8vw, 35px);
+  font-size: clamp(25px, 2.4vw, 30px);
+  line-height: 1.3;
+  letter-spacing: -0.03em;
 }
 .guide-section-lead {
-  max-width: 780px;
-  font-size: 18px;
-  margin-bottom: 32px;
+  font-size: 17px;
+  margin-bottom: 24px;
 }
 .guide-needs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 32px;
+  grid-template-columns: 1fr;
+  gap: 0;
 }
 .guide-needs > div {
-  border-top: 2px solid var(--green);
-  padding-top: 21px;
+  display: grid;
+  grid-template-columns: 145px minmax(0, 1fr);
+  gap: 8px 24px;
+  border-top: 1px solid var(--line);
+  padding-block: 20px;
 }
 .guide-needs h3 {
-  font-size: 23px;
-  line-height: 1.3;
-  margin-block: 14px 12px;
+  grid-column: 2;
+  font-size: 19px;
+  line-height: 1.35;
+  letter-spacing: -0.025em;
 }
 .guide-needs p {
-  margin-bottom: 16px;
+  grid-column: 2;
+}
+.guide-needs a {
+  grid-column: 2;
 }
 .guide-needs a,
 .guide-pvs-examples a,
@@ -1030,12 +1051,10 @@ html:has(.overview-dialog[open]) {
   color: var(--green);
 }
 .guide-evidence {
-  display: grid;
-  grid-template-columns: 1fr 1.7fr;
-  gap: 40px;
-  background: #ecece2;
-  padding: 30px;
-  margin-top: 40px;
+  background: #f0f1eb;
+  border-left: 3px solid #a4b6a0;
+  padding: 24px 26px;
+  margin-top: 28px;
 }
 .guide-call-path {
   margin-top: 34px;
@@ -1051,7 +1070,8 @@ html:has(.overview-dialog[open]) {
   max-width: 900px;
 }
 .guide-evidence h3 {
-  font-size: 25px;
+  font-size: 20px;
+  margin-bottom: 16px;
 }
 .guide-evidence-copy p + p {
   margin-top: 12px;
@@ -1062,28 +1082,24 @@ html:has(.overview-dialog[open]) {
   line-height: 1.6;
 }
 .guide-editorial-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 70px;
-  align-items: start;
+  display: block;
 }
 .guide-copy > p + p {
   margin-top: 18px;
 }
 .guide-pvs-examples {
-  border-left: 2px solid #c9d6c7;
-  padding-left: 28px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  border-top: 1px solid var(--line);
+  padding-top: 22px;
+  margin-top: 24px;
 }
 .guide-pvs-examples > div + div {
-  margin-top: 28px;
+  margin-top: 0;
 }
 .guide-pvs-examples p {
   margin-block: 10px;
-}
-.guide-table-hint {
-  display: none;
-  font-size: 13px;
-  margin-bottom: 12px;
 }
 .guide-table-scroll {
   overflow-x: auto;
@@ -1091,11 +1107,11 @@ html:has(.overview-dialog[open]) {
 }
 .guide-comparison {
   width: 100%;
-  min-width: 960px;
+  min-width: 0;
   border-collapse: collapse;
   table-layout: fixed;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 13px;
+  line-height: 1.65;
   background: #fdfcf8;
 }
 .guide-comparison caption {
@@ -1108,10 +1124,12 @@ html:has(.overview-dialog[open]) {
 }
 .guide-comparison th,
 .guide-comparison td {
-  padding: 22px 20px;
+  padding: 18px 14px;
   vertical-align: top;
   text-align: left;
   border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+  hyphens: auto;
 }
 .guide-comparison thead {
   background: var(--ink);
@@ -1127,7 +1145,7 @@ html:has(.overview-dialog[open]) {
   width: 18%;
 }
 .guide-comparison tbody th {
-  font-size: 16px;
+  font-size: 14px;
   background: #edf1e9;
 }
 .guide-comparison th span {
@@ -1144,12 +1162,12 @@ html:has(.overview-dialog[open]) {
   color: var(--ink);
 }
 .guide-cost-strip {
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 35px;
-  margin-top: 30px;
-  padding-block: 26px;
+  margin-top: 26px;
+  padding-block: 22px;
   border-block: 1px solid var(--line);
+}
+.guide-cost-strip p {
+  margin-top: 12px;
 }
 .guide-data-flow {
   display: grid;
@@ -1182,24 +1200,23 @@ html:has(.overview-dialog[open]) {
   font-size: 15px;
 }
 .guide-pullquote {
-  max-width: 770px;
-  margin-top: 40px;
-  padding-left: 24px;
-  border-left: 4px solid #ddb898;
+  margin-top: 28px;
+  padding-left: 20px;
+  border-left: 3px solid #cbb49b;
   color: var(--ink);
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: clamp(23px, 2.8vw, 32px);
-  line-height: 1.4;
+  font-size: 18px;
+  font-weight: 550;
+  line-height: 1.5;
 }
 .guide-product-band {
-  background: #e7ece3;
-  padding-block: 76px;
+  padding-block: 38px;
+  border-top: 1px solid var(--line);
 }
 .guide-product-intro {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 60px;
-  align-items: center;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 28px;
+  align-items: start;
 }
 .guide-product-image {
   padding: 14px;
@@ -1215,14 +1232,14 @@ html:has(.overview-dialog[open]) {
   padding: 12px 2px 0;
 }
 .guide-product-columns {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 60px;
-  margin-top: 44px;
+  margin-top: 30px;
+}
+.guide-product-columns > div + div {
+  margin-top: 28px;
 }
 .guide-product-columns h3 {
-  font-size: 25px;
-  margin-bottom: 16px;
+  font-size: 21px;
+  margin-bottom: 14px;
 }
 .guide-product-columns p {
   margin-bottom: 16px;
@@ -1230,10 +1247,10 @@ html:has(.overview-dialog[open]) {
 .guide-fit-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 60px;
-  margin-top: 36px;
-  padding-block: 30px;
-  border-block: 1px solid #c5d2c1;
+  gap: 28px;
+  margin-top: 26px;
+  padding-block: 24px;
+  border-block: 1px solid var(--line);
 }
 .guide-fit-grid h3 {
   margin-top: 12px;
@@ -1266,7 +1283,7 @@ html:has(.overview-dialog[open]) {
 }
 .guide-checklist {
   padding: 0;
-  margin: 0;
+  margin: 28px 0 0;
   border: 0;
   min-width: 0;
 }
@@ -1336,16 +1353,49 @@ html:has(.overview-dialog[open]) {
 .guide-teaser .button {
   flex-shrink: 0;
 }
+@media (max-width: 1100px) {
+  .guide-page article {
+    display: block;
+    width: min(860px, calc(100% - 40px));
+  }
+  .guide-nav {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px 22px;
+    margin-top: 0;
+    padding: 16px 0;
+    border-left: 0;
+    border-block: 1px solid var(--line);
+  }
+  .guide-nav-label {
+    flex-basis: 100%;
+  }
+}
+@media (max-width: 600px) {
+  .guide-needs > div,
+  .guide-pvs-examples {
+    display: block;
+  }
+  .guide-needs h3 {
+    margin-top: 10px;
+  }
+  .guide-needs p,
+  .guide-needs a {
+    margin-top: 10px;
+  }
+  .guide-needs a {
+    display: inline-block;
+  }
+  .guide-pvs-examples > div + div {
+    margin-top: 24px;
+  }
+}
 @media (max-width: 1000px) {
   .guide-nav {
     gap: 22px;
   }
-  .guide-table-hint {
-    display: block;
-  }
-  .guide-editorial-grid,
   .guide-product-intro,
-  .guide-product-columns,
   .guide-fit-grid {
     gap: 35px;
   }
@@ -1365,22 +1415,10 @@ html:has(.overview-dialog[open]) {
   }
   .guide-section,
   .guide-product-band {
-    padding-block: 48px;
+    padding-block: 32px;
   }
-  .guide-section-heading {
-    gap: 16px;
-  }
-  .guide-number {
-    min-width: 37px;
-    font-size: 36px;
-  }
-  .guide-needs,
-  .guide-editorial-grid,
   .guide-product-intro,
-  .guide-product-columns,
-  .guide-fit-grid,
-  .guide-evidence,
-  .guide-cost-strip {
+  .guide-fit-grid {
     grid-template-columns: 1fr;
     gap: 26px;
   }
@@ -1402,9 +1440,6 @@ html:has(.overview-dialog[open]) {
   }
 }
 @media (max-width: 430px) {
-  .guide-section-heading h2 br {
-    display: none;
-  }
   .guide-section-lead {
     font-size: 17px;
   }
@@ -1414,9 +1449,6 @@ html:has(.overview-dialog[open]) {
   }
 }
 @media screen and (max-width: 900px) {
-  .guide-table-hint {
-    display: none;
-  }
   .guide-table-scroll {
     border: 0;
     overflow: visible;
@@ -1479,8 +1511,7 @@ html:has(.overview-dialog[open]) {
   .guide-page .site-footer,
   .guide-page .guide-nav,
   .guide-page .actions,
-  .guide-page .skip-link,
-  .guide-page .guide-table-hint {
+  .guide-page .skip-link {
     display: none;
   }
   .guide-page {
@@ -1489,6 +1520,10 @@ html:has(.overview-dialog[open]) {
     font-size: 10pt;
   }
   .guide-page .wrap {
+    width: 100%;
+  }
+  .guide-page article {
+    display: block;
     width: 100%;
   }
   .guide-article-heading,

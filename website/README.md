@@ -21,6 +21,10 @@ Die Header- und Footer-Navigation auf allen Seiten gemeinsam pflegen.
 Praxisinhaber, MFA-Leitung und Praxis-IT. Der Einstieg bleibt ein kompakter
 Artikelkopf mit klarer Leserfrage und einer Einleitung zu Inhalt und Nutzen:
 keine Hero-Sektion, kein dekoratives Einstiegsschaubild und keine Start-CTAs.
+Das Layout folgt einem Fachartikel: begrenzte Textbreite, sachliche
+Zwischenüberschriften und ein seitliches Inhaltsverzeichnis am Desktop. Mobil
+steht das Inhaltsverzeichnis vor dem Artikel. Fachbegriffe dort verwenden, wo
+sie Entscheidungen präzisieren; Einleitungen und Hinweise nicht mehrfach wiederholen.
 Die Seite führt vom konkreten Engpass über
 vorhandene PVS-Funktionen und einen nach Aufgaben gegliederten Anbietervergleich
 zur Erprobung eines vollständigen Ablaufs. Herstellerangaben, empirische Befunde
