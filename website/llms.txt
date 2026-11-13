@@ -59,6 +59,7 @@ in Issues einstellen.
 ## Website
 
 - [Startseite](https://nox-do.github.io/wartezimmer/): Überblick und Einsatz im Praxisalltag.
+- [Patientenaufruf, Formulare und Patientenportale im Vergleich](https://nox-do.github.io/wartezimmer/patientenaufruf-vergleich.html): Quellenbasierte Entscheidungshilfe, vorhandene PVS-Module, Betriebsmodelle, Kosten und Checkliste für die Praxis.
 - [Downloads](https://nox-do.github.io/wartezimmer/downloads.html): Manager, Installations- und Updatepakete.
 - [Technik und Voraussetzungen](https://nox-do.github.io/wartezimmer/technik.html): Rechner, Docker, Geräte, HTTPS und Netztrennung.
 - [Lizenzübersicht](https://nox-do.github.io/wartezimmer/lizenzen.html): Lizenzumfang und Drittanbieterhinweise.

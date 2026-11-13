@@ -15,6 +15,23 @@ archiviert. Das Archiv wird nicht veröffentlicht.
 bereits im Hero sichtbar. Downloads und Technik haben eigene Seiten.
 Die Header- und Footer-Navigation auf allen Seiten gemeinsam pflegen.
 
+## Ratgeber und Vergleich
+
+`patientenaufruf-vergleich.html` ist eine eigenständige Entscheidungshilfe für
+Praxisinhaber, MFA-Leitung und Praxis-IT. Sie führt vom konkreten Engpass über
+vorhandene PVS-Funktionen und einen nach Aufgaben gegliederten Anbietervergleich
+zur Erprobung eines vollständigen Ablaufs. Herstellerangaben, empirische Befunde
+und eigene Produktangaben werden getrennt und unmittelbar verlinkt. Die
+Anbieterperspektive und der Recherchestand bleiben sichtbar; keine Rangliste oder
+unbelegte Einsparungsversprechen ergänzen.
+
+Die Seite enthält Article-Microdata, Canonical- und Open-Graph-Metadaten, wird in
+Sitemap und `llms.txt` aufgenommen und von der Startseite verlinkt. Sie benötigt
+kein JavaScript. Die Checkliste verwendet native Checkboxen ohne Speicherung
+oder Übertragung; Druckstile unterstützen die Besprechung im Team. Preise und
+Quellen beim Aktualisieren erneut prüfen. Angaben zum Manager-Backup, lokalen
+Portal und offenen Sicherheitsbefunden mit der Betriebsdokumentation abgleichen.
+
 ## Vorschau
 
 ```sh

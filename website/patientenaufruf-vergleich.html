@@ -1,0 +1,848 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>Patientenaufruf &amp; Patientenportale im Vergleich – Wartezimmer</title>
+    <meta
+      name="description"
+      content="Welches System entlastet Ihre Praxis? Patientenaufruf, digitale Anamnese und Patientenportale im Vergleich: Funktionen, PVS-Anbindung, Kosten und lokaler Betrieb."
+    />
+    <link
+      rel="canonical"
+      href="https://nox-do.github.io/wartezimmer/patientenaufruf-vergleich.html"
+    />
+    <meta property="og:type" content="article" />
+    <meta property="og:locale" content="de_DE" />
+    <meta property="og:title" content="Patientenaufruf, Formulare oder Patientenportal?" />
+    <meta
+      property="og:description"
+      content="Eine Entscheidungshilfe für Praxisinhaber und MFA: die passende Ergänzung finden, vorhandene PVS-Funktionen prüfen und den Aufwand realistisch vergleichen."
+    />
+    <meta
+      property="og:url"
+      content="https://nox-do.github.io/wartezimmer/patientenaufruf-vergleich.html"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="describedby" href="./llms.txt" type="text/plain" />
+  </head>
+  <body class="guide-page">
+    <a class="skip-link" href="#main">Zum Inhalt</a>
+    <header class="site-header wrap">
+      <a class="brand" href="./index.html" aria-label="Wartezimmer – Startseite"
+        ><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span
+        >Wartezimmer<span class="brand-subtitle">Für Einzel- und Gemeinschaftspraxen</span></a
+      >
+      <nav aria-label="Hauptnavigation">
+        <a href="./index.html#wz-funktionen">Praxisalltag</a
+        ><a href="./patientenaufruf-vergleich.html" aria-current="page">Ratgeber</a
+        ><a href="./downloads.html">Download</a><a href="./index.html#wz-kontakt">Kontakt</a
+        ><a href="https://github.com/nox-do/wartezimmer">GitHub</a>
+      </nav>
+    </header>
+    <main id="main">
+      <article itemscope itemtype="https://schema.org/Article">
+        <link
+          itemprop="mainEntityOfPage"
+          href="https://nox-do.github.io/wartezimmer/patientenaufruf-vergleich.html"
+        />
+        <meta itemprop="inLanguage" content="de-DE" />
+        <meta itemprop="datePublished" content="2026-11-13" />
+        <meta itemprop="dateModified" content="2026-11-13" />
+        <header class="guide-hero wrap">
+          <div class="guide-intro">
+            <p class="eyebrow">Praxisorganisation · Ratgeber &amp; Vergleich</p>
+            <h1 itemprop="headline">
+              Patientenaufruf,<br />
+              Formulare oder<br />
+              <em>Patientenportal?</em>
+            </h1>
+            <p class="lead" itemprop="description">
+              Welche digitale Ergänzung erleichtert Ihrem Team den Alltag? Finden Sie die passende
+              Lösung, ohne Ihr bestehendes PVS aus dem Blick zu verlieren.
+            </p>
+            <div class="actions">
+              <a class="button primary" href="#bedarf"
+                >Beim Praxisalltag anfangen <span aria-hidden="true">↓</span></a
+              ><a class="text-link" href="#vergleich">Direkt zum Vergleich →</a>
+            </div>
+          </div>
+          <aside class="guide-orientation" aria-label="Drei Aufgaben entlang des Praxisbesuchs">
+            <p class="guide-small-label">Wo brauchen Sie Unterstützung?</p>
+            <ol>
+              <li>
+                <span class="guide-phase">Vor dem Besuch</span><strong>Vorbereiten</strong>
+                <p>Termine, Anamnese und Unterlagen von zu Hause.</p>
+              </li>
+              <li class="guide-phase-local">
+                <span class="guide-phase">In der Praxis</span><strong>Den Besuch steuern</strong>
+                <p>Anmeldung, Warten, Aufruf und nächste Station.</p>
+              </li>
+              <li>
+                <span class="guide-phase">Nach dem Besuch</span
+                ><strong>In Verbindung bleiben</strong>
+                <p>Befunde, Nachrichten und weitere Anliegen.</p>
+              </li>
+            </ol>
+            <p class="guide-orientation-note">
+              Der Einsatzort entscheidet mit – besonders beim Patientenportal.
+            </p>
+          </aside>
+        </header>
+        <div class="guide-meta wrap">
+          <p>
+            Von
+            <span itemprop="author" itemscope itemtype="https://schema.org/Person"
+              ><a itemprop="url" href="./impressum.html"
+                ><span itemprop="name">Daniel Deuter</span></a
+              ></span
+            >, Entwickler von Wartezimmer · Stand:
+            <time datetime="2026-11-13">13. November 2026</time>
+          </p>
+          <p>
+            Einordnung aus Anbieterperspektive. Öffentliche Primärquellen, kein unabhängiger
+            Produkttest. <a href="#quellen">Zur Methode</a>
+          </p>
+        </div>
+        <nav class="guide-nav wrap" aria-label="Inhalt dieses Ratgebers">
+          <a href="#bedarf">01 Bedarf</a><a href="#pvs">02 Ihr PVS</a
+          ><a href="#vergleich">03 Vergleich</a><a href="#datenweg">04 Datenweg</a
+          ><a href="#wartezimmer">05 Wartezimmer</a><a href="#praxistest">06 Praxistest</a>
+        </nav>
+
+        <section class="guide-section wrap" id="bedarf" aria-labelledby="bedarf-heading">
+          <div class="guide-section-heading">
+            <span class="guide-number" aria-hidden="true">01</span>
+            <div>
+              <p class="eyebrow">Die richtige Aufgabe auswählen</p>
+              <h2 id="bedarf-heading">
+                Welche Arbeit soll<br />
+                einfacher werden?
+              </h2>
+            </div>
+          </div>
+          <p class="guide-section-lead">
+            Ein Aufrufsystem organisiert den Besuch vor Ort. Eine Formularlösung erfasst Angaben.
+            Ein Patientenportal verbindet Praxis und Patienten. Manche Produkte kombinieren diese
+            Aufgaben – die Übergaben müssen trotzdem zu Ihrem Team passen.
+          </p>
+          <div class="guide-needs">
+            <div>
+              <span class="guide-small-label">Aufruf &amp; Wege</span>
+              <h3>„Wer wartet wo – und wer ist als Nächstes dran?“</h3>
+              <p>
+                Sie brauchen eine gemeinsame Übersicht, eindeutige Aufrufe und eine Zuordnung zu
+                Räumen oder Stationen.
+              </p>
+              <a href="#vergleich">Aufrufsysteme vergleichen →</a>
+            </div>
+            <div>
+              <span class="guide-small-label">Aufnahme &amp; Unterlagen</span>
+              <h3>„Wir scannen, übertragen und fragen Angaben nach.“</h3>
+              <p>
+                Entscheidend sind passende Fragebögen, die richtige Patientenzuordnung und die
+                Übernahme ins PVS.
+              </p>
+              <a href="#datenweg">Den vollständigen Datenweg prüfen →</a>
+            </div>
+            <div>
+              <span class="guide-small-label">Kommunikation</span>
+              <h3>„Das soll schon vor dem Termin geklärt sein.“</h3>
+              <p>
+                Für Formulare zu Hause, Nachrichten und Befunde nach dem Besuch brauchen Sie einen
+                dafür vorgesehenen Online-Zugang.
+              </p>
+              <a href="#pvs">Vorhandene Portalmodule prüfen →</a>
+            </div>
+          </div>
+          <div class="guide-call-path">
+            <h3>Für den Aufruf: einen Besuch vollständig durchspielen.</h3>
+            <p>
+              <strong
+                >Anmeldung → Warteliste → Raumzuweisung und Aufruf → Abschluss oder nächste
+                Station.</strong
+              >
+            </p>
+            <p>
+              Wer aktualisiert den Zustand? Wie sieht das Team eine Änderung? Was passiert bei
+              Raumwechsel, Nichterscheinen oder einer dringenden Behandlung? Prüfen Sie diese
+              Schritte auch bei einem reinen Aufrufsystem.
+            </p>
+          </div>
+          <aside class="guide-evidence" aria-labelledby="evidence-heading">
+            <div>
+              <p class="eyebrow">Was Erhebungen beitragen</p>
+              <h3 id="evidence-heading">Entlastung muss im Ablauf ankommen.</h3>
+            </div>
+            <div class="guide-evidence-copy">
+              <p>
+                <strong
+                  >63 % der antwortenden Praxisinhaber berichteten von Personalengpässen</strong
+                >
+                im nichtärztlichen beziehungsweise nichttherapeutischen Bereich. Grundlage sind
+                2.876 Antworten in einer Zi-Befragung von Februar bis Juli 2025. Die vorläufige
+                Auswertung ist ungewichtet.
+                <a
+                  href="https://www.zi.de/fileadmin/Downloads/Themen/Praxis-Befragungen/Veroeffentlichungen/Fachinformationen/ZiPP2024_Vorabinformation.pdf#page=8"
+                  >Zi-Fachinformation, S. 4 und 8 ↗</a
+                >
+              </p>
+              <p>
+                Zugleich bezeichnen sich im
+                <strong
+                  >PraxisBarometer Digitalisierung 2026 64 % der Praxen als sehr oder eher
+                  aufgeschlossen</strong
+                >
+                gegenüber digitalen Innovationen. Befragt wurden rund 2.300 vertragsärztliche und
+                vertragspsychotherapeutische Praxen im Juli und August 2026.
+                <a
+                  href="https://www.iges.com/ergebnisse/projekte/2026/digitalisierung-der-ambulanten-versorgung/index_ger.html"
+                  >Ergebnisse von IGES und KBV ↗</a
+                >
+              </p>
+              <p class="guide-note">
+                Die Zahlen beschreiben die Befragten, nicht die Wirkung einer bestimmten Software.
+                Für Ihre Entscheidung zählt, welche Handgriffe im eigenen Ablauf tatsächlich
+                entfallen.
+              </p>
+            </div>
+          </aside>
+        </section>
+
+        <section
+          class="guide-section guide-section-lined wrap"
+          id="pvs"
+          aria-labelledby="pvs-heading"
+        >
+          <div class="guide-section-heading">
+            <span class="guide-number" aria-hidden="true">02</span>
+            <div>
+              <p class="eyebrow">Vor einer zusätzlichen Anschaffung</p>
+              <h2 id="pvs-heading">Was kann Ihr PVS schon?</h2>
+            </div>
+          </div>
+          <div class="guide-editorial-grid">
+            <div class="guide-copy">
+              <p>
+                Lassen Sie sich den gewünschten Ablauf mit Ihrem vorhandenen System zeigen: eine
+                Datei vom Patienten empfangen, korrekt zuordnen und in der Akte ablegen. Ein
+                enthaltenes Modul kann die einfachste Lösung sein.
+              </p>
+              <p>
+                <strong>„Funktioniert mit Ihrem PVS“ kann Verschiedenes bedeuten:</strong> eine
+                eigenständige Anwendung daneben, eine Dateiübergabe oder eine direkte Schnittstelle.
+                Fragen Sie nach dem konkreten Produkt, der Version und den verbleibenden manuellen
+                Schritten.
+              </p>
+            </div>
+            <div class="guide-pvs-examples">
+              <div>
+                <h3>medatixx + gesund.de</h3>
+                <p>
+                  Nachrichten und Dokumentenaustausch sind für unterstützte medatixx-Systeme
+                  verfügbar. Die Anbindung wird kostenfrei angeboten; das PVS selbst bleibt
+                  kostenpflichtig.
+                </p>
+                <a
+                  href="https://arztsoftware.medatixx.de/praxissoftware/zusatzloesungen/praxis-patienten-kommunikation"
+                  >Unterstützte Systeme und Funktionen ↗</a
+                >
+              </div>
+              <div>
+                <h3>tomedo + arzt-direkt</h3>
+                <p>
+                  Messenger und Dokumentenaustausch werden für tomedo derzeit kostenlos angeboten.
+                  Digitale Patientenformulare sind ein gesondertes kostenpflichtiges Modul.
+                </p>
+                <p>
+                  <a href="https://arzt-direkt.de/fuer-aerzte/module/patienten-app/"
+                    >Patienten-App ↗</a
+                  >
+                  ·
+                  <a
+                    href="https://support.tomedo.de/handbuch/tomedo/formulare/patientenformulare/faq-patientenformulare/"
+                    >Formularmodul ↗</a
+                  >
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section
+          class="guide-section guide-section-lined wrap"
+          id="vergleich"
+          aria-labelledby="vergleich-heading"
+        >
+          <div class="guide-section-heading">
+            <span class="guide-number" aria-hidden="true">03</span>
+            <div>
+              <p class="eyebrow">Lösungen nach Aufgabe vergleichen</p>
+              <h2 id="vergleich-heading">Was passt zu Ihrem Engpass?</h2>
+            </div>
+          </div>
+          <p class="guide-section-lead">
+            Ausgewählte Angebote für deutsche Arztpraxen. Aufruf, digitale Aufnahme und
+            Online-Kommunikation überschneiden sich, sind aber nicht austauschbar. Die Reihenfolge
+            ist keine Bewertung.
+          </p>
+          <p class="guide-table-hint">
+            Die Tabelle lässt sich auf kleinen Bildschirmen seitlich bewegen.
+          </p>
+          <div class="guide-table-scroll" role="region" aria-label="Anbietervergleich" tabindex="0">
+            <table class="guide-comparison" role="table">
+              <caption>
+                Funktionen, Betrieb, Datenwege und Preisorientierung – Herstellerangaben, geprüft am
+                13.11.2026
+              </caption>
+              <thead role="rowgroup">
+                <tr role="row">
+                  <th scope="col" role="columnheader">Lösung / Schwerpunkt</th>
+                  <th scope="col" role="columnheader">Betrieb &amp; Einstieg</th>
+                  <th scope="col" role="columnheader">PVS &amp; Datenweg</th>
+                  <th scope="col" role="columnheader">Preisorientierung</th>
+                </tr>
+              </thead>
+              <tbody role="rowgroup">
+                <tr role="row">
+                  <th scope="row" role="rowheader">
+                    <a href="https://www.praxisansatz.de/lisa/">LISA ↗</a
+                    ><span>Patientenaufruf</span>
+                  </th>
+                  <td role="cell" data-label="Betrieb &amp; Einstieg">
+                    Browserbasierter Dienst; Bildschirm- und Sprachaufruf. Eigene Einrichtung oder
+                    Einrichtungsservice, optional betreute LISA Box.
+                  </td>
+                  <td role="cell" data-label="PVS &amp; Datenweg">
+                    Direkter Aufruf aus tomedo; bei anderen PVS separate Anwendung. Besonders
+                    naheliegend für einfachen Aufruf in einer tomedo-Praxis.
+                  </td>
+                  <td role="cell" data-label="Preisorientierung">
+                    49 € netto je Behandler/Monat. Hardware und optionale Einrichtung kommen hinzu.
+                    Vollständiger Datenexport: in den geprüften Angaben offen.
+                  </td>
+                </tr>
+                <tr role="row">
+                  <th scope="row" role="rowheader">
+                    <a href="https://www.cleverq.de/branchen/patientenaufrufsystem/">cleverQ ↗</a
+                    ><span>Aufruf &amp; Besuchersteuerung</span>
+                  </th>
+                  <td role="cell" data-label="Betrieb &amp; Einstieg">
+                    Tickets, Selbstanmeldung, mehrere Stationen; Hardware und Einführung aus einer
+                    Hand möglich.
+                    <a href="https://www.cleverq.de/software/">Cloud oder lokales Docker-System</a>;
+                    lokal mit Fernzugriff für Installation und Updates.
+                  </td>
+                  <td role="cell" data-label="PVS &amp; Datenweg">
+                    Für größere Abläufe und Integrationsprojekte interessant.
+                    <a href="https://www.cleverq.de/intergrative-loesungen/"
+                      >API und konkrete Krankenhausanbindungen</a
+                    >
+                    beschrieben; Ihr PVS gesondert prüfen.
+                  </td>
+                  <td role="cell" data-label="Preisorientierung">
+                    Gesamtpreis für einen vergleichbaren Praxisumfang offen: Angebot einholen.
+                    <a href="https://www.cleverq.de/module/statistik/">Statistikexport</a> belegt;
+                    vollständige Datenmitnahme klären.
+                  </td>
+                </tr>
+                <tr role="row">
+                  <th scope="row" role="rowheader">
+                    <a href="https://idana.com/">Idana ↗</a><span>Anamnese &amp; Formulare</span>
+                  </th>
+                  <td role="cell" data-label="Betrieb &amp; Einstieg">
+                    Gehosteter Dienst, lokale Praxisanwendung für Windows/macOS; Patienten im
+                    Browser. Geeignet, wenn Fragebögen und deren Auswertung im Mittelpunkt stehen.
+                  </td>
+                  <td role="cell" data-label="PVS &amp; Datenweg">
+                    <a href="https://hilfe.idana.com/guides/einsatz-von-idana/exportmoeglichkeiten/"
+                      >GDT, PDF und JSON</a
+                    >
+                    dokumentiert. Konkrete Übernahme in Ihre PVS-Version vorführen lassen.
+                  </td>
+                  <td role="cell" data-label="Preisorientierung">
+                    <a href="https://idana.com/preise/">Regulär ab 79 € netto je Praxis/Monat</a>
+                    bei jährlicher Zahlung, nutzungsabhängig. PVS-Einrichtung ab 299 €.
+                    Aktionspreise und Zusatzleistungen gesondert prüfen.
+                  </td>
+                </tr>
+                <tr role="row">
+                  <th scope="row" role="rowheader">
+                    <a href="https://www.samedi.com/preise">samedi ↗</a
+                    ><span>Termine &amp; Praxisorganisation</span>
+                  </th>
+                  <td role="cell" data-label="Betrieb &amp; Einstieg">
+                    Cloud und Browser, lokale Anwendung für Schnittstellen. Ressourcenplanung,
+                    Selbstanmeldung, Formulare und Patientenkonto je nach Paket.
+                  </td>
+                  <td role="cell" data-label="PVS &amp; Datenweg">
+                    <a href="https://repo.samedi.de/samedi-app/latest/index.html"
+                      >GDT/VDDS/x.time</a
+                    >
+                    dokumentiert. Interessant bei verzahnter Termin- und Ressourcenplanung. Umfang
+                    des Dokumentenexports prüfen.
+                  </td>
+                  <td role="cell" data-label="Preisorientierung">
+                    59/99/199 € je Arzt/Monat laut Preisseite. Module, Einrichtung und Umsatzsteuer
+                    im Angebot bestätigen.
+                    <a href="https://legal.samedi.de/for_customers/tos/"
+                      >CSV-Ausgabe nach Vertragsende</a
+                    >
+                    ist zeitlich begrenzt.
+                  </td>
+                </tr>
+                <tr role="row">
+                  <th scope="row" role="rowheader">
+                    <a href="https://info.doctolib.de/">Doctolib Patientenmanagement ↗</a
+                    ><span>Termine &amp; Kommunikation</span>
+                  </th>
+                  <td role="cell" data-label="Betrieb &amp; Einstieg">
+                    Cloud, Praxisoberfläche und Patienten-App; Anbieter übernimmt den Dienstbetrieb.
+                    Relevant für Termine und Austausch vor dem Besuch.
+                  </td>
+                  <td role="cell" data-label="PVS &amp; Datenweg">
+                    <a
+                      href="https://doctolibpatient.zendesk.com/hc/de/articles/360009570200-Ein-Dokument-mit-%C3%84rzt-innen-teilen"
+                      >Dokumentenaustausch</a
+                    >
+                    und
+                    <a
+                      href="https://doctolib.zendesk.com/hc/de/articles/204738165-Einen-sofortigen-Export-erstellen-Patientenbasis-Terminhistorie-etc"
+                      >Stamm-/Termindatenexport</a
+                    >
+                    beschrieben. Vollständiger Dokumentenexport und konkrete PVS-Anbindung bleiben
+                    zu prüfen.
+                  </td>
+                  <td role="cell" data-label="Preisorientierung">
+                    <a href="https://info.doctolib.de/preis/"
+                      >Hausarzt-Auswahl: 229 € inkl. MwSt. je Arzt/Monat</a
+                    >
+                    im Jahresabo mit KI-Telefon. Ohne KI-Telefon nennt der Hinweis 139 €/Monat;
+                    genaue Abrechnung bestätigen.
+                  </td>
+                </tr>
+                <tr role="row">
+                  <th scope="row" role="rowheader">
+                    <a href="#wartezimmer">Wartezimmer ↓</a><span>Besuchsabläufe vor Ort</span>
+                  </th>
+                  <td role="cell" data-label="Betrieb &amp; Einstieg">
+                    Lokal auf einem Praxisrechner. Manager für macOS/Windows x64; Team im Browser.
+                    Aufruf, Räume und mehrstufige Abläufe, optional Aufnahme vor Ort.
+                  </td>
+                  <td role="cell" data-label="PVS &amp; Datenweg">
+                    Keine direkte Standard-PVS-Anbindung. Optionaler Kontaktabgleich per CSV;
+                    Unterlagen als Datei/PDF. Lokales Portal für den laufenden Besuch.
+                  </td>
+                  <td role="cell" data-label="Preisorientierung">
+                    <a href="./lizenzen.html">Keine Lizenzgebühr für zulässigen Eigenbetrieb.</a>
+                    Hardware, Einrichtung und Betreuung einrechnen. Source-available; kein
+                    zugesicherter Komplettbetrieb.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="guide-note">
+            „Offen“ bedeutet: in den geprüften Quellen nicht ausreichend geklärt. Es bedeutet nicht,
+            dass eine Funktion fehlt. Die Preise beziehen sich auf unterschiedliche Leistungen und
+            Abrechnungseinheiten.
+          </p>
+          <div class="guide-cost-strip">
+            <h3>Vergleichen Sie den Aufwand für Ihre Praxis.</h3>
+            <p>
+              <strong>Über drei Jahre:</strong> Einrichtung + Hardware + 36 × laufende Gebühren +
+              Betreuung + interner Aufwand. Lassen Sie sich dasselbe Nutzungsszenario anbieten –
+              einschließlich Schnittstellen, Updates und Datenmitnahme.
+            </p>
+          </div>
+        </section>
+
+        <section
+          class="guide-section guide-section-lined wrap"
+          id="datenweg"
+          aria-labelledby="datenweg-heading"
+        >
+          <div class="guide-section-heading">
+            <span class="guide-number" aria-hidden="true">04</span>
+            <div>
+              <p class="eyebrow">Die entscheidende Übergabe</p>
+              <h2 id="datenweg-heading">
+                Eine Datei ist erst dann hilfreich,<br />
+                wenn sie richtig ankommt.
+              </h2>
+            </div>
+          </div>
+          <p class="guide-section-lead">
+            Lassen Sie sich nicht nur den Upload zeigen. Verfolgen Sie eine Unterlage vom Patienten
+            bis in die richtige Akte. Dieses Beispiel ist ein Prüfschema für jede Lösung.
+          </p>
+          <ol class="guide-data-flow">
+            <li>
+              <span aria-hidden="true">1</span>
+              <h3>Abgeben</h3>
+              <p>
+                Zu Hause oder in der Praxis? Eigenes Smartphone oder Praxisgerät? Was geht ohne
+                Smartphone?
+              </p>
+            </li>
+            <li>
+              <span aria-hidden="true">2</span>
+              <h3>Zuordnen</h3>
+              <p>
+                Wie wird die Identität geprüft? Wie werden ähnlich benannte Patienten und falsche
+                Zuordnungen behandelt?
+              </p>
+            </li>
+            <li>
+              <span aria-hidden="true">3</span>
+              <h3>Prüfen</h3>
+              <p>
+                Wer kontrolliert Vollständigkeit und Inhalt? Wo erscheinen fehlende Angaben oder
+                auffällige Dateien?
+              </p>
+            </li>
+            <li>
+              <span aria-hidden="true">4</span>
+              <h3>Übernehmen</h3>
+              <p>
+                PDF, Dateiexport oder strukturierte Antworten? Wer bestätigt die Ablage im PVS,
+                bevor die Zwischenkopie gelöscht wird?
+              </p>
+            </li>
+          </ol>
+          <p class="guide-pullquote">
+            Welche Angaben kommen automatisch an – und welche Schritte übernimmt weiterhin Ihr Team?
+          </p>
+        </section>
+
+        <section class="guide-product-band" id="wartezimmer" aria-labelledby="wartezimmer-heading">
+          <div class="wrap">
+            <div class="guide-section-heading">
+              <span class="guide-number" aria-hidden="true">05</span>
+              <div>
+                <p class="eyebrow">Unsere Lösung einordnen</p>
+                <h2 id="wartezimmer-heading">
+                  Wartezimmer ergänzt<br />
+                  den Ablauf in Ihrer Praxis.
+                </h2>
+              </div>
+            </div>
+            <div class="guide-product-intro">
+              <div class="guide-copy">
+                <p>
+                  Ihr PVS bleibt für Patientenakte, Dokumentation und Abrechnung zuständig.
+                  Wartezimmer verbindet Anmeldung, Warteliste, Räume und Aufruf. Bei Bedarf kommt
+                  die lokale Abgabe von Unterlagen hinzu.
+                </p>
+                <p>
+                  Das passt besonders, wenn mehrere Behandelnde und Stationen einen gemeinsamen
+                  Überblick brauchen. Sie können mit der Teamübersicht beginnen und Terminal oder
+                  Anzeigen später ergänzen.
+                </p>
+                <p>
+                  <a class="text-link" href="./index.html#wz-besuch"
+                    >Einen Besuch mit Wartezimmer ansehen →</a
+                  >
+                </p>
+              </div>
+              <figure class="guide-product-image">
+                <img
+                  src="./images/produkt-warteliste.png"
+                  width="842"
+                  height="687"
+                  loading="lazy"
+                  alt="Wartezimmer-Teamübersicht mit Warteliste und Besuchszuständen"
+                />
+                <figcaption>
+                  Produktansicht mit fiktiven Daten. Die medizinische Priorität bestimmt das
+                  Praxisteam.
+                </figcaption>
+              </figure>
+            </div>
+            <div class="guide-product-columns">
+              <div>
+                <h3>Geführt einrichten und wiederherstellen</h3>
+                <p>
+                  Der Manager übernimmt Paketprüfung, Installation, Start, Updates und die
+                  Wiederherstellung von Einstellungen über eine Oberfläche. Dafür sind im
+                  vorgesehenen Ablauf keine Konsolenbefehle nötig.
+                </p>
+                <p>
+                  <strong
+                    >Unser Richtwert aus der Entwicklung: etwa fünf Minuten für die
+                    Basisinstallation auf einem vorbereiteten Rechner.</strong
+                  >
+                  Docker muss laufen und das Paket vorliegen. HTTPS, Patientenzugang und die
+                  Einrichtung Ihrer Abläufe kommen hinzu.
+                </p>
+                <p>
+                  Die geführte Neuinstallation kann Einstellungen aus einem Backup übernehmen.
+                  Laufende Besuche werden dabei nicht wiederhergestellt; Geräte müssen neu gekoppelt
+                  werden. Planen Sie für eine Unterbrechung einen Ersatzablauf ein.
+                </p>
+                <a
+                  href="https://github.com/nox-do/wartezimmer/blob/main/docs/operations/reinstall-recovery.md"
+                  >Installation und Recovery im Detail ↗</a
+                >
+              </div>
+              <div>
+                <h3>Lokale Verarbeitung mit kurzem Datenleben</h3>
+                <p>
+                  Wartezimmer führt keine dauerhafte Patientenakte. Unterlagen dienen der
+                  Bearbeitung des laufenden Besuchs. Nach Export oder Verwerfen, bei endgültiger
+                  Entlassung und beim Tagesreset werden sie aus Wartezimmer entfernt.
+                </p>
+                <p>
+                  Exportierte Dateien bleiben erhalten und gehören in Ihren Archivierungs- und
+                  Sicherungsprozess. Auch vorübergehend verarbeitete personenbezogene Daten brauchen
+                  Zugriffsschutz und klare Zuständigkeiten.
+                </p>
+                <p>
+                  Noch nicht exportierte Unterlagen können bei einem Containerneustart verloren
+                  gehen und müssen erneut abgegeben werden. Prüfen Sie deshalb vor Wartung und
+                  Updates die offenen Unterlagen.
+                </p>
+                <p>
+                  Der Kernbetrieb benötigt kein Cloud-Backend. Für Zertifikate und optionale
+                  Nachrichten können externe Dienste hinzukommen.
+                </p>
+                <a href="./technik.html#portal-dokumente">Dokumente, Löschung und Portalzugang →</a>
+              </div>
+            </div>
+            <p class="guide-form-scope">
+              <strong>Aktueller Formularumfang:</strong> allgemeinmedizinische Erstanamnese und
+              Datenschutz-Einwilligung. Weitere Vorlagen erfordern eine Erweiterung im Projekt; ein
+              frei bedienbarer Formularbaukasten gehört derzeit nicht zum Umfang.
+              <a
+                href="https://github.com/nox-do/wartezimmer/blob/main/app/src/shared/forms/templates/README.md"
+                >Vorlagen und Erweiterung ↗</a
+              >
+            </p>
+            <div class="guide-fit-grid">
+              <div>
+                <span class="guide-small-label">Passt zu Wartezimmer</span>
+                <h3>Besuche vor Ort organisieren</h3>
+                <ul>
+                  <li>Gemeinsame Übersicht, Aufruf und nächste Station.</li>
+                  <li>Bestehendes PVS behalten, lokal ergänzen.</li>
+                  <li>Formulare und Uploads während des Besuchs abgeben.</li>
+                  <li>Eigene Abläufe gestalten, bei Bedarf mit IT-Unterstützung.</li>
+                </ul>
+              </div>
+              <div>
+                <span class="guide-small-label">Andere Lösungen zuerst prüfen</span>
+                <h3>Vor und nach dem Besuch kommunizieren</h3>
+                <ul>
+                  <li>Formulare regelmäßig von zu Hause ausfüllen lassen.</li>
+                  <li>Dauerhafte Patientenkonten und Befundversand anbieten.</li>
+                  <li>Große Fachfragebogen-Kataloge sofort einsetzen.</li>
+                  <li>Strukturierte Daten ohne Dateiübergabe ins PVS übernehmen.</li>
+                </ul>
+              </div>
+            </div>
+            <details class="guide-details">
+              <summary>Was steckt hinter den geregelten Besuchsabläufen?</summary>
+              <div class="guide-copy">
+                <p>
+                  Flow-Core prüft serverseitig, welche Zustandswechsel zulässig sind.
+                  Zusammengehörige Änderungen laufen in Datenbanktransaktionen; Raumkapazität und
+                  Voraussetzungen werden vor der Zuweisung geprüft. Mehrstufige Abläufe und
+                  geschützte Vorlagenänderungen verhindern, dass eine Konfigurationsänderung
+                  laufende Besuche beliebig umdeutet.
+                </p>
+                <p>
+                  Das sind konkrete Eigenschaften der Softwarearchitektur. Wie viel Arbeit Ihre
+                  Praxis damit spart, muss der eigene Ablauf zeigen.
+                  <a
+                    href="https://github.com/nox-do/wartezimmer/blob/main/packages/flow-core/README.md"
+                    >Architektur, Tests und bekannte Grenzen ↗</a
+                  >
+                </p>
+              </div>
+            </details>
+            <p class="guide-security-note">
+              <strong>Aktueller Sicherheitsstand:</strong> Im Manager und eingebetteten Setup ist
+              CVE-2026-111497 weiterhin offen. Lokaler Betrieb beseitigt diese Runtime-Lücke nicht.
+              <a href="https://github.com/nox-do/wartezimmer/blob/main/KNOWN_VULNERABILITIES.md"
+                >Befund, Einschränkungen und Stand der Behebung ↗</a
+              >
+            </p>
+            <div class="actions">
+              <a class="button primary" href="./downloads.html">Wartezimmer ausprobieren →</a
+              ><a class="text-link" href="./technik.html">Technik und Voraussetzungen →</a>
+            </div>
+          </div>
+        </section>
+
+        <section class="guide-section wrap" id="praxistest" aria-labelledby="praxistest-heading">
+          <div class="guide-section-heading">
+            <span class="guide-number" aria-hidden="true">06</span>
+            <div>
+              <p class="eyebrow">Eine Entscheidung im Team treffen</p>
+              <h2 id="praxistest-heading">
+                Erproben Sie einen Ablauf.<br />
+                Mit den Menschen, die ihn nutzen.
+              </h2>
+            </div>
+          </div>
+          <div class="guide-editorial-grid">
+            <div class="guide-copy">
+              <p>
+                Wählen Sie eine wiederkehrende Situation aus Ihrer Praxis. Die MFA-Leitung prüft die
+                Handgriffe, die ärztliche Leitung den Nutzen und die IT die technischen
+                Voraussetzungen.
+              </p>
+              <p>
+                Beginnen Sie mit fiktiven Daten. Beobachten Sie anschließend im freigegebenen
+                Betrieb beispielsweise Nachfragen, doppelte Eingaben und nötige Wege. Vergleichen
+                Sie ähnliche Situationen, bevor Sie eine Zeitersparnis annehmen.
+              </p>
+              <p class="guide-note">
+                Die Checkliste lässt sich direkt abhaken und über die Druckfunktion Ihres Browsers
+                mitnehmen. Angaben werden nicht übertragen oder dauerhaft gespeichert.
+              </p>
+            </div>
+            <fieldset class="guide-checklist">
+              <legend>Unsere Praxisprobe</legend>
+              <label
+                ><input type="checkbox" /><span
+                  >Ein konkreter Engpass und ein Erfolgskriterium sind benannt.</span
+                ></label
+              ><label
+                ><input type="checkbox" /><span
+                  >Vorhandene PVS-Funktionen wurden mit demselben Ablauf geprüft.</span
+                ></label
+              ><label
+                ><input type="checkbox" /><span
+                  >Patient, MFA und PVS sind im vollständigen Durchlauf berücksichtigt.</span
+                ></label
+              ><label
+                ><input type="checkbox" /><span
+                  >Raumwechsel, falsche Zuordnung und Patienten ohne Smartphone wurden
+                  mitgedacht.</span
+                ></label
+              ><label
+                ><input type="checkbox" /><span
+                  >Für Ausfall, Wiederanlauf und offene Unterlagen gibt es einen Ablauf.</span
+                ></label
+              ><label
+                ><input type="checkbox" /><span
+                  >Kosten, Betreuung, Datenexport und Zugänge sind geklärt.</span
+                ></label
+              >
+            </fieldset>
+          </div>
+        </section>
+
+        <section class="guide-section guide-section-lined wrap" aria-labelledby="fragen-heading">
+          <div class="guide-section-heading">
+            <div>
+              <p class="eyebrow">Häufige Entscheidungsfragen</p>
+              <h2 id="fragen-heading">
+                Was vor der Auswahl<br />
+                klar sein sollte.
+              </h2>
+            </div>
+          </div>
+          <div class="guide-faq">
+            <details>
+              <summary>
+                Kann ein Patientenaufrufsystem ohne PVS-Schnittstelle sinnvoll sein?
+              </summary>
+              <p>
+                Ja, wenn es einen eigenständigen Ablauf verbessert und die verbleibende Eingabe
+                vertretbar ist. Prüfen Sie mit einem echten Beispielszenario, wo doppelte Erfassung
+                entsteht. Eine Dateiübergabe ist keine strukturierte Schnittstelle; eine
+                Schnittstelle ist wiederum noch kein Beleg für einen reibungslosen Gesamtprozess.
+              </p>
+            </details>
+            <details>
+              <summary>Was unterscheidet ein lokales Portal von einem Internetportal?</summary>
+              <p>
+                Ein lokales Portal ist innerhalb des dafür eingerichteten Netzes erreichbar. Bei
+                Wartezimmer ist es an den laufenden Besuch gebunden. Für eigene Smartphones braucht
+                es einen eingerichteten Patientenzugang mit HTTPS und geprüfter Netztrennung. Ein
+                dauerhaftes Konto oder öffentliches Ausfüllen von zu Hause gehört nicht zum
+                aktuellen Umfang. <a href="./technik.html">Netzwerkvoraussetzungen →</a>
+              </p>
+            </details>
+            <details>
+              <summary>Ist lokaler Betrieb automatisch datenschutzkonform?</summary>
+              <p>
+                Lokaler Betrieb ermöglicht die Verarbeitung auf dem eigenen Rechner. Kurze
+                Aufbewahrung begrenzt den Datenbestand. Beides ersetzt nicht den Schutz während der
+                Verarbeitung: Auch Erheben, Verwenden und Löschen personenbezogener Daten fallen
+                unter die DSGVO. Für Ihre Praxis müssen Zugänge, Übertragung, Löschung und
+                beteiligte Dienstleister passend geregelt sein.
+                <a href="https://www.edpb.europa.eu/contact/frequently-asked-questions_en"
+                  >Begriff der Verarbeitung beim Europäischen Datenschutzausschuss ↗</a
+                >
+              </p>
+            </details>
+            <details>
+              <summary>Was sichert das Wartezimmer-Backup?</summary>
+              <p>
+                Einstellungen und Konfiguration, gegebenenfalls einschließlich HTTPS-Daten. Es ist
+                kein Archiv für Besuche oder Patientenunterlagen. Die Sicherung kann Zugangsdaten
+                und private Schlüssel enthalten und ist nicht selbst verschlüsselt. Bewahren Sie sie
+                geschützt auf; bereits exportierte Unterlagen sichern Sie separat.
+                <a href="https://github.com/nox-do/wartezimmer/blob/main/docs/operations/backup.md"
+                  >Backupumfang und Wiederherstellung ↗</a
+                >
+              </p>
+            </details>
+            <details>
+              <summary>Ist Wartezimmer kostenlos und Open Source?</summary>
+              <p>
+                Für den zulässigen Eigenbetrieb fällt keine Lizenzgebühr an. Einrichtung, Hardware
+                und Betreuung können Kosten verursachen. Die eigene Lizenz erlaubt Anpassungen und
+                beauftragte IT-Leistungen, beschränkt aber Weitergabe und eigene Produktangebote.
+                Deshalb ist Wartezimmer Source-available, keine Open-Source-Software im OSI-Sinn.
+                Eine Pflicht zu Support oder Updates entsteht aus der Lizenz nicht.
+                <a href="./lizenzen.html">Lizenz verständlich erklärt →</a>
+              </p>
+            </details>
+          </div>
+        </section>
+
+        <footer class="guide-sources wrap" id="quellen">
+          <h2>Quellen und Einordnung</h2>
+          <p>
+            Dieser Ratgeber stammt vom Entwickler von Wartezimmer. Die Auswahl zeigt
+            unterschiedliche Lösungswege für deutsche Arztpraxen und erhebt keinen Anspruch auf
+            Vollständigkeit. Funktions- und Preisangaben beruhen auf den unmittelbar verlinkten
+            Herstellerquellen, geprüft am 13. November 2026. Es wurden keine praktischen
+            Vergleichstests mit Fremdprodukten durchgeführt.
+          </p>
+          <p>
+            Wartezimmer-Angaben beziehen sich auf Version 6.1.7 und die verlinkte
+            Projektdokumentation. Zahlen aus Erhebungen beschreiben deren Teilnehmer und
+            Fragestellungen; sie sind kein Wirksamkeitsnachweis für Wartezimmer. Vor einer
+            Entscheidung sollten Sie Paketumfang, Kosten und Kompatibilität anhand eines aktuellen
+            Angebots bestätigen lassen.
+          </p>
+          <p>
+            Eine Angabe ist veraltet oder unklar?
+            <a href="./index.html#wz-kontakt">Korrektur oder Rückfrage senden →</a>
+          </p>
+        </footer>
+      </article>
+    </main>
+    <footer class="site-footer wrap">
+      <a class="brand" href="./index.html">Wartezimmer</a>
+      <nav aria-label="Weitere Informationen">
+        <a href="./patientenaufruf-vergleich.html">Ratgeber &amp; Vergleich</a
+        ><a href="./downloads.html">Downloads</a><a href="./technik.html">Technik</a
+        ><a href="./lizenzen.html">Lizenzen</a><a href="./impressum.html">Impressum</a
+        ><a href="./datenschutz.html">Datenschutz</a
+        ><a href="https://github.com/nox-do/wartezimmer">Quellcode auf GitHub</a>
+      </nav>
+      <span>Mehr Ruhe im Praxisalltag.</span>
+    </footer>
+  </body>
+</html>

@@ -12,6 +12,7 @@ const pages = [
   'index.html',
   'downloads.html',
   'technik.html',
+  'patientenaufruf-vergleich.html',
   'impressum.html',
   'datenschutz.html',
   'lizenzen.html',
