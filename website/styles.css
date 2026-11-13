@@ -978,7 +978,7 @@ html:has(.overview-dialog[open]) {
 }
 .guide-nav {
   grid-column: 2;
-  grid-row: 1 / span 10;
+  grid-row: 1 / span 11;
   align-self: start;
   position: sticky;
   top: 28px;
@@ -1073,9 +1073,6 @@ html:has(.overview-dialog[open]) {
   font-size: 20px;
   margin-bottom: 16px;
 }
-.guide-evidence-copy p + p {
-  margin-top: 12px;
-}
 .guide-note {
   margin-top: 16px;
   font-size: 13px;
@@ -1142,7 +1139,66 @@ html:has(.overview-dialog[open]) {
   padding-block: 16px;
 }
 .guide-comparison thead th:first-child {
-  width: 18%;
+  width: 20%;
+}
+.guide-comparison thead th:nth-child(2) {
+  width: 15%;
+}
+.guide-comparison thead th:nth-child(3) {
+  width: 27%;
+}
+.guide-comparison .guide-mode {
+  display: block;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+.guide-comparison .guide-price {
+  display: block;
+  color: var(--ink);
+  font-size: 22px;
+  font-weight: 650;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.guide-price-unit {
+  display: block;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 8px;
+}
+.guide-vendor-details {
+  padding-block: 22px;
+  border-bottom: 1px solid var(--line);
+}
+.guide-vendor-details summary {
+  font-weight: 650;
+  font-size: 16px;
+}
+.guide-vendor-details dl {
+  margin-top: 20px;
+}
+.guide-vendor-details dl > div + div {
+  margin-top: 18px;
+}
+.guide-vendor-details dt {
+  font-weight: 650;
+}
+.guide-vendor-details dd {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+.guide-study-list > section {
+  padding-block: 22px;
+  border-top: 1px solid var(--line);
+}
+.guide-study-list h3 {
+  font-size: 21px;
+  margin-block: 10px;
+}
+.guide-study-list p:not(.guide-small-label) {
+  font-size: 15px;
 }
 .guide-comparison tbody th {
   font-size: 14px;
@@ -1477,10 +1533,13 @@ html:has(.overview-dialog[open]) {
     gap: 20px;
   }
   .guide-comparison tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     border: 1px solid var(--line);
     background: #fdfcf8;
   }
   .guide-comparison tbody th {
+    grid-column: 1 / -1;
     padding: 17px 20px;
     font-size: 21px;
   }
@@ -1489,7 +1548,8 @@ html:has(.overview-dialog[open]) {
     border-bottom: 0;
     font-size: 15px;
   }
-  .guide-comparison td + td {
+  .guide-comparison td:last-child {
+    grid-column: 1 / -1;
     padding-top: 0;
   }
   .guide-comparison td::before {

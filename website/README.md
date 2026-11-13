@@ -32,6 +32,14 @@ und eigene Produktangaben werden getrennt und unmittelbar verlinkt. Die
 Anbieterperspektive und der Recherchestand bleiben sichtbar; keine Rangliste oder
 unbelegte Einsparungsversprechen ergänzen.
 
+Betriebsmodell und Softwarepreis haben eigene, auf einen Blick lesbare Spalten;
+Bezugsgröße, Umsatzsteuer und Preisbedingungen bleiben sichtbar. Einzelheiten zu
+Einrichtung und Export stehen unter der Tabelle. Studienergebnisse zur Entlastung
+benennen Messgröße, Stichprobe, Design und Grenzen. Herstellerbefragungen nicht
+als gemessene Wirksamkeit oder Zeitgewinn durch Wartezimmer darstellen.
+CSV-Kontaktabgleich ist vorhanden; GDT-/PVS-Individualentwicklung bleibt vom
+Standardumfang und einer geprüften Anbindung an ein konkretes PVS getrennt.
+
 Die Seite enthält Article-Microdata, Canonical- und Open-Graph-Metadaten, wird in
 Sitemap und `llms.txt` aufgenommen und von der Startseite verlinkt. Sie benötigt
 kein JavaScript. Die Checkliste verwendet native Checkboxen ohne Speicherung
