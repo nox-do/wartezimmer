@@ -648,6 +648,69 @@ test('saveHostNetwork preserves active TLS mode and canonical URL', async () => 
   });
 });
 
+for (const operation of ['network', 'setup'] as const) {
+  for (const mode of ['managed', 'custom'] as const) {
+    test(`${operation} synchronizes the staff IP with active ${mode} HTTPS`, async () => {
+      await withRoot(async (root) => {
+        writeExample(root, 'PROXY_ENABLED=false\nAPP_BIND_ADDRESS=0.0.0.0\nTLS_LAN_IP=');
+        const identity = {
+          TLS_STATE: 'active',
+          TLS_MODE: mode,
+          TLS_HOSTNAME: 'staff.example.test',
+          TLS_PORTAL_HOSTNAME: 'portal.example.test',
+          TLS_WILDCARD_CERTIFICATE_NAME: '*.example.test',
+          TLS_CUTOVER_APPLIED: 'true',
+          TLS_CERT_ISSUER: 'Test CA',
+          TLS_CERT_NAMES: '["staff.example.test"]',
+        };
+        writeEnv(root, {
+          PRACTICE_DISPLAY_NAME: 'Praxis Nord',
+          AUTH_KEY_CAPTIVE: SECRET,
+          SANDBOX_INTERNAL_TOKEN: SECRET,
+          ...proxyOn,
+          ...identity,
+          PROXY_MODE: `tls-${mode}`,
+          SETUP_LAN_APP_IP: '192.168.1.107',
+          TLS_LAN_IP: '192.168.1.107',
+          CANONICAL_BASE_URL: 'https://staff.example.test',
+          SETUP_RESTRICTED_ENABLED: mode === 'managed' ? 'true' : 'false',
+          SETUP_RESTRICTED_APP_IP: '10.20.0.2',
+          SETUP_RESTRICTED_INTERFACE_ID: 'mac:aa:00:00:00:00:07',
+          SETUP_RESTRICTED_WARNINGS_CONFIRMED: 'true',
+          SETUP_RESTRICTED_SAME_INTERFACE_CONFIRMED: 'false',
+        });
+        const input = { lanAppIp: '192.168.1.100', gateway: gwOff('192.168.1.100') };
+        if (operation === 'network') {
+          await saveHostNetwork(ctx(root), input);
+        } else {
+          await applySetupPlan(ctx(root), {
+            ...input,
+            practiceDisplayName: 'Praxis Nord',
+            preserveEnv: true,
+            runCompose: false,
+            runProbes: false,
+          });
+        }
+        const after = env(root);
+        assert.equal(after.get('SETUP_LAN_APP_IP'), '192.168.1.100');
+        assert.equal(after.get('TLS_LAN_IP'), '192.168.1.100');
+        assert.equal(
+          fs
+            .readFileSync(path.join(root, '.env'), 'utf8')
+            .split('\n')
+            .filter((line) => line.startsWith('TLS_LAN_IP=')).length,
+          1,
+        );
+        assert.equal(after.get('CANONICAL_BASE_URL'), 'https://staff.example.test');
+        assert.equal(after.get('PROXY_MODE'), `tls-${mode}`);
+        assert.equal(after.get('SETUP_RESTRICTED_APP_IP'), '10.20.0.2');
+        for (const [key, value] of Object.entries(identity))
+          assert.equal(after.get(key), value, key);
+      });
+    });
+  }
+}
+
 test('saveHostNetwork syncs TLS_LAN_IP during TLS preparation', async () => {
   await withRoot(async (root) => {
     writeEnv(root, {
@@ -874,9 +937,12 @@ test('applySetupPlan preserves prepared and active restricted state', async () =
   });
 });
 
-test('HTTP host apply preserves an in-progress TLS preparation', async () => {
+test('HTTP host apply preserves an in-progress TLS preparation and syncs its IP', async () => {
   await withRoot(async (root) => {
-    writeExample(root, 'PROXY_ENABLED=false\nPROXY_MODE=off\nAPP_BIND_ADDRESS=0.0.0.0');
+    writeExample(
+      root,
+      'PROXY_ENABLED=false\nPROXY_MODE=off\nAPP_BIND_ADDRESS=0.0.0.0\nTLS_LAN_IP=',
+    );
     writeEnv(root, {
       PRACTICE_DISPLAY_NAME: 'Praxis Nord',
       AUTH_KEY_CAPTIVE: SECRET,
@@ -896,10 +962,10 @@ test('HTTP host apply preserves an in-progress TLS preparation', async () => {
     });
 
     await applySetupPlan(ctx(root), {
-      lanAppIp: '192.168.178.112',
+      lanAppIp: '192.168.178.120',
       practiceDisplayName: 'Praxis Nord',
       proxy: { enabled: true, httpPort: 80 },
-      gateway: gwOff('192.168.178.112'),
+      gateway: gwOff('192.168.178.120'),
       preserveEnv: true,
       runCompose: false,
       runProbes: false,
@@ -907,7 +973,8 @@ test('HTTP host apply preserves an in-progress TLS preparation', async () => {
 
     const map = env(root);
     assert.equal(map.get('PROXY_MODE'), 'http');
-    assert.equal(map.get('CANONICAL_BASE_URL'), 'http://192.168.178.112');
+    assert.equal(map.get('CANONICAL_BASE_URL'), 'http://192.168.178.120');
+    assert.equal(map.get('TLS_LAN_IP'), '192.168.178.120');
     assert.equal(map.get('TLS_STATE'), 'awaiting-operator-dns');
     assert.equal(map.get('TLS_INSTALLATION_ID'), '7fk3m2q9');
     assert.equal(map.get('PROXY_CADDYFILE_HOST_PATH'), '/install/state/tls/Caddyfile');

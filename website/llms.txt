@@ -32,7 +32,7 @@ allein bedeutet keine pauschale Datenschutzkonformität.
 
 ## Veröffentlichung und bekannte Grenzen
 
-Version 6.1.6 ist mit Quellcode und installierbaren Paketen auf GitHub verfügbar.
+Version 6.1.7 ist mit Quellcode und installierbaren Paketen auf GitHub verfügbar.
 Die Manager-Installer sind unsigniert, die macOS-Apps nicht notarisiert. Bei der
 Installation oder beim ersten Öffnen können Betriebssystemwarnungen erscheinen.
 Ich spare mir diese Kosten, damit ich Wartezimmer kostenlos anbieten kann.
@@ -70,7 +70,7 @@ in Issues einstellen.
 ## Quellcode und Dokumentation
 
 - [Quellcode und Entwickler-README](https://github.com/nox-do/wartezimmer).
-- [Release 6.1.6](https://github.com/nox-do/wartezimmer/releases/tag/v6.1.6): Pakete, Prüfsummen und Release Notes.
+- [Release 6.1.7](https://github.com/nox-do/wartezimmer/releases/tag/v6.1.7): Pakete, Prüfsummen und Release Notes.
 - [Dokumentationsübersicht](https://github.com/nox-do/wartezimmer/blob/main/docs/README.md): Fachlichkeit, Architektur und Betrieb.
 - [Installation und Recovery](https://github.com/nox-do/wartezimmer/blob/main/docs/operations/reinstall-recovery.md).
 - [Backup und Wiederherstellung](https://github.com/nox-do/wartezimmer/blob/main/docs/operations/backup.md).

@@ -20,11 +20,14 @@ export function isTlsPreparationInProgressEnv(env: EnvLike): boolean {
   return !['1', 'true', 'yes', 'on'].includes(cutover);
 }
 
-export function tlsPreparationLanIpSyncUpdates(
+/** Keep the configured HTTPS target aligned with an explicit staff-IP change.
+ * This updates local configuration only; DNS still needs its own reachability check.
+ */
+export function tlsLanIpSyncUpdates(
   env: Map<string, string>,
   nextLanIp: string,
 ): Record<string, string> {
-  if (!isTlsPreparationInProgressEnv(env)) {
+  if ((env.get('TLS_STATE')?.trim() || 'off') === 'off') {
     return {};
   }
   const trimmed = nextLanIp.trim();

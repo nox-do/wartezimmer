@@ -6,10 +6,17 @@ Der lokale Betrieb reduziert die Exposition, ersetzt aber keinen Fix. Die
 Behebung im Manager ist bewusst bis zu einem bestätigten stabilen Electron-Fix
 zurückgestellt. Dies ist keine Einstufung als „nicht betroffen“.
 
-Stand und letzte Bewertung: **27. Oktober 2026**. Dieser Eintrag muss bei
+Stand und letzte Bewertung: **13. November 2026**. Dieser Eintrag muss bei
 Electron-Updates, Änderungen der Netzwerkzugriffe und vor Manager-Releases erneut
-geprüft werden. Für Release 6.1.6 erneut geprüft: Runtime und Netzwerkpfade sind unverändert;
+geprüft werden. Für Release 6.1.7 erneut geprüft: Runtime und Netzwerkpfade sind unverändert;
 die Lücke bleibt offen. Die Angaben zu verfügbaren Electron-Versionen sind eine Momentaufnahme.
+
+Lokaler Manager-Testbuild **6.1.7-local.1 vom 13. November 2026**: Die Änderung
+synchronisiert ausschließlich die gespeicherte HTTPS-IP bei einer Änderung der
+Praxis-IP. Electron 44.4.3 und die Netzwerkpfade bleiben unverändert; der Build
+enthält keinen Fix für CVE-2026-111497. Der gepackte ARM64-Testbuild wurde mit
+Electron 44.4.3 / Node 24.21.0 geprüft: Manager-Smoke-Test und IP-Synchronisierung
+im eingebetteten Setup (active/degraded/error) erfolgreich. Der Status bleibt offen.
 
 ## CVE-2026-111497 im Manager und Setup
 

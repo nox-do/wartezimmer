@@ -184,7 +184,7 @@ import {
   writeGeneratedTlsCaddyfile,
   readInstalledPortalContract,
 } from './proxy-tls.js';
-import { tlsPreparationLanIpSyncUpdates } from './tls-env.js';
+import { tlsLanIpSyncUpdates } from './tls-env.js';
 import {
   buildRestrictedNetworkCandidates,
   buildRestrictedNetworkInspect,
@@ -1841,6 +1841,7 @@ export async function applySetupPlan(
       input.proxy,
     );
     // Image always; runtime PROXY_* only when wire omits proxy (else overrides cannot flip enable).
+    const tlsLanIpUpdates = tlsLanIpSyncUpdates(existingBefore, input.lanAppIp.trim());
     const preserveExistingKeys = [
       ...(input.preserveEnv
         ? [
@@ -1852,7 +1853,7 @@ export async function applySetupPlan(
         : []),
       PROXY_IMAGE_ENV_KEY,
       ...(writeProxyEnv ? [] : [...PROXY_RUNTIME_ENV_KEYS]),
-      ...TLS_ENV_KEYS,
+      ...TLS_ENV_KEYS.filter((key) => !Object.hasOwn(tlsLanIpUpdates, key)),
       ...PROXY_TLS_RUNTIME_ENV_KEYS,
       ...RESTRICTED_NETWORK_PERSISTED_KEYS,
     ];
@@ -1911,7 +1912,7 @@ export async function applySetupPlan(
               APP_BIND_ADDRESS: resolveAppBindAddress(proxy.enabled),
               SETUP_LAN_APP_IP: input.lanAppIp.trim(),
               CANONICAL_BASE_URL: canonicalToWrite,
-              ...tlsPreparationLanIpSyncUpdates(existingBefore, input.lanAppIp.trim()),
+              ...tlsLanIpUpdates,
               ...(preparedStorage
                 ? {
                     IMPORTS_HOST_PATH: preparedStorage.folders.imports,
@@ -2131,7 +2132,7 @@ export async function saveHostNetwork(
     const updates: Record<string, string> = {
       SETUP_LAN_APP_IP: lanAppIp,
       CANONICAL_BASE_URL: canonicalBaseUrl,
-      ...tlsPreparationLanIpSyncUpdates(existing, lanAppIp),
+      ...tlsLanIpSyncUpdates(existing, lanAppIp),
       ...(writeProxyEnv ? buildProxyEnvUpdates(proxy, existing) : {}),
       APP_BIND_ADDRESS: resolveAppBindAddress(proxy.enabled),
     };
