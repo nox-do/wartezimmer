@@ -73,16 +73,17 @@
           <p>
             Von
             <span itemprop="author" itemscope itemtype="https://schema.org/Person"
-              ><a itemprop="url" href="./impressum.html"
+              ><a itemprop="url" href="https://deuter.org/#ueber-mich"
                 ><span itemprop="name">Daniel Deuter</span></a
               ></span
             >, Entwickler von Wartezimmer · Stand:
             <time datetime="2026-11-14">14. November 2026</time>
           </p>
           <p>
-            Wartezimmer ist im eigenen Praxisbetrieb lizenzgebührenfrei. Einrichtung und
-            individuelle Anpassungen biete ich gegen Honorar an.
-            <a href="#quellen">Warum ich diese Lösungen vergleiche</a>
+            Mein Honorar verdiene ich mit dem Entwurf und der Umsetzung von Lösungen. Für
+            Wartezimmer fallen im
+            <a href="./lizenzen.html">eigenen Praxisbetrieb keine Lizenzgebühren</a> an.
+            <a href="#quellen">Was mich zu Wartezimmer bewogen hat</a>
           </p>
         </div>
         <nav class="guide-nav wrap" aria-label="Inhalt dieses Ratgebers">
@@ -987,26 +988,43 @@
         </section>
 
         <footer class="guide-sources wrap" id="quellen">
-          <h2>Warum ich diesen Vergleich veröffentliche</h2>
+          <h2>Warum ich Wartezimmer entwickelt habe</h2>
           <p>
-            Ich wollte, dass eine Praxis den Aufruf ins nächste Behandlungszimmer ergänzen kann,
-            ohne ihr PVS zu wechseln oder ein weiteres Abo abzuschließen. Deshalb erhebe ich für
-            Wartezimmer im <a href="./lizenzen.html">eigenen Praxisbetrieb keine Lizenzgebühr</a>.
-            Sie können die Software selbst einrichten oder Ihre Praxis-IT damit beauftragen.
+            Als Patient kenne ich die Ungewissheit im Wartezimmer: Wie geht es für mich weiter? Im
+            Ausland habe ich andere Wege gesehen, das Warten und den Aufruf zu organisieren. Mich
+            hat interessiert, welche Ideen sich auf eine Praxis hier übertragen lassen und wo der
+            Datenschutz eine andere Gestaltung verlangt. Ein Beispiel ist die Anzeige im
+            Wartezimmer: Eine Wartenummer und der nächste Raum reichen. Name und Besuchsgrund müssen
+            dort nicht stehen.
           </p>
           <p>
-            Wenn Ihre MFA den nächsten Patienten bereits aus der Warteliste im PVS aufrufen kann,
-            würde ich dafür kein zweites System einführen. Sollen Patienten vor allem online Termine
-            buchen, ist die Anbindung an Ihren Praxiskalender entscheidend. Wartezimmer bietet keine
-            Online-Terminbuchung an.
+            Wartezimmer kümmert sich um den Weg durch die Praxis. Ist für einen Besuch erst das
+            Labor und dann das Sprechzimmer vorgesehen, lässt sich nach festen Regeln prüfen,
+            welcher Schritt ansteht und ob der Raum frei ist. Dafür braucht es keine KI. Die
+            medizinische Dringlichkeit beurteilt das Team. Die Regeln für den Weg durch die Praxis
+            habe ich in einem eigenen Baustein gebündelt:
+            <a href="https://github.com/nox-do/wartezimmer/blob/main/packages/flow-core/README.md"
+              >Flow-Core</a
+            >
+            lässt sich für unterschiedliche Stationsfolgen wiederverwenden. Terminal, Teamübersicht
+            und Aufrufanzeige greifen auf denselben Stand des Besuchs zu.
           </p>
           <p>
-            <strong>Wie der Vergleich zustande kommt.</strong> Ich habe Lösungen ausgewählt, die
-            mindestens eine der Aufgaben an der Anmeldung abdecken. Für die fünf Funktionen in der
-            Tabelle stütze ich mich auf die verlinkten Herstellerangaben, für Wartezimmer auf die
-            Dokumentation zu Version 6.1.7 (Stand: 14. November 2026). Fremdprodukte habe ich nicht
-            praktisch getestet. Im <a href="#entlastung">Studienabschnitt</a> unterscheide ich
-            gemessene Anmeldezeiten von der Entlastung, die Befragte selbst einschätzen.
+            Ich entwerfe Lösungen für Auftraggeber aus unterschiedlichen Branchen. Wartezimmer ist
+            dafür eine
+            <a href="https://deuter.org/#referenz-wartezimmer">öffentliche Arbeitsprobe</a>: Wer
+            mich beauftragen möchte, kann an einem konkreten Fall beurteilen, wie ich arbeite. Eine
+            persönliche Rundumbetreuung für viele Praxen kann ich nicht leisten. Die laufende
+            Betreuung können Sie Ihrer Praxis-IT übertragen.
+          </p>
+          <p>
+            <strong>Wie ich vergleiche.</strong> Für mich zählt, welche Aufgabe an Ihrer Anmeldung
+            offen ist. Kann Ihre MFA Patienten bereits aus der Warteliste im PVS aufrufen, würde ich
+            dafür kein zweites System einführen. Für die fünf Funktionen in der Tabelle stütze ich
+            mich auf die verlinkten Herstellerangaben, für Wartezimmer auf die Dokumentation zu
+            Version 6.1.7 (Stand: 14. November 2026). Fremdprodukte habe ich nicht praktisch
+            getestet. Im <a href="#entlastung">Studienabschnitt</a> unterscheide ich gemessene
+            Anmeldezeiten von der Entlastung, die Befragte selbst einschätzen.
           </p>
           <p>
             Hat sich ein Tarif geändert oder fehlt ein Beleg?
