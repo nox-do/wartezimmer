@@ -1139,13 +1139,13 @@ html:has(.overview-dialog[open]) {
   padding-block: 16px;
 }
 .guide-comparison thead th:first-child {
-  width: 20%;
+  width: 18%;
 }
 .guide-comparison thead th:nth-child(2) {
-  width: 15%;
+  width: 13%;
 }
 .guide-comparison thead th:nth-child(3) {
-  width: 27%;
+  width: 23%;
 }
 .guide-comparison .guide-mode {
   display: block;
@@ -1167,6 +1167,61 @@ html:has(.overview-dialog[open]) {
   font-size: 12px;
   line-height: 1.5;
   margin-top: 8px;
+}
+.guide-feature-legend,
+.guide-features {
+  list-style: none;
+  padding: 0;
+}
+.guide-feature-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  margin: 0 0 18px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.guide-feature-legend li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+}
+.guide-included {
+  color: var(--green);
+}
+.guide-extra {
+  color: #855514;
+}
+.guide-features {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 0;
+  color: var(--ink);
+}
+.guide-features li {
+  min-width: 0;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.5;
+  hyphens: none;
+}
+.guide-features li + li {
+  border-inline-start: 1px solid var(--line);
+}
+.guide-features b {
+  display: block;
+  font-size: 15px;
+  line-height: 1.25;
+  margin-bottom: 3px;
+}
+.guide-more,
+.guide-pvs-line {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.guide-more b {
+  margin-inline-end: 3px;
 }
 .guide-vendor-details {
   padding-block: 22px;

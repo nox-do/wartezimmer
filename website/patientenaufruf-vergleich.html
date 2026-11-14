@@ -28,7 +28,7 @@
       property="og:url"
       content="https://nox-do.github.io/wartezimmer/patientenaufruf-vergleich.html"
     />
-    <link rel="stylesheet" href="./styles.css?v=f9368f77eef4" />
+    <link rel="stylesheet" href="./styles.css?v=60f2a2eb107b" />
     <link rel="describedby" href="./llms.txt" type="text/plain" />
   </head>
   <body class="guide-page">
@@ -306,13 +306,19 @@
             </div>
           </div>
           <p class="guide-section-lead">
-            Auswahl für deutsche Arztpraxen, nach Aufgaben geordnet und ohne Rangfolge. Aufruf,
-            digitale Aufnahme und Online-Kommunikation sind nur teilweise vergleichbar.
+            Welche Arbeit übernimmt die Software zum genannten Preis? Vergleichen Sie fünf Aufgaben
+            der Anmeldung: Patienten vor Ort aufrufen, sie bei Ankunft selbst einchecken lassen,
+            Formulare ausfüllen, Termine online buchen und Patienten per SMS benachrichtigen.
           </p>
+          <ul class="guide-feature-legend" role="list" aria-label="Zeichenerklärung">
+            <li><b class="guide-included" aria-hidden="true">●</b> Im Preis enthalten</li>
+            <li><b class="guide-extra" aria-hidden="true">$</b> Kostet zusätzlich</li>
+            <li><b aria-hidden="true">–</b> Im Tarif nicht belegt</li>
+          </ul>
           <div class="guide-table-scroll" role="region" aria-label="Anbietervergleich" tabindex="0">
             <table class="guide-comparison" role="table">
               <caption>
-                Cloud oder lokal, Softwarepreis und PVS-Anbindung – Herstellerangaben; Preisstand
+                Leistungsumfang, Betrieb, Preis und PVS-Anbindung nach Anbieterangaben. Stand:
                 14.11.2026.
               </caption>
               <thead role="rowgroup">
@@ -320,7 +326,7 @@
                   <th scope="col" role="columnheader">Lösung / Schwerpunkt</th>
                   <th scope="col" role="columnheader">Betrieb</th>
                   <th scope="col" role="columnheader">Softwarepreis</th>
-                  <th scope="col" role="columnheader">PVS &amp; Datenweg</th>
+                  <th scope="col" role="columnheader">Leistungsumfang</th>
                 </tr>
               </thead>
               <tbody role="rowgroup">
@@ -336,8 +342,24 @@
                     <strong class="guide-price">49 €</strong
                     ><span class="guide-price-unit">je Behandler/Monat<br />netto</span>
                   </td>
-                  <td role="cell" data-label="PVS &amp; Datenweg">
-                    Direkter Aufruf aus tomedo; bei anderen PVS separate Anwendung.
+                  <td role="cell" data-label="Leistungsumfang">
+                    <ul class="guide-features" role="list">
+                      <li>
+                        <b class="guide-included" role="img" aria-label="Im Preis enthalten">●</b
+                        >Aufruf
+                      </li>
+                      <li><b role="img" aria-label="Im Tarif nicht belegt">–</b>Check-in</li>
+                      <li><b role="img" aria-label="Im Tarif nicht belegt">–</b>Formulare</li>
+                      <li><b role="img" aria-label="Im Tarif nicht belegt">–</b>Termine</li>
+                      <li><b role="img" aria-label="Im Tarif nicht belegt">–</b>SMS</li>
+                    </ul>
+                    <div class="guide-more">
+                      <b class="guide-extra" role="img" aria-label="Kostet zusätzlich">$</b>
+                      Praxis-TV als Zusatzmodul
+                    </div>
+                    <div class="guide-pvs-line">
+                      <strong>PVS:</strong> Aufruf aus tomedo, sonst separate Anwendung.
+                    </div>
                   </td>
                 </tr>
                 <tr role="row">
@@ -351,13 +373,34 @@
                     >
                   </td>
                   <td role="cell" data-label="Softwarepreis">
-                    <strong class="guide-mode">Individuelles Angebot</strong
-                    ><span class="guide-price-unit">Vergleichbarer Gesamtpreis offen</span>
+                    <strong class="guide-mode">Auf Anfrage</strong
+                    ><span class="guide-price-unit">Tarif Advanced</span>
                   </td>
-                  <td role="cell" data-label="PVS &amp; Datenweg">
-                    <a href="https://www.cleverq.de/intergrative-loesungen/"
-                      >API und Krankenhausanbindungen</a
-                    >; konkrete PVS-Anbindung prüfen.
+                  <td role="cell" data-label="Leistungsumfang">
+                    <ul class="guide-features" role="list">
+                      <li>
+                        <b class="guide-included" role="img" aria-label="Im Preis enthalten">●</b
+                        >Aufruf
+                      </li>
+                      <li>
+                        <b class="guide-included" role="img" aria-label="Im Preis enthalten">●</b
+                        >Check-in
+                      </li>
+                      <li><b role="img" aria-label="Im Tarif nicht belegt">–</b>Formulare</li>
+                      <li>
+                        <b class="guide-included" role="img" aria-label="Im Preis enthalten">●</b
+                        >Termine
+                      </li>
+                      <li>
+                        <b class="guide-extra" role="img" aria-label="Kostet zusätzlich">$</b>SMS
+                      </li>
+                    </ul>
+                    <div class="guide-pvs-line">
+                      <strong>PVS:</strong>
+                      <a href="https://www.cleverq.de/intergrative-loesungen/"
+                        >API und Krankenhausanbindungen</a
+                      >; konkrete PVS-Anbindung prüfen.
+                    </div>
                   </td>
                 </tr>
                 <tr role="row">
@@ -373,10 +416,28 @@
                       >je Praxis/Monat · netto<br />Jährliche Zahlung, nutzungsabhängig</span
                     >
                   </td>
-                  <td role="cell" data-label="PVS &amp; Datenweg">
-                    <a href="https://hilfe.idana.com/guides/einsatz-von-idana/exportmoeglichkeiten/"
-                      >GDT, PDF und JSON</a
-                    >; Übernahme in die konkrete PVS-Version prüfen.
+                  <td role="cell" data-label="Leistungsumfang">
+                    <ul class="guide-features" role="list">
+                      <li><b role="img" aria-label="Im Tarif nicht belegt">–</b>Aufruf</li>
+                      <li><b role="img" aria-label="Im Tarif nicht belegt">–</b>Check-in</li>
+                      <li>
+                        <b class="guide-included" role="img" aria-label="Im Preis enthalten">●</b
+                        >Formulare
+                      </li>
+                      <li><b role="img" aria-label="Im Tarif nicht belegt">–</b>Termine</li>
+                      <li><b role="img" aria-label="Im Tarif nicht belegt">–</b>SMS</li>
+                    </ul>
+                    <div class="guide-more">
+                      <b class="guide-extra" role="img" aria-label="Kostet zusätzlich">$</b>
+                      Fragebogeneditor: 379 € netto
+                    </div>
+                    <div class="guide-pvs-line">
+                      <strong>PVS:</strong>
+                      <a
+                        href="https://hilfe.idana.com/guides/einsatz-von-idana/exportmoeglichkeiten/"
+                        >GDT, PDF und JSON</a
+                      >; Übernahme in die konkrete PVS-Version prüfen.
+                    </div>
                   </td>
                 </tr>
                 <tr role="row">
@@ -390,14 +451,35 @@
                   <td role="cell" data-label="Softwarepreis">
                     <strong class="guide-price">ab 59 €</strong
                     ><span class="guide-price-unit"
-                      >je Arzt/Monat<br />Umsatzsteuer bestätigen</span
+                      >Tarif Essential · je Arzt/Monat<br />Umsatzsteuer bestätigen</span
                     >
                   </td>
-                  <td role="cell" data-label="PVS &amp; Datenweg">
-                    <a href="https://repo.samedi.de/samedi-app/latest/index.html"
-                      >GDT/VDDS/x.time</a
-                    >
-                    dokumentiert; Dokumentenexport klären.
+                  <td role="cell" data-label="Leistungsumfang">
+                    <ul class="guide-features" role="list">
+                      <li><b role="img" aria-label="Im Tarif nicht belegt">–</b>Aufruf</li>
+                      <li>
+                        <b class="guide-included" role="img" aria-label="Im Preis enthalten">●</b
+                        >Check-in
+                      </li>
+                      <li>
+                        <b class="guide-extra" role="img" aria-label="Kostet zusätzlich">$</b
+                        >Formulare
+                      </li>
+                      <li>
+                        <b class="guide-included" role="img" aria-label="Im Preis enthalten">●</b
+                        >Termine
+                      </li>
+                      <li>
+                        <b class="guide-extra" role="img" aria-label="Kostet zusätzlich">$</b>SMS
+                      </li>
+                    </ul>
+                    <div class="guide-pvs-line">
+                      <strong>PVS:</strong>
+                      <a href="https://repo.samedi.de/samedi-app/latest/index.html"
+                        >GDT/VDDS/x.time</a
+                      >
+                      dokumentiert; Dokumentenexport klären.
+                    </div>
                   </td>
                 </tr>
                 <tr role="row">
@@ -414,8 +496,24 @@
                       >je Arzt/Monat · inkl. MwSt.<br />Jahresabo mit KI-Telefon¹</span
                     >
                   </td>
-                  <td role="cell" data-label="PVS &amp; Datenweg">
-                    Dokumentenaustausch und Stamm-/Termindatenexport; PVS-Anbindung klären.
+                  <td role="cell" data-label="Leistungsumfang">
+                    <ul class="guide-features" role="list">
+                      <li><b role="img" aria-label="Im Tarif nicht belegt">–</b>Aufruf</li>
+                      <li><b role="img" aria-label="Im Tarif nicht belegt">–</b>Check-in</li>
+                      <li>
+                        <b class="guide-included" role="img" aria-label="Im Preis enthalten">●</b
+                        >Formulare
+                      </li>
+                      <li>
+                        <b class="guide-included" role="img" aria-label="Im Preis enthalten">●</b
+                        >Termine
+                      </li>
+                      <li><b role="img" aria-label="Im Tarif nicht belegt">–</b>SMS</li>
+                    </ul>
+                    <div class="guide-pvs-line">
+                      <strong>PVS:</strong> Dokumentenaustausch und Stamm-/Termindatenexport;
+                      PVS-Anbindung klären.
+                    </div>
                   </td>
                 </tr>
                 <tr role="row">
@@ -429,19 +527,39 @@
                     <a class="guide-price" href="./lizenzen.html">0 €</a
                     ><span class="guide-price-unit">Lizenzgebühr für zulässigen Eigenbetrieb</span>
                   </td>
-                  <td role="cell" data-label="PVS &amp; Datenweg">
-                    CSV-Kontaktabgleich; Dateien/PDF. GDT als Individualentwicklung planbar.
+                  <td role="cell" data-label="Leistungsumfang">
+                    <ul class="guide-features" role="list">
+                      <li>
+                        <b class="guide-included" role="img" aria-label="Im Preis enthalten">●</b
+                        >Aufruf
+                      </li>
+                      <li>
+                        <b class="guide-included" role="img" aria-label="Im Preis enthalten">●</b
+                        >Check-in
+                      </li>
+                      <li>
+                        <b class="guide-included" role="img" aria-label="Im Preis enthalten">●</b
+                        >Formulare
+                      </li>
+                      <li><b role="img" aria-label="Im Tarif nicht belegt">–</b>Termine</li>
+                      <li>
+                        <b class="guide-extra" role="img" aria-label="Kostet zusätzlich">$</b>SMS
+                      </li>
+                    </ul>
+                    <div class="guide-pvs-line">
+                      <strong>PVS:</strong> CSV-Kontaktabgleich; Dateien/PDF. GDT als
+                      Individualentwicklung.
+                    </div>
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
           <p class="guide-note">
-            Betriebsmodell des Dienstes; ein lokaler Client oder eine Schnittstellenanwendung macht
-            einen Cloud-Dienst nicht zu einer lokalen Lösung. Preise sind wegen Leistungsumfang,
-            Bezugsgröße und Umsatzsteuer nicht unmittelbar vergleichbar. Hardware, Einrichtung und
-            Betreuung können hinzukommen. ¹ Doctolib: Hausarzt-Auswahl; ohne KI-Telefon laut
-            Preishinweis 139 €/Monat, Abrechnungsdetails bestätigen.
+            Ein Strich bedeutet, dass die Quellen keine eindeutige Zuordnung zum Tarif erlauben.
+            Hardware, Einrichtung und Betreuung können auch bei enthaltenen Funktionen hinzukommen.
+            ¹ Doctolib: Hausarzt-Auswahl; ohne KI-Telefon laut Preishinweis 139 €/Monat,
+            Abrechnungsdetails bestätigen.
           </p>
           <details class="guide-vendor-details">
             <summary>Leistungsumfang, Einrichtung und Export im Detail</summary>
@@ -449,17 +567,22 @@
               <div>
                 <dt>LISA</dt>
                 <dd>
-                  Bildschirm- und Sprachaufruf im Browser. Selbsteinrichtung oder Service, optional
-                  betreute LISA Box. Hardware und Einrichtung zusätzlich; vollständiger Datenexport
-                  offen.
+                  Bildschirm- und Sprachaufruf sind enthalten. Wer dort auch eigene
+                  Praxisinformationen zeigen möchte, benötigt das
+                  <a href="https://www.praxisansatz.de/lisa/">Modul Praxismarketing</a>: 39 € netto
+                  im Monat für den ersten Bildschirm, 29 € für jeden weiteren. In Kombination mit
+                  dem Aufruf sinkt der Preis um 5 € je Bildschirm. Selbsteinrichtung ist möglich;
+                  Service und LISA Box kosten extra. Vollständiger Datenexport offen.
                 </dd>
               </div>
               <div>
                 <dt>cleverQ</dt>
                 <dd>
-                  Tickets, Selbstanmeldung und mehrere Stationen; Hardware und Einführung
-                  erhältlich. Lokaler Betrieb per Docker, Fernzugriff für Installation und Updates
-                  erforderlich.
+                  Der <a href="https://www.cleverq.de/software/">Tarif Advanced</a> bündelt QR- oder
+                  Terminal-Tickets, Bildschirmaufruf und Online-Termine. Wer nur vor Ort aufruft,
+                  kann auch Essential anfragen. SMS werden monatlich nach Verbrauch abgerechnet. Für
+                  die lokale Docker-Variante benötigt der Anbieter Fernzugriff für Installation und
+                  Updates.
                   <a href="https://www.cleverq.de/module/statistik/">Statistikexport</a> belegt;
                   vollständigen Export klären.
                 </dd>
@@ -467,17 +590,26 @@
               <div>
                 <dt>Idana</dt>
                 <dd>
-                  Cloud-Dienst mit Windows-/macOS-Anwendung; Patienten nutzen den Browser.
-                  Fragebögen und Auswertung. Regulärer Einstiegspreis; Aktionen und Zusatzleistungen
-                  gesondert. PVS-Einrichtung ab 299 € netto.
+                  Cloud-Dienst mit Windows-/macOS-Anwendung; Patienten nutzen den Browser. Der
+                  Einstiegstarif enthält Fragebögen und deren Auswertung. Wer eigene Bögen anlegen
+                  oder Vorlagen selbst bearbeiten möchte, zahlt für den
+                  <a href="https://idana.com/preise/">Fragebogeneditor</a> 379 € netto. Die
+                  PVS-Einrichtung kostet ab 299 € netto.
                 </dd>
               </div>
               <div>
                 <dt>samedi</dt>
                 <dd>
-                  Cloud und Browser mit lokaler Schnittstellenanwendung. Ressourcenplanung,
-                  Selbstanmeldung, Formulare und Patientenkonto paketabhängig. Pakete zu 59/99/199 €
-                  je Arzt/Monat; Module, Einrichtung und Umsatzsteuer bestätigen.
+                  Im <a href="https://www.samedi.com/preise">Tarif Essential</a> sind
+                  Online-Terminbuchung, Selbstanmeldung bei Ankunft und Patientenkonto enthalten.
+                  Das Konto zeigt auch digitale Formulare an. Für Praxen, die einen Standardbogen
+                  versenden und ausgefüllt zurückerhalten möchten, nennt die
+                  <a href="https://www.samedi.com/assets/Preisliste/aktuell.pdf#page=4"
+                    >Modulpreisliste</a
+                  >
+                  30 € je Arzt und Monat; SMS kosten dort 0,08 € pro Credit. Geltung für das
+                  individuelle Angebot bestätigen. Das digitale Wartezimmer mit Wartezeitprognose
+                  steht ab Comfort Praxis (99 € je Arzt und Monat) zur Verfügung.
                   <a href="https://legal.samedi.de/for_customers/tos/"
                     >CSV-Ausgabe nach Vertragsende</a
                   >
@@ -487,7 +619,11 @@
               <div>
                 <dt>Doctolib Patientenmanagement</dt>
                 <dd>
-                  Praxisoberfläche und Patienten-App für Termine und Kommunikation.
+                  Im <a href="https://info.doctolib.de/preis/">Hausarzttarif Patientenmanagement</a>
+                  buchen Patienten Termine online und geben vorab ihre Daten zur Aufnahme ein. Der
+                  Patientennavigator zeigt dem Team den Besuchsstatus. Ob Selbstanmeldung bei
+                  Ankunft und SMS ohne Aufpreis enthalten sind, geht aus der Tarifansicht nicht
+                  hervor.
                   <a
                     href="https://doctolibpatient.zendesk.com/hc/de/articles/360009570200-Ein-Dokument-mit-%C3%84rzt-innen-teilen"
                     >Dokumentenaustausch</a
@@ -504,8 +640,11 @@
                 <dt>Wartezimmer</dt>
                 <dd>
                   Manager für macOS/Windows x64 und Browseroberflächen. Aufruf, Räume, mehrstufige
-                  Abläufe und optionale Aufnahme vor Ort. Portalzugang besuchsbezogen im Praxisnetz.
-                  Keine Standard-PVS-Anbindung; Source-available ohne zugesicherten Komplettbetrieb.
+                  Abläufe und Selbstanmeldung am Terminal. Das besuchsbezogene Portal im Praxisnetz
+                  enthält einen allgemeinmedizinischen Aufnahmebogen. Eine Online-Terminbuchung ist
+                  nicht enthalten. Beim optionalen Zurückholen per SMS fallen
+                  <a href="./technik.html#rueckholen">Versandkosten beim SMS-Dienst</a> an. Keine
+                  Standard-PVS-Anbindung; Source-available ohne zugesicherten Komplettbetrieb.
                   Hardware, Einrichtung, Individualentwicklung und Betreuung verursachen
                   gegebenenfalls Kosten.
                 </dd>
@@ -849,8 +988,8 @@
           <h2>Quellen und Einordnung</h2>
           <p>
             Auswahl aus Anbieterperspektive, ohne Vollständigkeitsanspruch. Funktionen und Preise
-            basieren auf den verlinkten Herstellerquellen; Funktionen geprüft am 13., Preise am 14.
-            November 2026. Keine praktischen Vergleichstests mit Fremdprodukten.
+            basieren auf den verlinkten Herstellerquellen; Tarife und markierte Leistungen zuletzt
+            geprüft am 14. November 2026. Keine praktischen Vergleichstests mit Fremdprodukten.
           </p>
           <p>
             Wartezimmer: Version 6.1.7, gemäß verlinkter Projektdokumentation. Paketumfang, Kosten
