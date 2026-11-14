@@ -1441,6 +1441,16 @@ html:has(.overview-dialog[open]) {
   font-size: 22px;
   margin-bottom: 18px;
 }
+.guide-sources h3 {
+  font-size: 16px;
+  line-height: 1.4;
+}
+.guide-sources p + h3 {
+  margin-top: 22px;
+}
+.guide-sources h3 + p {
+  margin-top: 4px;
+}
 .guide-sources p {
   font-size: 13px;
   max-width: 900px;
