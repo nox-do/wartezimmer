@@ -52,3 +52,6 @@ setup/src
 # Electron/manager (only package.json for workspace npm ci)
 manager/**
 !manager/package.json
+
+# Local reference assets and publication notes
+.local

@@ -176,7 +176,7 @@ website/                Projektwebsite für GitHub Pages
 | Integrationen                          | [Schnittstellen und Betriebsgrenzen](docs/operations/integrations.md) |
 | Website pflegen und lokal ansehen      | [Website-README](website/README.md)                                   |
 
-Frühere Website-Entwürfe und Originalbilder liegen im [Website-Archiv](docs/archive/website/2026-10-10/README.md) und werden nicht veröffentlicht. Eine lokale Website-Vorschau lässt sich mit `node scripts/build-pages.mjs --preview` bauen.
+Frühere Website-Stände und Originalbilder sind über die Git-Historie nachvollziehbar; der aktuelle Dateibaum enthält die aktive Website. Eine lokale Website-Vorschau lässt sich mit `node scripts/build-pages.mjs --preview` bauen.
 
 ## Kontakt und Support
 

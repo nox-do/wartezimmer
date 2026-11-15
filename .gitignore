@@ -38,5 +38,8 @@ wartezimmer-source-*.tar.gz
 *.pfinstall
 *.pfupdate
 
+# Local reference assets and publication notes
+/.local/
+
 # Local instructions for coding assistants
 /AGENTS.md

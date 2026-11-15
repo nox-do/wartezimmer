@@ -19,6 +19,7 @@ for (const file of files) {
         'out',
         'build-resources',
         '.tmp',
+        '.local',
         'backups',
         'dumps',
         'state',

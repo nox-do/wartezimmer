@@ -1,8 +1,8 @@
 # Wartezimmer · GitHub Pages
 
 Die aktive Website liegt ausschließlich in `website/`. Frühere Entwürfe und
-sämtliche Originalbilder sind vollständig unter `docs/archive/website/2026-10-10/`
-archiviert. Das Archiv wird nicht veröffentlicht.
+Originalbilder sind über die Git-Historie bis Commit `64dd37b` nachvollziehbar,
+unter `docs/archive/website/`. Sie gehören nicht mehr zum aktuellen Dateibaum.
 
 ## Redaktioneller Aufbau
 
@@ -160,7 +160,8 @@ abgleichen. Im Archiv liegen auch die bisherigen ausführlichen Quellen und Noti
 
 ### Raum-Panel-Visualisierung
 
-`../docs/archive/website/2026-10-12-unused-assets/produkt-room-panel-demo.jpg` ist ein Browser-Screenshot einer statischen
+Die frühere Datei `docs/archive/website/2026-10-12-unused-assets/produkt-room-panel-demo.jpg`
+(bis Commit `64dd37b`) ist ein Browser-Screenshot einer statischen
 Darstellung mit Beispieldaten, abgeleitet aus `RoomPanelPreview.svelte`,
 `room-panel.css` und `tokens.css`. Außenpanel, Anzeige ohne Patientennamen:
 Untersuchung 1, Bitte eintreten., A-003. Kein Screenshot einer laufenden Praxis.
@@ -169,7 +170,8 @@ Untersuchung 1, Bitte eintreten., A-003. Kein Screenshot einer laufenden Praxis.
 unter Verwendung dieses UI-Screenshots als Bildschirmvorlage generiert und im
 Reiter Weitergehen als Visualisierung eingesetzt.
 
-`../docs/archive/website/2026-10-12-unused-assets/produkt-tv-demo.jpg` zeigt eine statische Anzeige mit Beispieldaten,
+Die frühere Datei `docs/archive/website/2026-10-12-unused-assets/produkt-tv-demo.jpg`
+(bis Commit `64dd37b`) zeigt eine statische Anzeige mit Beispieldaten,
 abgeleitet aus der TV-Route, `tv.css` und `tokens.css`.
 `images/wartezimmer-tv-foto.webp` wurde mit dem integrierten Imagegen-Werkzeug
 und diesem Screenshot als Bildschirmvorlage generiert. Die Fotovisualisierungen
@@ -185,9 +187,10 @@ mit Absätzen und verlinkbaren Abschnittsüberschriften. Die Website-Lizenzdatei
 wird beim Build ebenfalls aus `LICENSE` erzeugt. Der Leselink führt auf die
 HTML-Seite; die Textdatei ist dort zusätzlich als Download verlinkt.
 
-Nicht verwendete Bilder liegen unter [`docs/archive/website/2026-10-12-unused-assets/`](../docs/archive/website/2026-10-12-unused-assets/README.md).
+Nicht mehr verwendete Bilder bleiben über die Git-Historie bis Commit `64dd37b`
+unter `docs/archive/website/2026-10-12-unused-assets/` verfügbar.
 
 Die vier großen Illustrations-PNGs werden verlustfrei als WebP ausgeliefert.
 Abmessungen und RGBA-Pixel wurden beim Konvertieren auf Gleichheit geprüft.
-Die PNG-Originale liegen im oben genannten Archiv. Die Lizenztextdatei wird
+Die PNG-Originale sind im oben genannten historischen Stand erhalten. Die Lizenztextdatei wird
 ausschließlich beim Build erzeugt; es gibt keine zweite gepflegte Quellfassung.
