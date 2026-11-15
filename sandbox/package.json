@@ -9,7 +9,7 @@
     "build": "node ../scripts/build-typescript.mjs",
     "start": "node dist/server.js",
     "lint": "eslint \"src/**/*.ts\"",
-    "test": "node --import tsx --test --test-reporter=dot 'src/*.test.ts' 'src/routes/*.test.ts'",
+    "test": "node --import tsx --test --test-reporter=dot \"src/*.test.ts\" \"src/routes/*.test.ts\"",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

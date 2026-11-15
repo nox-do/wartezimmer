@@ -22,14 +22,14 @@
     "build": "node ../../scripts/build-typescript.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
-    "test": "npm run build && node --import tsx --test --test-reporter=dot 'test/**/*.test.ts'"
+    "test": "npm run build && node --import tsx --test --test-reporter=dot \"test/**/*.test.ts\""
   },
   "dependencies": {
     "@wartezimmer/domain": "*"
   },
   "devDependencies": {
-    "@types/node": "^26.1.0",
+    "@types/node": "^25.9.3",
     "tsx": "^4.22.3",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   }
 }

@@ -29,8 +29,6 @@ COPY scripts/strip-production-artifacts.mjs ./scripts/strip-production-artifacts
 COPY scripts/bundle-openapi.mjs ./scripts/bundle-openapi.mjs
 COPY scripts/generate-fastify-schemas.mjs ./scripts/generate-fastify-schemas.mjs
 COPY scripts/generate-openapi-types.mjs ./scripts/generate-openapi-types.mjs
-COPY scripts/generate-app-openapi-types.mjs ./scripts/generate-app-openapi-types.mjs
-COPY scripts/openapi-types-lib.mjs ./scripts/openapi-types-lib.mjs
 COPY scripts/openapi-lib.mjs ./scripts/openapi-lib.mjs
 COPY scripts/prettier-write.mjs ./scripts/prettier-write.mjs
 COPY openapi ./openapi
@@ -54,9 +52,7 @@ ARG VITE_API_BASE=
 ENV VITE_API_BASE=${VITE_API_BASE}
 
 RUN npm run generate:api
-RUN npm run build:domain
-RUN npm run build:server-shared
-RUN npm run build:flow-core
+RUN npm run build:deps
 RUN npm exec -w @wartezimmer/ui -- svelte-kit sync
 RUN npm run -w @wartezimmer/ui build
 RUN npm run -w @wartezimmer/app build

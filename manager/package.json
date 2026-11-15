@@ -12,7 +12,7 @@
     "dist:mac": "npm run prepare:packaged && npm run build && node scripts/build-macos.mjs",
     "lint": "eslint \"src/**/*.{ts,svelte}\"",
     "smoke:electron": "npm run build && node scripts/smoke-electron.mjs",
-    "test": "node --import tsx --test --test-reporter=dot src/**/*.test.ts && npm run test:packaging",
+    "test": "node --import tsx --test --test-reporter=dot \"src/**/*.test.ts\" && npm run test:packaging",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit && svelte-check --tsconfig tsconfig.json",
     "dist:win": "npm run prepare:packaged && npm run build && node scripts/build-windows.mjs",
     "test:packaging": "node --test scripts/nsis-integrity.test.mjs scripts/check-packaged-files.test.mjs"
@@ -23,7 +23,7 @@
   "devDependencies": {
     "@fontsource-variable/inter": "^5.3.0",
     "@sveltejs/vite-plugin-svelte": "^6.2.1",
-    "@types/node": "^25.9.1",
+    "@types/node": "^25.9.3",
     "cross-env": "^7.0.3",
     "electron": "44.11.3",
     "electron-builder": "26.15.3",

@@ -97,14 +97,14 @@ passenden Slot.
 npm run generate:api
 ```
 
-Das orchestriert:
+Der Befehl erzeugt Bundle und Fastify-Schemas und übersetzt jede YAML-Spezifikation einmal für die zugehörigen Typdateien. Die npm-Skripte in der Tabelle lassen sich auch einzeln ausführen.
 
 | Schritt         | Script                       | Output                                       |
 | --------------- | ---------------------------- | -------------------------------------------- |
 | Bundle          | `bundle:openapi`             | `openapi/bundle.json`                        |
 | Fastify-Schemas | `generate:api-schemas`       | `app/src/api/generated/*.fastify-schemas.ts` |
-| App-Typen       | `generate:app-openapi-types` | `app/src/api/*-openapi-types.ts`             |
-| UI-Typen        | `generate:openapi-types`     | `ui/src/lib/**/openapi-types.ts`             |
+| App-Typen       | `generate:app-openapi-types` | `app/src/api/generated/*-openapi.d.ts`       |
+| UI-Typen        | `generate:openapi-types`     | `ui/src/lib/**/generated/*-openapi.d.ts`     |
 
 Zwei Zielgruppen, **kein** gemeinsames Generated-Package. Swagger UI: `/api/docs` nur Dev/local (Override `OPENAPI_DOCS_ENABLED`); Production-Image ohne `openapi/bundle.json` und ohne Swagger-Deps.
 

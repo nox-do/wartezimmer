@@ -55,7 +55,7 @@ test('production stripping removes nested test-only trees and every source-map t
   fs.writeFileSync(path.join(directory, 'main.js'), 'export {};');
   const result = spawnSync(
     process.execPath,
-    [new URL('./strip-production-artifacts.mjs', import.meta.url).pathname, `dist:${directory}`],
+    [path.join(import.meta.dirname, 'strip-production-artifacts.mjs'), `dist:${directory}`],
     { encoding: 'utf8' },
   );
   assert.equal(result.status, 0, result.stderr);

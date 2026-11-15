@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
+  assertGeneratedFilesTracked,
   extractOperationSchemas,
   loadDomainSpec,
   OPENAPI_COMMON_SPEC,
@@ -17,6 +18,7 @@ import { writePrettierFile } from './prettier-write.mjs';
 const root = repoRootFromImportMeta(import.meta.url);
 const check = process.argv.includes('--check');
 const outDir = path.join(root, 'app/src/api/generated');
+const generatedFiles = [];
 
 const DOMAIN_FILES = [
   { spec: OPENAPI_COMMON_SPEC, exportName: 'commonSchemas', componentsOnly: true },
@@ -87,8 +89,11 @@ for (const entry of DOMAIN_FILES) {
   );
 
   const outFile = path.join(outDir, `${outSpec}.fastify-schemas.ts`);
+  generatedFiles.push(path.relative(root, outFile));
   await writePrettierFile(outFile, parts.join('\n'), { check });
   console.log(
     `generate-fastify-schemas: ${check ? 'checked' : 'wrote'} ${path.relative(root, outFile)} (${schemaNames.length} schemas)`,
   );
 }
+
+if (check) assertGeneratedFilesTracked(generatedFiles, 'generate-fastify-schemas', root);

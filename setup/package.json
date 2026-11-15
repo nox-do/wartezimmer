@@ -7,7 +7,7 @@
     "build": "node ../scripts/build-typescript.mjs tsconfig.build.json",
     "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --import tsx --test --test-reporter=dot src/*.test.ts",
+    "test": "node --import tsx --test --test-reporter=dot \"src/*.test.ts\"",
     "cli": "tsx src/cli.ts",
     "serve": "tsx src/server.ts",
     "reset": "tsx src/reset-cli.ts"
@@ -17,7 +17,7 @@
     "@wartezimmer/server-shared": "*"
   },
   "devDependencies": {
-    "@types/node": "^25.9.1",
+    "@types/node": "^25.9.3",
     "tsx": "^4.22.3",
     "typescript": "^6.0.3"
   }

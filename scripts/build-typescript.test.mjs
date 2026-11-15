@@ -14,7 +14,7 @@ test('TypeScript build removes deleted modules and refuses to clean source paths
   fs.symlinkSync(
     path.dirname(require.resolve('typescript/package.json')),
     path.join(directory, 'node_modules/typescript'),
-    'dir',
+    process.platform === 'win32' ? 'junction' : 'dir',
   );
   fs.writeFileSync(path.join(directory, 'package.json'), '{}');
   fs.mkdirSync(path.join(directory, 'src'));
@@ -27,7 +27,7 @@ test('TypeScript build removes deleted modules and refuses to clean source paths
   fs.mkdirSync(path.join(directory, 'dist'));
   fs.writeFileSync(path.join(directory, 'dist/deleted-module.js'), 'obsolete');
   const invoke = () =>
-    spawnSync(process.execPath, [new URL('./build-typescript.mjs', import.meta.url).pathname], {
+    spawnSync(process.execPath, [path.join(import.meta.dirname, 'build-typescript.mjs')], {
       cwd: directory,
       encoding: 'utf8',
     });
