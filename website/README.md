@@ -21,14 +21,13 @@ Die Header- und Footer-Navigation auf allen Seiten gemeinsam pflegen.
 Praxisinhaber, MFA-Leitung und Praxis-IT. Der Einstieg bleibt ein kompakter
 Artikelkopf mit klarer Leserfrage und einer Einleitung zu Inhalt und Nutzen:
 keine Hero-Sektion, kein dekoratives Einstiegsschaubild und keine Start-CTAs.
-Das Layout folgt einem Fachartikel: begrenzte Textbreite, sachliche
-Zwischenüberschriften und ein seitliches Inhaltsverzeichnis am Desktop. Mobil
-steht das Inhaltsverzeichnis vor dem Artikel. Fachbegriffe dort verwenden, wo
-sie Entscheidungen präzisieren; Einleitungen und Hinweise nicht mehrfach wiederholen.
-Die Seite führt vom konkreten Engpass über
-vorhandene PVS-Funktionen und einen nach Aufgaben gegliederten Anbietervergleich
-zur Erprobung eines vollständigen Ablaufs. Herstellerangaben, empirische Befunde
-und eigene Produktangaben werden getrennt und unmittelbar verlinkt. Die
+Das Layout folgt einem Fachartikel mit begrenzter Textbreite und sachlichen
+Zwischenüberschriften. Fachbegriffe dort verwenden, wo sie Entscheidungen präzisieren;
+Einleitungen und Hinweise nicht mehrfach wiederholen. Der Praxischeck schließt an die Bestandsaufnahme im PVS an.
+Auf schmalen Bildschirmen steht jeder Test direkt unter der zugehörigen Alltagssituation.
+Offene Fragen aus dem Test führen zum nach Aufgaben gegliederten Anbietervergleich.
+Herstellerangaben, empirische Befunde und eigene Produktangaben werden getrennt und
+unmittelbar verlinkt. Die
 Anbieterperspektive und der Recherchestand bleiben sichtbar; keine Rangliste oder
 unbelegte Einsparungsversprechen ergänzen.
 
@@ -42,10 +41,8 @@ Standardumfang und einer geprüften Anbindung an ein konkretes PVS getrennt.
 
 Die Seite enthält Article-Microdata, Canonical- und Open-Graph-Metadaten, wird in
 Sitemap und `llms.txt` aufgenommen und von der Startseite verlinkt. Sie benötigt
-kein JavaScript. Die Checkliste verwendet native Checkboxen ohne Speicherung
-oder Übertragung; Druckstile unterstützen die Besprechung im Team. Preise und
-Quellen beim Aktualisieren erneut prüfen. Angaben zum Manager-Backup, lokalen
-Portal und offenen Sicherheitsbefunden mit der Betriebsdokumentation abgleichen.
+kein JavaScript. Preise und Quellen beim Aktualisieren erneut prüfen. Angaben zum
+Manager-Backup, lokalen Portal und offenen Sicherheitsbefunden mit der Betriebsdokumentation abgleichen.
 
 ## Vorschau
 
