@@ -37,3 +37,6 @@ dumps/
 wartezimmer-source-*.tar.gz
 *.pfinstall
 *.pfupdate
+
+# Local instructions for coding assistants
+/AGENTS.md
