@@ -22,8 +22,8 @@ Praxisinhaber, MFA-Leitung und Praxis-IT. Der Einstieg bleibt ein kompakter
 Artikelkopf mit klarer Leserfrage und einer Einleitung zu Inhalt und Nutzen:
 keine Hero-Sektion, kein dekoratives Einstiegsschaubild und keine Start-CTAs.
 Das Layout folgt einem Fachartikel mit begrenzter Textbreite und sachlichen
-Zwischenüberschriften. Auf breiten Bildschirmen steht links eine mitlaufende
-Sprungnavigation; bis 1100 px steht sie vor dem Artikel. Das Frau-Weber-Beispiel
+Zwischenüberschriften. Der Artikel bleibt am Desktop mittig; links daneben steht
+eine mitlaufende Sprungnavigation. Bis 1400 px steht sie vor dem Artikel. Das Frau-Weber-Beispiel
 erklärt den Stationswechsel mit drei Ablaufschritten, mobil untereinander.
 Fachbegriffe dort verwenden, wo sie Entscheidungen präzisieren; Einleitungen und
 Hinweise nicht mehrfach wiederholen. Der Praxischeck schließt an die Bestandsaufnahme

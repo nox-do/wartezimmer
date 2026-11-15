@@ -915,13 +915,16 @@ html:has(.overview-dialog[open]) {
 /* Editorial guide: a complete decision path, readable without JavaScript. */
 .guide-layout {
   display: grid;
-  grid-template-columns: 180px minmax(0, 850px);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 850px) minmax(0, 1fr);
   gap: 48px;
-  width: min(1078px, calc(100% - 80px));
+  width: calc(100% - 80px);
   margin-inline: auto;
   align-items: start;
 }
 .guide-nav {
+  grid-column: 1;
+  justify-self: end;
+  width: 180px;
   position: sticky;
   top: 96px;
   padding-block: 38px;
@@ -952,6 +955,7 @@ html:has(.overview-dialog[open]) {
   text-decoration: underline;
 }
 .guide-page article {
+  grid-column: 2;
   min-width: 0;
   width: 100%;
 }
@@ -1441,13 +1445,14 @@ html:has(.overview-dialog[open]) {
 .guide-teaser .button {
   flex-shrink: 0;
 }
-@media (max-width: 1100px) {
+@media (max-width: 1400px) {
   .guide-layout {
     display: block;
-    width: min(860px, calc(100% - 40px));
+    width: min(850px, calc(100% - 40px));
   }
   .guide-nav {
     position: static;
+    width: auto;
     padding-block: 20px 0;
   }
   .guide-nav ul {
