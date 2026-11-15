@@ -23,7 +23,9 @@ Artikelkopf mit klarer Leserfrage und einer Einleitung zu Inhalt und Nutzen:
 keine Hero-Sektion, kein dekoratives Einstiegsschaubild und keine Start-CTAs.
 Das Layout folgt einem Fachartikel mit begrenzter Textbreite und sachlichen
 Zwischenüberschriften. Der Artikel bleibt am Desktop mittig; links daneben steht
-eine mitlaufende Sprungnavigation. Bis 1400 px steht sie vor dem Artikel. Das Frau-Weber-Beispiel
+eine mitlaufende Sprungnavigation. Der Vergleich nutzt bis zu 1100 px Breite;
+Fließtexte bleiben auf 850 px begrenzt. Bis 1640 px steht die Navigation vor dem
+Artikel, bis 1100 px werden die Anbieter als Karten dargestellt. Das Frau-Weber-Beispiel
 erklärt den Stationswechsel mit drei Ablaufschritten, mobil untereinander.
 Fachbegriffe dort verwenden, wo sie Entscheidungen präzisieren; Einleitungen und
 Hinweise nicht mehrfach wiederholen. Der Praxischeck schließt an die Bestandsaufnahme
@@ -37,8 +39,19 @@ ergänzen.
 Die Anbieterperspektive steht auch vor der Tabelle; der Artikel nennt Daniel Deuter
 sichtbar und als Person in den Article-Microdata. Der Einstieg behält die Leserfrage
 unter der beschreibenden H1 „Patientenaufruf im Vergleich“.
+Die persönliche Entstehungsgeschichte bleibt als letzter Expander auf der Ratgeberseite.
+Im Vergleich bleiben Auswahlkriterien, Quellenbasis und der Hinweis auf nicht selbst
+getestete Fremdprodukte. Studien, Methodik und Entstehungsgeschichte haben dezent graue Expander-Köpfe.
+Anbieterdetails ergänzen die Tabelle um Zusatzkosten und Grenzen, ohne die
+PVS-Angaben zu wiederholen. Betrieb und Demo-Hinweise bleiben kurz.
 
 Betriebsmodell, Softwarepreis und PVS-Anbindung haben eigene Spalten;
+eine weitere Spalte unterscheidet Kiosk/Self-Service, Mehrsprachigkeit je Oberfläche
+und separate Raum-Panels. Nur dokumentierte Herstellerangaben aufnehmen und direkt
+verlinken. Tablet-Kioskmodus für Fragebögen nicht mit einem Anmeldekiosk gleichsetzen,
+Aufrufmonitore nicht mit Türanzeigen. Angekündigte Funktionen als solche kennzeichnen;
+fehlende Belege bedeuten keine bestätigte Nichtverfügbarkeit. Angebote für Kliniken
+nicht als enthaltene Leistungen des verglichenen Praxistarifs darstellen.
 Bezugsgröße, Umsatzsteuer und Preisbedingungen bleiben sichtbar. Einzelheiten zu
 Einrichtung und Export stehen unter der Tabelle. Studienergebnisse zur Entlastung
 benennen Messgröße, Stichprobe, Design und Grenzen. Herstellerbefragungen nicht
@@ -46,8 +59,8 @@ als gemessene Wirksamkeit oder Zeitgewinn durch Wartezimmer darstellen.
 CSV-Kontaktabgleich ist vorhanden; GDT-/PVS-Individualentwicklung bleibt vom
 Standardumfang und einer geprüften Anbindung an ein konkretes PVS getrennt.
 Monats- und Netto-Umrechnungen sind Rechenhilfen, keine abweichenden Tarife.
-Das Kostenbeispiel umfasst auch Wartezimmer mit Einrichtung, Betrieb und dem Hinweis
-auf unsignierte Installer; keine unbelegten Einrichtungsbudgets nennen.
+Das Kostenbeispiel umfasst auch Wartezimmer mit Einrichtung und Betrieb;
+keine unbelegten Einrichtungsbudgets nennen.
 
 Die Seite enthält Article-Microdata, Canonical- und Open-Graph-Metadaten, wird in
 Sitemap und `llms.txt` aufgenommen und von der Startseite verlinkt. Sie benötigt

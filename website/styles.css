@@ -915,7 +915,7 @@ html:has(.overview-dialog[open]) {
 /* Editorial guide: a complete decision path, readable without JavaScript. */
 .guide-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 850px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1100px) minmax(0, 1fr);
   gap: 48px;
   width: calc(100% - 80px);
   margin-inline: auto;
@@ -979,7 +979,7 @@ html:has(.overview-dialog[open]) {
   margin-bottom: 22px;
 }
 .guide-article-heading > p:not(.eyebrow) {
-  max-width: 900px;
+  max-width: 850px;
   margin-top: 12px;
 }
 .guide-opening-question {
@@ -1092,10 +1092,12 @@ html:has(.overview-dialog[open]) {
   letter-spacing: -0.03em;
 }
 .guide-section-lead {
+  max-width: 850px;
   font-size: 17px;
   margin-bottom: 24px;
 }
 .guide-note {
+  max-width: 850px;
   margin-top: 16px;
   font-size: 13px;
   line-height: 1.6;
@@ -1141,6 +1143,9 @@ html:has(.overview-dialog[open]) {
 #pvs .guide-copy p + h3,
 #pvs .guide-copy h3 + p {
   margin-top: 12px;
+}
+.guide-copy {
+  max-width: 850px;
 }
 .guide-copy > p + p {
   margin-top: 18px;
@@ -1189,16 +1194,34 @@ html:has(.overview-dialog[open]) {
   padding-block: 16px;
 }
 .guide-comparison thead th:first-child {
-  width: 17%;
+  width: 13%;
 }
 .guide-comparison thead th:nth-child(2) {
-  width: 12%;
+  width: 8%;
 }
 .guide-comparison thead th:nth-child(3) {
-  width: 20%;
+  width: 15%;
 }
 .guide-comparison thead th:nth-child(4) {
-  width: 29%;
+  width: 20%;
+}
+.guide-comparison thead th:nth-child(5) {
+  width: 27%;
+}
+.guide-self-service {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.guide-self-service dt {
+  font-weight: 650;
+  color: var(--ink);
+}
+.guide-self-service dd {
+  margin: 2px 0 10px;
+}
+.guide-self-service dd:last-child {
+  margin-bottom: 0;
 }
 /* One column per task; on small screens each offer uses the existing card layout. */
 .guide-comparison .guide-mode {
@@ -1342,6 +1365,23 @@ html:has(.overview-dialog[open]) {
     background: #dfeadd;
   }
 }
+.guide-disclosure-muted {
+  border-color: var(--line);
+}
+.guide-disclosure-muted > summary {
+  background: #f1f1ed;
+}
+.guide-disclosure-muted[open] > summary {
+  border-bottom-color: var(--line);
+}
+.guide-disclosure-muted > summary::before {
+  background: var(--muted);
+}
+@media (hover: hover) {
+  .guide-disclosure-muted > summary:hover {
+    background: #e8e9e3;
+  }
+}
 @media (forced-colors: active) {
   .guide-disclosure > summary::before {
     border: 1px solid ButtonText;
@@ -1455,10 +1495,10 @@ html:has(.overview-dialog[open]) {
 .guide-teaser .button {
   flex-shrink: 0;
 }
-@media (max-width: 1400px) {
+@media (max-width: 1640px) {
   .guide-layout {
     display: block;
-    width: min(850px, calc(100% - 40px));
+    width: min(1100px, calc(100% - 40px));
   }
   .guide-nav {
     position: static;
@@ -1499,7 +1539,7 @@ html:has(.overview-dialog[open]) {
     padding: 18px 15px;
   }
 }
-@media screen and (max-width: 900px) {
+@media screen and (max-width: 1100px) {
   .guide-table-scroll {
     border: 0;
     overflow: visible;
@@ -1547,6 +1587,7 @@ html:has(.overview-dialog[open]) {
     font-size: 15px;
   }
   .guide-comparison td[data-label='Leistungsumfang'],
+  .guide-comparison .guide-self-service-cell,
   .guide-comparison td[data-label='PVS-Anbindung'] {
     grid-column: 1 / -1;
     padding-top: 0;
