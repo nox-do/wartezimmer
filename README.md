@@ -4,9 +4,6 @@ Wartezimmer ist ein lokal betriebenes System zur Organisation von Patientenbesuc
 
 Diese README richtet sich an Entwickler und die Praxis-IT. Die [Projektwebsite](https://nox-do.github.io/wartezimmer/) erklärt die Anwendung im Praxisalltag; die [Dokumentation](docs/README.md) beschreibt Fachlichkeit, Architektur und Betrieb.
 
-**Bekannte Sicherheitslücken:** [KNOWN_VULNERABILITIES.md](KNOWN_VULNERABILITIES.md)
-enthält die offene Brotli-Schwachstelle im Manager und die Kriterien für deren Behebung.
-
 ## Fachlicher Umfang
 
 | Bereich                | Funktion                                                                                                    |
