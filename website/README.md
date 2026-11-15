@@ -22,14 +22,17 @@ Praxisinhaber, MFA-Leitung und Praxis-IT. Der Einstieg bleibt ein kompakter
 Artikelkopf mit klarer Leserfrage und einer Einleitung zu Inhalt und Nutzen:
 keine Hero-Sektion, kein dekoratives Einstiegsschaubild und keine Start-CTAs.
 Das Layout folgt einem Fachartikel mit begrenzter Textbreite und sachlichen
-Zwischenüberschriften. Fachbegriffe dort verwenden, wo sie Entscheidungen präzisieren;
-Einleitungen und Hinweise nicht mehrfach wiederholen. Der Praxischeck schließt an die Bestandsaufnahme im PVS an.
-Auf schmalen Bildschirmen steht jeder Test direkt unter der zugehörigen Alltagssituation.
-Offene Fragen aus dem Test führen zum nach Aufgaben gegliederten Anbietervergleich.
-Herstellerangaben, empirische Befunde und eigene Produktangaben werden getrennt und
-unmittelbar verlinkt. Die
-Anbieterperspektive und der Recherchestand bleiben sichtbar; keine Rangliste oder
-unbelegte Einsparungsversprechen ergänzen.
+Zwischenüberschriften. Auf breiten Bildschirmen steht links eine mitlaufende
+Sprungnavigation; bis 1100 px steht sie vor dem Artikel. Das Frau-Weber-Beispiel
+erklärt den Stationswechsel mit drei Ablaufschritten, mobil untereinander.
+Fachbegriffe dort verwenden, wo sie Entscheidungen präzisieren; Einleitungen und
+Hinweise nicht mehrfach wiederholen. Der Praxischeck schließt an die Bestandsaufnahme
+im PVS an. Auf schmalen Bildschirmen steht jeder Test direkt unter der zugehörigen
+Alltagssituation. Offene Fragen aus dem Test führen zum nach Aufgaben gegliederten
+Anbietervergleich. Herstellerangaben, empirische Befunde und eigene Produktangaben
+werden getrennt und unmittelbar verlinkt. Die Anbieterperspektive und der
+Recherchestand bleiben sichtbar; keine Rangliste oder unbelegte Einsparungsversprechen
+ergänzen.
 
 Betriebsmodell und Softwarepreis haben eigene, auf einen Blick lesbare Spalten;
 Bezugsgröße, Umsatzsteuer und Preisbedingungen bleiben sichtbar. Einzelheiten zu

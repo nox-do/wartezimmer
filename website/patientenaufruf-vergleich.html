@@ -28,7 +28,7 @@
       property="og:url"
       content="https://nox-do.github.io/wartezimmer/patientenaufruf-vergleich.html"
     />
-    <link rel="stylesheet" href="./styles.css?v=58998256a38e" />
+    <link rel="stylesheet" href="./styles.css?v=71053248e253" />
     <link rel="describedby" href="./llms.txt" type="text/plain" />
   </head>
   <body class="guide-page">
@@ -47,7 +47,15 @@
         >
       </nav>
     </header>
-    <main id="main">
+    <main id="main" class="guide-layout">
+      <nav class="guide-nav" aria-label="In diesem Ratgeber">
+        <p>In diesem Ratgeber</p>
+        <ul role="list">
+          <li><a href="#pvs">PVS prüfen</a></li>
+          <li><a href="#vergleich">Anbieter vergleichen</a></li>
+          <li><a href="#kostenbeispiel">Kosten einordnen</a></li>
+        </ul>
+      </nav>
       <article itemscope itemtype="https://schema.org/Article">
         <link
           itemprop="mainEntityOfPage"
@@ -211,15 +219,20 @@
               <div class="guide-case">
                 <h4>Wer ruft Frau Weber nach dem Labor auf?</h4>
                 <p>
-                  Die Blutabnahme ist erledigt. Weil Zimmer 2 noch belegt ist, geht Frau Weber
-                  zurück ins Wartezimmer. Kann die MFA im Labor ihre Rückkehr mit einem Eintrag
-                  festhalten? Sieht die Kollegin in Zimmer 2, wen sie aufrufen kann, sobald der Raum
-                  frei ist?
+                  Die Blutabnahme ist erledigt. Zimmer 2 ist noch belegt. Frau Weber geht zurück ins
+                  Wartezimmer.
                 </p>
+                <ol class="guide-journey" role="list" aria-label="Frau Webers nächster Weg">
+                  <li><strong>Labor</strong><span>Blutabnahme fertig</span></li>
+                  <li><strong>Wartezimmer</strong><span>Wartet auf Zimmer 2</span></li>
+                  <li>
+                    <strong>Zimmer 2</strong><span>Kann sie aufrufen, sobald es frei ist</span>
+                  </li>
+                </ol>
                 <p>
-                  Muss das Sprechzimmer erst am Empfang nachfragen, prüfen Sie im Vergleich die
-                  Funktion
-                  <strong>Stationswechsel</strong>.
+                  Kann die MFA im Labor die Rückkehr festhalten? Sieht Zimmer 2 sie, ohne am Empfang
+                  nachzufragen? Prüfen Sie dafür im Vergleich die Funktion
+                  <a href="#vergleich">Stationswechsel</a>.
                 </p>
               </div>
               <dl class="guide-tasks" id="aufgaben">
