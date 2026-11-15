@@ -34,13 +34,20 @@ werden getrennt und unmittelbar verlinkt. Die Anbieterperspektive und der
 Recherchestand bleiben sichtbar; keine Rangliste oder unbelegte Einsparungsversprechen
 ergänzen.
 
-Betriebsmodell und Softwarepreis haben eigene, auf einen Blick lesbare Spalten;
+Die Anbieterperspektive steht auch vor der Tabelle; der Artikel nennt Daniel Deuter
+sichtbar und als Person in den Article-Microdata. Der Einstieg behält die Leserfrage
+unter der beschreibenden H1 „Patientenaufruf im Vergleich“.
+
+Betriebsmodell, Softwarepreis und PVS-Anbindung haben eigene Spalten;
 Bezugsgröße, Umsatzsteuer und Preisbedingungen bleiben sichtbar. Einzelheiten zu
 Einrichtung und Export stehen unter der Tabelle. Studienergebnisse zur Entlastung
 benennen Messgröße, Stichprobe, Design und Grenzen. Herstellerbefragungen nicht
 als gemessene Wirksamkeit oder Zeitgewinn durch Wartezimmer darstellen.
 CSV-Kontaktabgleich ist vorhanden; GDT-/PVS-Individualentwicklung bleibt vom
 Standardumfang und einer geprüften Anbindung an ein konkretes PVS getrennt.
+Monats- und Netto-Umrechnungen sind Rechenhilfen, keine abweichenden Tarife.
+Das Kostenbeispiel umfasst auch Wartezimmer mit Einrichtung, Betrieb und dem Hinweis
+auf unsignierte Installer; keine unbelegten Einrichtungsbudgets nennen.
 
 Die Seite enthält Article-Microdata, Canonical- und Open-Graph-Metadaten, wird in
 Sitemap und `llms.txt` aufgenommen und von der Startseite verlinkt. Sie benötigt

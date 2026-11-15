@@ -28,7 +28,7 @@
       property="og:url"
       content="https://nox-do.github.io/wartezimmer/patientenaufruf-vergleich.html"
     />
-    <link rel="stylesheet" href="./styles.css?v=7fffee9d1a53" />
+    <link rel="stylesheet" href="./styles.css?v=18b1459ae950" />
     <link rel="describedby" href="./llms.txt" type="text/plain" />
   </head>
   <body class="guide-page">
@@ -68,11 +68,19 @@
           <p class="eyebrow">
             Patientenaufruf, digitale Anamnese und Patientenportale im Vergleich
           </p>
-          <h1 itemprop="headline">„Ist Frau Weber noch im Labor?“</h1>
+          <h1 itemprop="headline">Patientenaufruf im Vergleich</h1>
+          <p class="guide-opening-question">„Ist Frau Weber noch im Labor?“</p>
           <p itemprop="description">
             Manchmal genügt für die Antwort ein Blick in die Warteliste Ihres
             Praxisverwaltungssystems (PVS). Wo Ihr Team trotzdem am Empfang nachfragen oder Daten
             doppelt eingeben muss, kann ein Aufrufsystem oder ein Patientenportal helfen.
+          </p>
+          <p class="guide-note" itemprop="author" itemscope itemtype="https://schema.org/Person">
+            Von
+            <a itemprop="url" href="https://deuter.org/" target="_blank" rel="noopener noreferrer"
+              ><span itemprop="name">Daniel Deuter</span></a
+            >
+            · Stand: 15. November 2026
           </p>
         </header>
         <section
@@ -319,6 +327,17 @@
             Sprechzimmer übergeben kann. Danach folgen drei Angebote für Anamnesebögen, Termine und
             den Dokumentenaustausch.
           </p>
+          <p class="guide-note">
+            Ich habe Wartezimmer entwickelt und vergleiche hier auch mein eigenes Produkt. Für den
+            zulässigen Eigenbetrieb fallen keine Lizenzgebühren an; Wartezimmer dient mir als
+            Referenz für Aufträge. Einrichtung und Betreuung durch Ihre Praxis-IT können
+            kostenpflichtig sein.
+          </p>
+          <p class="guide-note">
+            Die PVS-Spalte nennt dokumentierte Anbindungen. Eine Schnittstelle allein belegt keinen
+            vollständigen Datenabgleich. Lassen Sie sich Ihren Ablauf mit Ihrer PVS-Version zeigen.
+            Monatliche Rechenwerte ändern weder die Abrechnung noch den Leistungsumfang.
+          </p>
           <ul class="guide-feature-legend" role="list" aria-label="Zeichenerklärung">
             <li><b class="guide-included" aria-hidden="true">●</b> Im Preis enthalten</li>
             <li><b class="guide-extra" aria-hidden="true">$</b> Kostet zusätzlich</li>
@@ -342,11 +361,12 @@
                   <th scope="col" role="columnheader">Betrieb</th>
                   <th scope="col" role="columnheader">Softwarepreis</th>
                   <th scope="col" role="columnheader">Leistungsumfang</th>
+                  <th scope="col" role="columnheader">PVS-Anbindung</th>
                 </tr>
               </thead>
               <tbody role="rowgroup" aria-labelledby="aufruf-gruppe">
                 <tr role="row">
-                  <th scope="rowgroup" colspan="4" id="aufruf-gruppe">
+                  <th scope="rowgroup" colspan="5" id="aufruf-gruppe">
                     Patientenaufruf und Wartelisten
                   </th>
                 </tr>
@@ -375,6 +395,15 @@
                       <b class="guide-extra" role="img" aria-label="Kostet zusätzlich">$</b
                       >Praxis-TV
                     </div>
+                  </td>
+                  <td role="cell" data-label="PVS-Anbindung">
+                    Aufruf direkt aus tomedo; bei anderen PVS separate LISA-App.
+                    <a
+                      href="https://praxisansatz.de/lisa/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      >Details ↗</a
+                    >
                   </td>
                 </tr>
                 <tr role="row">
@@ -415,6 +444,12 @@
                       oder SMS. Das Self-Check-in-Terminal kostet zusätzlich.
                     </div>
                   </td>
+                  <td role="cell" data-label="PVS-Anbindung">
+                    GDT/BDT unter Windows dokumentiert. Tiefe und Umfang je PVS prüfen.
+                    <a href="https://allavia.de/" target="_blank" rel="noopener noreferrer"
+                      >Details ↗</a
+                    >
+                  </td>
                 </tr>
                 <tr role="row">
                   <th scope="row" role="rowheader">Dr.wait<span>Virtuelle Warteschlange</span></th>
@@ -448,6 +483,16 @@
                       Die App zeigt die voraussichtliche Wartezeit. Wer draußen wartet, kann per
                       Push-Nachricht zurückgerufen werden.
                     </div>
+                  </td>
+                  <td role="cell" data-label="PVS-Anbindung">
+                    Patientenakte aus der Desktop-App öffnen; Methode je PVS. Kein Beleg für
+                    vollständigen Datenabgleich.
+                    <a
+                      href="https://www.drwait.de/d/docs/pvs-verbindungen/im-pvs-oeffnen"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      >Details ↗</a
+                    >
                   </td>
                 </tr>
                 <tr role="row">
@@ -488,6 +533,15 @@
                       Verbrauch und Praxis-TV
                     </div>
                   </td>
+                  <td role="cell" data-label="PVS-Anbindung">
+                    API verfügbar. Konkrete PVS-Anbindung mit Anbieter und Praxis-IT klären.
+                    <a
+                      href="https://www.cleverq.de/intergrative-loesungen/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      >Details ↗</a
+                    >
+                  </td>
                 </tr>
                 <tr role="row">
                   <th scope="row" role="rowheader">
@@ -498,7 +552,10 @@
                   </td>
                   <td role="cell" data-label="Softwarepreis">
                     <strong class="guide-price">2.500 €</strong
-                    ><span class="guide-price-unit">je Standort/Jahr · netto<br />Jahrespaket</span>
+                    ><span class="guide-price-unit"
+                      >je Standort/Jahr · netto<br />≈ 208,33 € netto/Monat, jährlich
+                      abgerechnet</span
+                    >
                   </td>
                   <td role="cell" data-label="Leistungsumfang">
                     Automaten-Check-in, Online-Termine und Weiterleitung vom Labor ins Sprechzimmer
@@ -507,6 +564,16 @@
                       Welche Leistungen im Jahrespreis enthalten sind, legt der Anbieter im
                       individuellen Angebot fest.
                     </div>
+                  </td>
+                  <td role="cell" data-label="PVS-Anbindung">
+                    API verfügbar; keine fertige GDT-/HL7-Anbindung. Individuelle Umsetzung
+                    erforderlich.
+                    <a
+                      href="https://kascms.de/patientenaufrufsystem/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      >Details ↗</a
+                    >
                   </td>
                 </tr>
                 <tr role="row" class="guide-author-product">
@@ -547,11 +614,16 @@
                       Rückholen
                     </div>
                   </td>
+                  <td role="cell" data-label="PVS-Anbindung">
+                    Keine Standard-PVS-Anbindung. CSV-Kontaktabgleich ersetzt keinen laufenden
+                    Datenabgleich.
+                    <a href="./technik.html">Details ↗</a>
+                  </td>
                 </tr>
               </tbody>
               <tbody role="rowgroup" aria-labelledby="portal-gruppe">
                 <tr role="row">
-                  <th scope="rowgroup" colspan="4" id="portal-gruppe">
+                  <th scope="rowgroup" colspan="5" id="portal-gruppe">
                     Anamnese, Termine und Patientenportale
                   </th>
                 </tr>
@@ -582,6 +654,16 @@
                       <b class="guide-extra" role="img" aria-label="Kostet zusätzlich">$</b
                       >Fragebogeneditor
                     </div>
+                  </td>
+                  <td role="cell" data-label="PVS-Anbindung">
+                    GDT-Übergabe dokumentiert; alternativ PDF/JSON. PVS-Einrichtung kostet
+                    zusätzlich.
+                    <a
+                      href="https://hilfe.idana.com/guides/einsatz-von-idana/exportmoeglichkeiten/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      >Details ↗</a
+                    >
                   </td>
                 </tr>
                 <tr role="row">
@@ -619,6 +701,15 @@
                       Verbrauch
                     </div>
                   </td>
+                  <td role="cell" data-label="PVS-Anbindung">
+                    GDT, VDDS und x.time über die samedi-App. Unterstützte Abläufe je PVS prüfen.
+                    <a
+                      href="https://repo.samedi.de/samedi-app/latest/index.html"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      >Details ↗</a
+                    >
+                  </td>
                 </tr>
                 <tr role="row">
                   <th scope="row" role="rowheader">Doctolib<span>Patientenmanagement</span></th>
@@ -628,8 +719,8 @@
                   <td role="cell" data-label="Softwarepreis">
                     <strong class="guide-price">139 €</strong
                     ><span class="guide-price-unit"
-                      >je Arzt/Monat · inkl. MwSt.<br />Hausarzttarif im Jahresabo ohne KI-Telefon.
-                      Mit KI-Telefon 229 €.</span
+                      >je Arzt/Monat · inkl. MwSt.<br />≈ 116,81 € netto bei 19 % MwSt.<br />Hausarzttarif
+                      im Jahresabo ohne KI-Telefon. Mit KI-Telefon 229 €.</span
                     >
                   </td>
                   <td role="cell" data-label="Leistungsumfang">
@@ -648,6 +739,16 @@
                     </ul>
                     <div class="guide-more">Dokumente im Patientenkonto.</div>
                   </td>
+                  <td role="cell" data-label="PVS-Anbindung">
+                    Konnektor für unterstützte PVS dokumentiert. Verfügbarkeit und Umfang für Ihren
+                    Tarif prüfen.
+                    <a
+                      href="https://doctolib.zendesk.com/hc/de/articles/360058568972-Ihr-Doctolib-Konnektor-zu-Ihrem-PVS"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      >Details ↗</a
+                    >
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -664,7 +765,30 @@
                 2 × 9,90 € für die Ärzte, zusammen <strong>149,70 € netto im Monat</strong>. Darin
                 sind auch die Weiterleitung zwischen Räumen und digitale Anamnesebögen enthalten.
               </li>
+              <li>
+                Bei <strong>Dr.wait Premium</strong> ergeben 49 € plus 19,90 € für den zweiten
+                Behandler <strong>68,90 € netto im Monat</strong>.
+              </li>
+              <li>
+                Bei <strong>KAS Control</strong> kostet das Jahrespaket je Standort
+                <strong>2.500 € netto im Jahr</strong>, rechnerisch 208,33 € im Monat. Abgerechnet
+                wird jährlich; der genaue Leistungsumfang steht im Angebot.
+              </li>
+              <li>
+                Bei <strong>Wartezimmer</strong> beträgt die Lizenzgebühr für den zulässigen
+                Eigenbetrieb <strong>0 €</strong>. Einrichtung und Betrieb übernimmt die Praxis
+                selbst oder ihre Praxis-IT. Deren Kosten hängen von vorhandenen Geräten, Netzwerk
+                und Betreuungsbedarf ab. Eine belastbare pauschale Preisspanne kann ich nicht
+                nennen. SMS-Versand kostet zusätzlich. Die Manager-Installer für macOS und Windows
+                sind unsigniert; bei Installation und Start können Betriebssystemwarnungen
+                erscheinen.
+              </li>
             </ul>
+            <p class="guide-note">
+              Dies sind Softwarepreise für unterschiedliche Leistungsumfänge, keine Gesamtkosten.
+              Die Netto-Umrechnung bei Doctolib setzt 19 % MwSt. voraus; der ausgewiesene Zahlbetrag
+              bleibt 139 € inkl. MwSt. je Arzt und Monat.
+            </p>
             <p>
               Bitten Sie um ein Angebot für Ihre Räume und Arbeitsplätze. Welche Geräte können Sie
               weiterverwenden? Was kosten Einrichtung und laufende Betreuung?
@@ -1033,7 +1157,9 @@
             <summary><h2>Wie ich Wartezimmer mit anderen Angeboten vergleiche</h2></summary>
             <div class="guide-copy">
               <p>
-                Ich habe Wartezimmer entwickelt. Am Produkt selbst verdiene ich nichts. Bei der
+                Ich habe Wartezimmer entwickelt. Für den zulässigen Eigenbetrieb erhebe ich keine
+                Lizenzgebühren. Wartezimmer dient mir aber als Referenz für Aufträge. Einrichtung
+                und Betreuung durch IT-Dienstleister können kostenpflichtig sein. Bei der
                 Entwicklung habe ich mich viel damit beschäftigt, wie Patienten vom Labor ins
                 Sprechzimmer kommen. Deshalb gebe ich Raumwechseln im Vergleich womöglich mehr
                 Gewicht, als sie in Ihrer Praxis haben.

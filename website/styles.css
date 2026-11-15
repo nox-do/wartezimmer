@@ -982,6 +982,11 @@ html:has(.overview-dialog[open]) {
   max-width: 900px;
   margin-top: 12px;
 }
+.guide-opening-question {
+  font-size: 21px;
+  font-weight: 650;
+  line-height: 1.4;
+}
 .guide-practice-check {
   margin-block: 28px;
 }
@@ -1095,6 +1100,9 @@ html:has(.overview-dialog[open]) {
   font-size: 13px;
   line-height: 1.6;
 }
+#vergleich > .guide-note {
+  margin-block: 16px;
+}
 .guide-question {
   display: flex;
   align-items: baseline;
@@ -1181,13 +1189,16 @@ html:has(.overview-dialog[open]) {
   padding-block: 16px;
 }
 .guide-comparison thead th:first-child {
-  width: 18%;
+  width: 17%;
 }
 .guide-comparison thead th:nth-child(2) {
-  width: 13%;
+  width: 12%;
 }
 .guide-comparison thead th:nth-child(3) {
-  width: 23%;
+  width: 20%;
+}
+.guide-comparison thead th:nth-child(4) {
+  width: 29%;
 }
 /* One column per task; on small screens each offer uses the existing card layout. */
 .guide-comparison .guide-mode {
@@ -1237,25 +1248,24 @@ html:has(.overview-dialog[open]) {
 }
 .guide-features {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 10px;
   margin: 0;
   color: var(--ink);
 }
 .guide-features li {
   min-width: 0;
-  text-align: center;
+  text-align: left;
   font-size: 11px;
   line-height: 1.5;
   hyphens: none;
 }
-.guide-features li + li {
-  border-inline-start: 1px solid var(--line);
-}
 .guide-features b {
-  display: block;
+  display: inline-block;
+  width: 1em;
   font-size: 15px;
   line-height: 1.25;
-  margin-bottom: 3px;
+  margin-inline-end: 3px;
 }
 .guide-more {
   margin-top: 10px;
@@ -1536,7 +1546,8 @@ html:has(.overview-dialog[open]) {
     border-bottom: 0;
     font-size: 15px;
   }
-  .guide-comparison td:last-child {
+  .guide-comparison td[data-label='Leistungsumfang'],
+  .guide-comparison td[data-label='PVS-Anbindung'] {
     grid-column: 1 / -1;
     padding-top: 0;
   }
