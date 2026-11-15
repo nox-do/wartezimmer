@@ -1,7 +1,7 @@
 {
   "name": "@wartezimmer/manager",
   "private": true,
-  "version": "6.1.7",
+  "version": "6.1.8",
   "productName": "Wartezimmer Manager",
   "type": "module",
   "main": "./out/main/index.js",
@@ -25,7 +25,7 @@
     "@sveltejs/vite-plugin-svelte": "^6.2.1",
     "@types/node": "^25.9.1",
     "cross-env": "^7.0.3",
-    "electron": "44.4.3",
+    "electron": "44.11.3",
     "electron-builder": "26.15.3",
     "electron-vite": "^3.1.0",
     "svelte": "^5.35.5",

@@ -46,7 +46,7 @@ THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR I
 Electron and Chromium
 ---------------------
 
-Electron 44.4.3 is included in the Manager. Its MIT license and Chromium
+Electron 44.11.3 is included in the Manager. Its MIT license and Chromium
 third-party license notices are included in the installed Manager resources
 as LICENSE.electron.txt and LICENSES.chromium.html.
 

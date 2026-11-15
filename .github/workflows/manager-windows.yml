@@ -64,6 +64,14 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       - name: Packaged Electron runtime without external Node/npm on PATH
         run: node manager/scripts/smoke-packaged-setup.mjs '.tmp/build/manager/win-unpacked/WartezimmerManager.exe' .tmp/build/manager/win-unpacked/resources
+      - name: Verify shipped Electron and Node versions, SQLite and Brotli
+        run: node manager/scripts/check-packaged-runtime.mjs '.tmp/build/manager/win-unpacked/WartezimmerManager.exe' 24.22.2
       - name: Disposable NSIS install, reinstall, uninstall and data preservation
         shell: pwsh
         run: ./manager/scripts/test-windows-installer.ps1
+      - name: Upload verified Windows installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: wartezimmer-manager-windows-x64
+          path: dist/releases/*/WartezimmerManager-*-windows-x64-setup.exe
+          retention-days: 30
