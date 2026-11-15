@@ -128,7 +128,7 @@ erscheint bei deaktiviertem JavaScript. Beide Seiten bleiben unter ihren bisheri
 URLs erreichbar, bitten um `noindex,nofollow,noarchive` und stehen nicht in der Sitemap.
 Die übrigen Seiten, einschließlich Lizenz, bleiben direkt lesbar.
 
-Startseite und `llms.txt` verweisen für Kontaktdaten auf das Impressum. Auch die
+Die Startseite verweist für Kontakt auf `https://deuter.org`, `llms.txt` auf das Impressum. Auch die
 kanonische Root-Lizenz verweist für gesonderte Vereinbarungen auf das Impressum;
 der Lizenztext und sein Download werden weiterhin aus dieser Datei erzeugt.
 

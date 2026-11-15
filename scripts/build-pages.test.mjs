@@ -114,7 +114,7 @@ test('Pages build renders the canonical license, project sitemap and blocks inco
     assert.doesNotMatch(sealed, /Schickenberg|info@notaus|15678/);
   }
   const homepage = await readFile(path.join(output, 'index.html'), 'utf8');
-  assert.match(homepage, /Kontaktdaten öffnen/);
+  assert.match(homepage, /href="https:\/\/deuter\.org"/);
   assert.doesNotMatch(homepage, /mailto:|tel:/);
   assert.doesNotMatch(await readFile(path.join(output, 'llms.txt'), 'utf8'), /info@notaus/);
   const publicationPage = path.join(directory, 'website/datenschutz.html');
