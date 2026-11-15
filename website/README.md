@@ -145,8 +145,10 @@ Inline-Code des Öffnungsbildschirms über exakt berechnete SHA-256-Hashes.
 
 Das Git-Remote ist `git@github.com:nox-do/wartezimmer.git`. Für die Veröffentlichung
 GitHub Pages auf GitHub Actions einstellen und den Workflow manuell
-starten. Mit Repository-Variable `PAGES_BASE_URL` (vollständiger URL einschließlich
-Projektpfad) werden Sitemap und deren robots.txt-Verweis erzeugt.
+starten. Jeder Build erzeugt die Sitemap und deren robots.txt-Verweis für
+`https://nox-do.github.io/wartezimmer/`, einschließlich der Vergleichsseite.
+Die Repository-Variable `PAGES_BASE_URL` kann diese Basisadresse überschreiben
+(vollständige URL einschließlich Projektpfad).
 
 ## Assets
 

@@ -46,7 +46,8 @@ const licenseHtml = licenseText
     return `<p>${escapeHtml(paragraph.replace(/\r?\n/g, ' '))}</p>`;
   })
   .join('\n');
-const configuredBase = process.env.PAGES_BASE_URL?.trim();
+const configuredBase =
+  process.env.PAGES_BASE_URL?.trim() || 'https://nox-do.github.io/wartezimmer/';
 let siteBase;
 if (configuredBase) {
   siteBase = new URL(configuredBase);
@@ -100,7 +101,7 @@ await writeFile(path.join(output, 'licenses/wartezimmer-LICENSE.txt'), licenseTe
 // Keep editable source images and unused assets out of the published website.
 await cp(path.join(source, 'images'), path.join(output, 'images'), {
   recursive: true,
-  filter: (file) => !['originale', 'archiv'].includes(path.basename(file)),
+  filter: (file) => !['originale', 'archiv', '.DS_Store'].includes(path.basename(file)),
 });
 if (siteBase) {
   const escapeXml = (value) =>

@@ -129,6 +129,16 @@ test('Pages build renders the canonical license, project sitemap and blocks inco
   await writeFile(publicationPage, completePage);
   const publication = invoke([]);
   assert.equal(publication.status, 0, publication.stderr);
+  const defaultBase = invoke([], '');
+  assert.equal(defaultBase.status, 0, defaultBase.stderr);
+  assert.match(
+    await readFile(path.join(output, 'sitemap.xml'), 'utf8'),
+    /https:\/\/nox-do\.github\.io\/wartezimmer\/patientenaufruf-vergleich\.html/,
+  );
+  assert.match(
+    await readFile(path.join(output, 'robots.txt'), 'utf8'),
+    /Sitemap: https:\/\/nox-do\.github\.io\/wartezimmer\/sitemap\.xml/,
+  );
   assert.notEqual(invoke(['--preview'], 'https://example.org/project?token=secret').status, 0);
   const templatePath = path.join(directory, 'website/lizenz.html');
   await writeFile(
