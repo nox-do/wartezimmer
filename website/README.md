@@ -13,7 +13,10 @@ unter `docs/archive/website/`. Sie gehören nicht mehr zum aktuellen Dateibaum.
 
 „Kostenlos im Praxisbetrieb · Lokal in Ihrer Praxis · In 5 Minuten startklar.“ bleibt
 bereits im Hero sichtbar. Downloads und Technik haben eigene Seiten.
-Die Header- und Footer-Navigation auf allen Seiten gemeinsam pflegen.
+Header und Footer werden aus `partials/header.html` und `partials/footer.html`
+beim Build eingesetzt. `{{SITE_HEADER}}` und `{{SITE_FOOTER}}` müssen in jeder
+Seitenvorlage genau einmal stehen. `{{HOME}}` in der Header-Vorlage erhält auf
+Unterseiten den Startseitenpfad; aktive Navigationslinks bekommen `aria-current`.
 
 ## Ratgeber und Vergleich
 
@@ -77,7 +80,13 @@ python3 -m http.server 8000 --directory dist/pages
 ```
 
 `npm run lint:website` prüft JavaScript, CSS und ungenutzte Selektoren.
-`node --test scripts/build-pages.test.mjs` prüft den Build und die Interaktionen.
+Ungenutzte Schriftdefinitionen, Animationen und CSS-Variablen werden ebenfalls gemeldet.
+Zusätzlich zu PurgeCSS werden vollständige Selektoren gegen das mit den gemeinsamen
+Vorlagen gerenderte HTML geprüft. Hover und Fokus sowie geöffnete Dialoge, Details
+und ausgewählte Besuchsreiter werden dabei berücksichtigt. Neue dynamisch erzeugte
+Strukturen müssen in `scripts/check-website-css.mjs` ausdrücklich modelliert werden.
+`node --test scripts/build-pages.test.mjs scripts/check-website-css.test.mjs` prüft
+den Build, die Interaktionen, gemeinsame Vorlagen und die CSS-Prüfung.
 Jeder Build prüft das fertige Artefakt auf HTML-Fehler, doppelte IDs, defekte
 interne Links und Anker, fehlende ARIA-Ziele, nicht aufgelöste Vorlagen sowie
 fehlende oder ungenutzte Bild- und Schriftdateien. Interne Links müssen auch

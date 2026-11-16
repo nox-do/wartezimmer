@@ -3,11 +3,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkPages } from './check-pages.mjs';
 import { sealPage } from './seal-pages.mjs';
+import { loadPagePartials, renderPage } from './render-page.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const source = path.join(root, 'website');
 const output = path.join(root, 'dist/pages');
 const preview = process.argv.includes('--preview');
+const partials = await loadPagePartials(source);
 const pages = [
   'index.html',
   'downloads.html',
@@ -65,13 +67,22 @@ if (configuredBase) {
   if (!siteBase.pathname.endsWith('/')) siteBase.pathname += '/';
 }
 
+// Validate the complete rendered pages before replacing the existing artifact.
+const renderedPages = new Map();
 for (const page of pages) {
-  const html = await readFile(path.join(source, page), 'utf8');
+  let html = renderPage(await readFile(path.join(source, page), 'utf8'), page, partials);
+  if (page === 'lizenz.html') {
+    if (html.split('{{LICENSE_CONTENT}}').length !== 2) {
+      throw new Error('lizenz.html: Lizenz-Platzhalter muss genau einmal vorhanden sein.');
+    }
+    html = html.replace('{{LICENSE_CONTENT}}', licenseHtml);
+  }
   if (!preview && html.includes('data-publish-placeholder')) {
     throw new Error(
       `${page}: Angaben vor Veröffentlichung vervollständigen (siehe website/README.md).`,
     );
   }
+  renderedPages.set(page, html);
 }
 
 await rm(output, { recursive: true, force: true });
@@ -87,12 +98,8 @@ for (const entry of [
   'llms.txt',
   'robots.txt',
 ]) {
-  if (entry === 'lizenz.html') {
-    const template = await readFile(path.join(source, entry), 'utf8');
-    if (template.split('{{LICENSE_CONTENT}}').length !== 2) {
-      throw new Error('lizenz.html: Lizenz-Platzhalter muss genau einmal vorhanden sein.');
-    }
-    await writeFile(path.join(output, entry), template.replace('{{LICENSE_CONTENT}}', licenseHtml));
+  if (pages.includes(entry)) {
+    await writeFile(path.join(output, entry), renderedPages.get(entry));
     continue;
   }
   await cp(path.join(source, entry), path.join(output, entry), { recursive: true });

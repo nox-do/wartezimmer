@@ -28,25 +28,12 @@
       property="og:url"
       content="https://nox-do.github.io/wartezimmer/patientenaufruf-vergleich.html"
     />
-    <link rel="stylesheet" href="./styles.css?v=c9a095479933" />
+    <link rel="stylesheet" href="./styles.css" />
     <link rel="describedby" href="./llms.txt" type="text/plain" />
   </head>
   <body class="guide-page">
     <a class="skip-link" href="#main">Zum Inhalt</a>
-    <header class="site-header wrap">
-      <a class="brand" href="./index.html" aria-label="Wartezimmer – Startseite"
-        ><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span
-        >Wartezimmer<span class="brand-subtitle">Für Einzel- und Gemeinschaftspraxen</span></a
-      >
-      <nav aria-label="Hauptnavigation">
-        <a href="./index.html#wz-funktionen">Praxisalltag</a
-        ><a href="./patientenaufruf-vergleich.html" aria-current="page">Ratgeber</a
-        ><a href="./downloads.html">Download</a><a href="./index.html#wz-kontakt">Kontakt</a
-        ><a href="https://github.com/nox-do/wartezimmer" target="_blank" rel="noopener noreferrer"
-          >GitHub</a
-        >
-      </nav>
-    </header>
+    {{SITE_HEADER}}
     <main id="main" class="guide-layout">
       <nav class="guide-nav" aria-label="In diesem Ratgeber">
         <p>In diesem Ratgeber</p>
@@ -1377,18 +1364,6 @@
         </footer>
       </article>
     </main>
-    <footer class="site-footer wrap">
-      <a class="brand" href="./index.html">Wartezimmer</a>
-      <nav aria-label="Weitere Informationen">
-        <a href="./patientenaufruf-vergleich.html">Ratgeber &amp; Vergleich</a
-        ><a href="./downloads.html">Downloads</a><a href="./technik.html">Technik</a
-        ><a href="./lizenzen.html">Lizenzen</a><a href="./impressum.html">Impressum</a
-        ><a href="./datenschutz.html">Datenschutz</a
-        ><a href="https://github.com/nox-do/wartezimmer" target="_blank" rel="noopener noreferrer"
-          >Quellcode auf GitHub</a
-        >
-      </nav>
-      <span>Mehr Ruhe im Praxisalltag.</span>
-    </footer>
+    {{SITE_FOOTER}}
   </body>
 </html>

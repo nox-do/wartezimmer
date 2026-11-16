@@ -3,10 +3,20 @@ import { mkdtemp, mkdir, writeFile, rm, readFile, cp } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { JSDOM } from 'jsdom';
 import test from 'node:test';
 import { checkPages } from './check-pages.mjs';
 import { sealPage } from './seal-pages.mjs';
+import { loadPagePartials, renderPage } from './render-page.mjs';
+
+const partials = await loadPagePartials(fileURLToPath(new URL('../website/', import.meta.url)));
+const renderSource = async (page) =>
+  renderPage(
+    await readFile(new URL(`../website/${page}`, import.meta.url), 'utf8'),
+    page,
+    partials,
+  );
 
 async function fixture(t, html) {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'pf-pages-check-'));
@@ -73,6 +83,10 @@ test('Pages build renders the canonical license, project sitemap and blocks inco
       .replace(
         "'./seal-pages.mjs'",
         JSON.stringify(new URL('./seal-pages.mjs', import.meta.url).href),
+      )
+      .replace(
+        "'./render-page.mjs'",
+        JSON.stringify(new URL('./render-page.mjs', import.meta.url).href),
       ),
   );
   await cp(new URL('../website/', import.meta.url), path.join(directory, 'website'), {
@@ -127,6 +141,34 @@ test('Pages build renders the canonical license, project sitemap and blocks inco
   assert.notEqual(incomplete.status, 0);
   assert.match(incomplete.stderr, /Angaben vor Veröffentlichung/);
   await writeFile(publicationPage, completePage);
+  for (const partial of ['header', 'footer']) {
+    await t.test(`blocks publication placeholders in the shared ${partial}`, async () => {
+      const partialPath = path.join(directory, `website/partials/${partial}.html`);
+      const completePartial = await readFile(partialPath, 'utf8');
+      const previousOutput = await readFile(path.join(output, 'index.html'), 'utf8');
+      try {
+        await writeFile(
+          partialPath,
+          completePartial.replace(
+            `</${partial}>`,
+            `<span data-publish-placeholder="${partial}-fixture">Offen</span></${partial}>`,
+          ),
+        );
+        const blocked = invoke([]);
+        assert.notEqual(blocked.status, 0, `${partial}: incomplete publication must fail`);
+        assert.match(blocked.stderr, /Angaben vor Veröffentlichung/);
+        assert.equal(await readFile(path.join(output, 'index.html'), 'utf8'), previousOutput);
+        const partialPreview = invoke(['--preview']);
+        assert.equal(partialPreview.status, 0, partialPreview.stderr);
+        assert.match(
+          await readFile(path.join(output, 'index.html'), 'utf8'),
+          new RegExp(`data-publish-placeholder="${partial}-fixture"`),
+        );
+      } finally {
+        await writeFile(partialPath, completePartial);
+      }
+    });
+  }
   const publication = invoke([]);
   assert.equal(publication.status, 0, publication.stderr);
   const defaultBase = invoke([], '');
@@ -148,11 +190,9 @@ test('Pages build renders the canonical license, project sitemap and blocks inco
   assert.match(invoke(['--preview']).stderr, /Lizenz-Platzhalter/);
 });
 
-// jsdom is a declared test dependency of the UI workspace.
-const { JSDOM } = createRequire(new URL('../ui/package.json', import.meta.url))('jsdom');
 for (const page of ['impressum.html', 'datenschutz.html']) {
   test(`StaticSeal restores ${page} only after opening, retaining text and project links`, async () => {
-    const source = await readFile(new URL(`../website/${page}`, import.meta.url), 'utf8');
+    const source = await renderSource(page);
     const dom = new JSDOM(sealPage(source, page, 'Test'), {
       url: `https://example.org/project/${page}`,
       runScripts: 'outside-only',
@@ -196,7 +236,7 @@ for (const page of ['impressum.html', 'datenschutz.html']) {
   });
 }
 test('Website tabs, dialog and gallery work by keyboard and with reduced motion', async () => {
-  const dom = new JSDOM(await readFile(new URL('../website/index.html', import.meta.url), 'utf8'), {
+  const dom = new JSDOM(await renderSource('index.html'), {
     url: 'https://example.org/project/index.html#visit-aufruf',
     runScripts: 'outside-only',
   });

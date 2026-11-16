@@ -18,18 +18,7 @@
   </head>
   <body>
     <a class="skip-link" href="#main">Zum Inhalt</a>
-    <header class="site-header wrap">
-      <a class="brand" href="./index.html" aria-label="Wartezimmer – Startseite"
-        ><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span
-        >Wartezimmer<span class="brand-subtitle">Für Einzel- und Gemeinschaftspraxen</span></a
-      >
-      <nav aria-label="Hauptnavigation">
-        <a href="./index.html#wz-funktionen">Praxisalltag</a
-        ><a href="./patientenaufruf-vergleich.html">Ratgeber</a
-        ><a href="./downloads.html">Download</a><a href="./index.html#wz-kontakt">Kontakt</a>
-        <a href="https://github.com/nox-do/wartezimmer">GitHub</a>
-      </nav>
-    </header>
+    {{SITE_HEADER}}
     <main id="main" class="wrap">
       <div class="page-heading">
         <p class="eyebrow">Herunterladen &amp; starten</p>
@@ -158,12 +147,58 @@
             </div>
           </div>
         </div>
-        <div class="prose download-contact">
+        <aside class="install-help download-contact" aria-labelledby="install-help-heading">
+          <h2 id="install-help-heading">Sicherheitswarnung beim ersten Start?</h2>
           <p>
-            Bei der Installation oder beim ersten Öffnen des Managers können Windows und macOS eine
-            Sicherheitswarnung anzeigen. Ich spare mir die Kosten für Signierung und Notarisierung,
-            damit ich Wartezimmer kostenlos anbieten kann.
+            Der Manager ist nicht signiert oder notarisiert. Ich spare mir diese Kosten, damit ich
+            Wartezimmer kostenlos anbieten kann.
           </p>
+          <div class="install-help-grid">
+            <figure>
+              <img
+                src="./images/manager-start-windows.svg"
+                width="400"
+                height="190"
+                alt="Windows SmartScreen: zuerst Weitere Informationen, dann Trotzdem ausführen wählen."
+                loading="lazy"
+              />
+              <figcaption>
+                <h3>Windows</h3>
+                <p>
+                  In der SmartScreen-Warnung <strong>Weitere Informationen</strong> →
+                  <strong>Trotzdem ausführen</strong> wählen.
+                </p>
+              </figcaption>
+            </figure>
+            <figure>
+              <img
+                src="./images/manager-start-macos.svg"
+                width="400"
+                height="190"
+                alt="macOS-Systemeinstellungen: Datenschutz und Sicherheit mit hervorgehobenem Dennoch öffnen."
+                loading="lazy"
+              />
+              <figcaption>
+                <h3>macOS</h3>
+                <p>
+                  Nach dem ersten Startversuch: <strong>Systemeinstellungen</strong> →
+                  <strong>Datenschutz &amp; Sicherheit</strong> → <strong>Dennoch öffnen</strong>.
+                  Danach mit <strong>Öffnen</strong> bestätigen.
+                </p>
+              </figcaption>
+            </figure>
+          </div>
+          <p class="install-help-note">
+            Schematische Darstellungen. Nur für den Manager aus den oben verlinkten Downloads.
+            Details bei
+            <a
+              href="https://learn.microsoft.com/de-de/windows/apps/package-and-deploy/smartscreen-reputation"
+              >Microsoft</a
+            >
+            und <a href="https://support.apple.com/de-de/102445">Apple</a>.
+          </p>
+        </aside>
+        <div class="prose download-contact">
           <p>
             Die .pfinstall- und .pfupdate-Pakete enthalten ihre Prüfsummen bereits; der Manager
             prüft sie beim Import. Für die Manager-Installer finden Sie die
@@ -186,16 +221,6 @@
         </div>
       </div>
     </main>
-    <footer class="site-footer wrap">
-      <a class="brand" href="./index.html">Wartezimmer</a>
-      <nav aria-label="Weitere Informationen">
-        <a href="./patientenaufruf-vergleich.html">Ratgeber &amp; Vergleich</a>
-        <a href="./downloads.html">Downloads</a><a href="./technik.html">Technik</a
-        ><a href="./lizenzen.html">Lizenzen</a><a href="./impressum.html">Impressum</a
-        ><a href="./datenschutz.html">Datenschutz</a>
-        <a href="https://github.com/nox-do/wartezimmer">Quellcode auf GitHub</a>
-      </nav>
-      <span>Mehr Ruhe im Praxisalltag.</span>
-    </footer>
+    {{SITE_FOOTER}}
   </body>
 </html>

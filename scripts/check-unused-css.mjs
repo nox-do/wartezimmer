@@ -10,6 +10,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { PurgeCSS } from 'purgecss';
+import postcss from 'postcss';
+import { loadPagePartials, renderPage } from './render-page.mjs';
 
 const repoRoot = process.cwd();
 const allowlistPath = path.join(repoRoot, 'scripts/unused-css-allowlist.json');
@@ -101,6 +103,27 @@ function extractCssCandidates(content) {
   return [...tokens];
 }
 
+// PurgeCSS's rejected list only contains selectors, even when it also removes
+// unused font faces, animations or custom properties from the resulting CSS.
+export function removedDefinitions(original, purged) {
+  const definitions = (css) => {
+    const found = new Set();
+    const root = postcss.parse(css);
+    root.walkAtRules((rule) => {
+      if (rule.name.endsWith('keyframes')) found.add(`@${rule.name} ${rule.params}`);
+      if (rule.name === 'font-face') {
+        rule.walkDecls('font-family', (decl) => found.add(`@font-face ${decl.value}`));
+      }
+    });
+    root.walkDecls((decl) => {
+      if (decl.prop.startsWith('--')) found.add(decl.prop);
+    });
+    return found;
+  };
+  const kept = definitions(purged);
+  return [...definitions(original)].filter((definition) => !kept.has(definition));
+}
+
 /**
  * @param {Target} target
  */
@@ -115,10 +138,15 @@ async function checkTarget(target) {
     throw new Error(`[${target.name}] no content files matched`);
   }
 
+  const partials =
+    target.name === 'website' ? await loadPagePartials(path.join(repoRoot, 'website')) : null;
   const results = await new PurgeCSS().purge({
     css,
     content: contentFiles.map((file) => ({
-      raw: fs.readFileSync(file, 'utf8'),
+      raw:
+        partials && file.endsWith('.html')
+          ? renderPage(fs.readFileSync(file, 'utf8'), path.basename(file), partials)
+          : fs.readFileSync(file, 'utf8'),
       extension: path.extname(file).slice(1) || 'html',
     })),
     defaultExtractor: (content) => extractCssCandidates(content),
@@ -133,6 +161,9 @@ async function checkTarget(target) {
   const unused = [];
   for (const result of results) {
     const rejected = (result.rejected ?? []).map(normalizeSelector);
+    if (target.name === 'website') {
+      rejected.push(...removedDefinitions(fs.readFileSync(result.file, 'utf8'), result.css));
+    }
     if (rejected.length === 0) continue;
     unused.push({
       file: path.relative(repoRoot, result.file ?? 'unknown'),
