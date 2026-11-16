@@ -663,37 +663,33 @@
 }
 
 /* Modal */
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1050;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-2);
+dialog.modal-content::backdrop {
   background: var(--overlay-backdrop);
   backdrop-filter: blur(6px);
+  overflow: hidden;
+  overscroll-behavior: contain;
 }
 
-.modal-backdrop--dimmed {
+dialog.modal-content--dimmed::backdrop {
   background: var(--overlay-backdrop-dim);
   backdrop-filter: blur(8px);
 }
 
-.modal-backdrop--align-top {
-  align-items: flex-start;
-  padding-top: 2.5rem;
-}
-
-.modal-backdrop--fullscreen {
-  padding: 0;
+dialog.modal-content--fullscreen::backdrop {
   background: transparent;
   backdrop-filter: none;
 }
 
+dialog.modal-content--align-top {
+  margin-top: min(2.5rem, 5dvh);
+}
+
 .modal-content {
-  width: min(100%, 560px);
-  max-height: 90vh;
+  width: calc(100% - 2 * var(--spacing-2));
+  max-height: min(90dvh, calc(100dvh - 2 * var(--spacing-2)));
+  margin: auto;
+  border: 0;
+  overscroll-behavior: contain;
   padding: var(--spacing-2);
   overflow: auto;
   border-radius: var(--radius);
@@ -702,17 +698,24 @@
   box-shadow: 0 16px 40px var(--shadow-color-modal);
 }
 
-.modal-content--fullscreen {
+.modal-content--fullscreen[open] {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: none !important;
-  height: 100%;
+  max-width: none;
+  height: 100dvh;
   max-height: none;
+  margin: 0;
   padding: 0;
   overflow: hidden;
   border-radius: 0;
   box-shadow: none;
+}
+
+/* Dialog notifications must fit even when the dialog itself is narrow. */
+.modal-content .toast {
+  min-width: min(320px, calc(100dvw - 2rem));
+  max-width: min(420px, calc(100dvw - 2rem));
 }
 
 .modal-header {

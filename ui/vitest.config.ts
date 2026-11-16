@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
-import { compileModule } from 'svelte/compiler';
+import { compile, compileModule } from 'svelte/compiler';
 import { transformWithEsbuild } from 'vite';
 
 const uiRoot = path.dirname(fileURLToPath(import.meta.url));
@@ -12,6 +12,8 @@ export default defineConfig({
       name: 'svelte-runes-tests',
       enforce: 'pre',
       async transform(source, id) {
+        if (id.endsWith('.svelte'))
+          return compile(source, { filename: id, generate: 'client', css: 'injected' }).js;
         if (!id.endsWith('.svelte.ts')) return;
         const { code } = await transformWithEsbuild(source, id, { loader: 'ts' });
         return compileModule(code, { filename: id, generate: 'client' }).js;
@@ -19,6 +21,7 @@ export default defineConfig({
     },
   ],
   resolve: {
+    conditions: ['browser'],
     alias: {
       $lib: path.resolve(uiRoot, 'src/lib'),
     },

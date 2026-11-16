@@ -54,6 +54,8 @@
     onPersist,
   }: Props = $props();
 
+  const instanceId = $props.id();
+
   let openRoomId = $state<string | null>(null);
   let draft = $state<PracticeRoomWithPanels | null>(null);
   let lastSyncedRoomJson = $state('');
@@ -579,34 +581,34 @@
                     {/if}
 
                     {#if panel.enabled}
-                      <div class="modal-form-field">
-                        <span id="room-panel-mode-{placement}">{t('mfa.settings.roomPanelMode')}</span>
-                        <div
-                          class="segmented-control segmented-control--journey"
-                          role="radiogroup"
-                          aria-labelledby="room-panel-mode-{placement}"
-                        >
+                      <fieldset class="modal-form-field panel-mode-field" disabled={busy}>
+                        <legend>{t('mfa.settings.roomPanelMode')}</legend>
+                        <div class="segmented-control segmented-control--journey">
                           {#each panelModesForPlacement(placement) as panelMode (`${placement}:${panelMode}`)}
-                            <button
-                              type="button"
-                              class="segmented-control__option"
-                              role="radio"
-                              aria-checked={panel.mode === panelMode}
+                            {@const modeId = `${instanceId}-${room.roomId}-${placement}-${panelMode}`}
+                            <input
+                              class="sr-only"
+                              id={modeId}
+                              type="radio"
+                              name={`${instanceId}-${room.roomId}-${placement}-mode`}
+                              value={panelMode}
+                              checked={panel.mode === panelMode}
                               disabled={busy}
-                              onclick={() =>
+                              onchange={() =>
                                 updateDraftPanel(placement, {
                                   mode: panelMode,
                                   ...(placement === 'inside' && panelMode !== 'staff_full'
                                     ? { allowCalling: false }
                                     : {}),
                                 })}
-                            >
+                            />
+                            <label class="segmented-control__option" for={modeId}>
                               {roomPanelModeLabel(placement, panelMode)}
-                            </button>
+                            </label>
                           {/each}
                         </div>
                         <p class="field-hint">{roomPanelModeGuide(placement, panel.mode)}</p>
-                      </div>
+                      </fieldset>
 
                       {#if placement === 'inside'}
                         <ChoiceField label={t('mfa.settings.roomPanelShowNames')}>
@@ -753,7 +755,7 @@
   title={t('mfa.settings.roomDeleteConfirmTitle')}
   maxWidth="480px"
   dimBackdrop={true}
-  closeOnEscape={!busy}
+  closeDisabled={busy}
   onClose={() => {
     deleteConfirmOpen = false;
     deleteTargetIndex = null;
@@ -779,3 +781,16 @@
     </div>
   </div>
 </Modal>
+
+<style>
+  .panel-mode-field {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  label.segmented-control__option {
+    white-space: normal;
+  }
+</style>

@@ -69,7 +69,7 @@
   title={t('mfa.settings.terminalDisableConfirmTitle')}
   maxWidth="440px"
   dimBackdrop={true}
-  closeOnEscape={!busy}
+  closeDisabled={busy}
   onClose={() => {
     confirmLockOpen = false;
   }}

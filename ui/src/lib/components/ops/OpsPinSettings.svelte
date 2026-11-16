@@ -64,7 +64,8 @@
         }
         return;
       }
-      closeDialog();
+      dialogOpen = false;
+      form = { currentPin: '', newPin: '', confirmNewPin: '' };
       toastStore.success(t('ops.pinChangeSaved'));
     } finally {
       busy = false;
@@ -89,7 +90,7 @@
   headerClass="modal-header--hero bg-gradient-primary"
   maxWidth="520px"
   dimBackdrop={true}
-  closeOnEscape={!busy}
+  closeDisabled={busy}
   showCloseButton={!busy}
   onClose={closeDialog}
 >

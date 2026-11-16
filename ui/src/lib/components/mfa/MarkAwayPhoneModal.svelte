@@ -57,16 +57,16 @@
   dimBackdrop={true}
   maxWidth="420px"
   headerClass="modal-header--hero bg-gradient-primary"
-  closeOnEscape={!busy}
+  closeDisabled={busy}
   onClose={handleClose}
 >
-  {#snippet header()}
+  {#snippet header(titleId)}
     <div class="modal-header__left">
       <div class="modal-header__icon">
         <Pause size={18} aria-hidden="true" />
       </div>
       <div class="modal-header__texts">
-        <h2 id="modal-title" class="modal-title">
+        <h2 id={titleId} class="modal-title">
           {purpose === 'fixRecallNotify'
             ? t('mfa.fixRecallNotifyModalTitle')
             : t('mfa.markAwayModalTitle')}

@@ -23,7 +23,7 @@
   bind:open
   title={t('terminal.assistanceConfirmTitle')}
   showCloseButton={false}
-  closeOnEscape={!busy}
+  closeDisabled={busy}
   closeOnBackdropClick={!busy}
   onClose={close}
   maxWidth="600px"

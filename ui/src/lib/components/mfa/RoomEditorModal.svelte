@@ -99,7 +99,7 @@
   headerClass="modal-header--hero bg-gradient-primary"
   maxWidth="480px"
   dimBackdrop={true}
-  closeOnEscape={!busy}
+  closeDisabled={busy}
   onClose={handleClose}
 >
   <form

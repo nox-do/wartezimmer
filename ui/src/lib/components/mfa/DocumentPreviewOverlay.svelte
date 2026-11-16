@@ -39,6 +39,7 @@
   let busyAction = $state<'export' | 'discard' | 'rename' | null>(null);
   let renameEditing = $state(false);
   let renameDraft = $state('');
+  let renameButtonEl = $state<HTMLButtonElement | null>(null);
   let renameInputEl = $state<HTMLInputElement | null>(null);
   let previewRequestSeq = 0;
 
@@ -64,7 +65,7 @@
   });
 
   function handleClose() {
-    if (!open) {
+    if (!open || busyAction != null) {
       return;
     }
     cancelRename();
@@ -73,14 +74,6 @@
   }
 
   function handleKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
-      if (renameEditing) {
-        cancelRename();
-        return;
-      }
-      handleClose();
-      return;
-    }
     if (busyAction != null || previewLoading || listLoading || renameEditing) {
       return;
     }
@@ -197,6 +190,11 @@
     renameDraft = '';
   }
 
+  function cancelRenameWithFocus() {
+    cancelRename();
+    queueMicrotask(() => renameButtonEl?.focus());
+  }
+
   function finishRenameEdit() {
     renameEditing = false;
     renameDraft = '';
@@ -265,7 +263,7 @@
     if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
-      cancelRename();
+      if (busyAction == null) cancelRenameWithFocus();
     }
   }
 
@@ -376,11 +374,16 @@
 <Modal
   bind:open
   fullscreen
-  portalZIndex={1100}
   ariaLabel={t('mfa.previewTitle')}
   contentClass="doc-preview-shell"
   closeOnBackdropClick={false}
-  closeOnEscape={false}
+  closeDisabled={busyAction != null}
+  onCancel={(event) => {
+    if (renameEditing) {
+      event.preventDefault();
+      cancelRenameWithFocus();
+    }
+  }}
   showCloseButton={false}
   onClose={() => onClose?.()}
   onDialogKeydown={handleKeydown}
@@ -422,6 +425,7 @@
             {#if canRename}
               <button
                 type="button"
+                bind:this={renameButtonEl}
                 class="icon-btn doc-preview-rename-btn"
                 disabled={busyAction != null || previewLoading}
                 aria-label={t('mfa.documentRename')}
@@ -485,6 +489,7 @@
           class="icon-btn doc-preview-close-btn"
           onmousedown={(event) => event.preventDefault()}
           onclick={handleClose}
+          disabled={busyAction != null}
           aria-label={t('ui.dialogCloseAria')}
         >
           <X size={22} aria-hidden="true" />

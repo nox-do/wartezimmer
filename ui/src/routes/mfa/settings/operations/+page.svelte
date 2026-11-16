@@ -452,7 +452,7 @@
   headerClass="modal-header--hero bg-gradient-primary"
   maxWidth="520px"
   dimBackdrop={true}
-  closeOnEscape={pinBusyTarget == null}
+  closeDisabled={pinBusyTarget != null}
   showCloseButton={pinBusyTarget == null}
   onClose={closePinDialog}
 >

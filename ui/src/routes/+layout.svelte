@@ -40,7 +40,7 @@
 </svelte:head>
 
 <div class="app-shell">
-  <main class="app-main" data-surface={surface ?? undefined}>
+  <main tabindex="-1" class="app-main" data-surface={surface ?? undefined}>
     {#if bootstrapped}
       {@render children()}
     {:else}

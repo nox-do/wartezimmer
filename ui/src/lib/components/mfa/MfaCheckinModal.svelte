@@ -272,16 +272,16 @@
   dimBackdrop={true}
   maxWidth="560px"
   headerClass="modal-header--hero bg-gradient-primary"
-  closeOnEscape={!submitBusy}
+  closeDisabled={submitBusy}
   onClose={closeModal}
 >
-  {#snippet header()}
+  {#snippet header(titleId)}
     <div class="modal-header__left">
       <div class="modal-header__icon">
         <UserPlus size={18} aria-hidden="true" />
       </div>
       <div class="modal-header__texts">
-        <h2 id="modal-title" class="modal-title">{t('mfa.checkinModalTitle')}</h2>
+        <h2 id={titleId} class="modal-title">{t('mfa.checkinModalTitle')}</h2>
       </div>
     </div>
   {/snippet}

@@ -27,6 +27,8 @@
 
   let { ticket = null, rooms = [], activeItems = [], busy = false, onConfirm, onCancel }: Props = $props();
 
+  const instanceId = $props.id();
+
   const open = $derived(ticket != null);
   const ticketLabel = $derived(
     ticket != null ? formatTicketCode(ticket.laneCode, ticket.number) : '',
@@ -77,16 +79,16 @@
   dimBackdrop={true}
   maxWidth="420px"
   headerClass="modal-header--hero bg-gradient-primary"
-  closeOnEscape={!busy}
+  closeDisabled={busy}
   onClose={handleClose}
 >
-  {#snippet header()}
+  {#snippet header(titleId)}
     <div class="modal-header__left">
       <div class="modal-header__icon">
         <ArrowRight size={18} aria-hidden="true" />
       </div>
       <div class="modal-header__texts">
-        <h2 id="modal-title" class="modal-title">{t('mfa.reassignModalTitle')}</h2>
+        <h2 id={titleId} class="modal-title">{t('mfa.reassignModalTitle')}</h2>
         {#if ticket}
           <p class="modal-subtitle modal-subtitle--pre-line">
             {tf('mfa.reassignModalDesc', { ticket: ticketLabel })}
@@ -100,26 +102,25 @@
     {#if enabledRooms.length === 0}
       <p class="text-muted">{t('mfa.reassignNoRooms')}</p>
     {:else}
-      <div class="qs-room-list" role="listbox" aria-label={t('mfa.reassignRoomListAria')}>
+      <fieldset class="qs-room-list" disabled={busy}>
+        <legend class="sr-only">{t('mfa.reassignRoomListAria')}</legend>
         {#each enabledRooms as room (room.roomId)}
-          <button
-            type="button"
-            class="qs-room-chip"
-            class:qs-room-chip--active={room.roomId === selectedRoomId}
-            role="option"
-            aria-selected={room.roomId === selectedRoomId}
+          {@const roomId = `${instanceId}-${room.roomId}`}
+          <input
+            class="sr-only"
+            id={roomId}
+            type="radio"
+            name={`${instanceId}-target-room`}
+            value={room.roomId}
+            checked={room.roomId === selectedRoomId}
             disabled={busy || !roomIsSelectable(room)}
-            onclick={() => {
-              if (!roomIsSelectable(room)) {
-                return;
-              }
-              selectedRoomId = room.roomId;
-            }}
-          >
+            onchange={() => { selectedRoomId = room.roomId; }}
+          />
+          <label class="qs-room-chip" class:qs-room-chip--active={room.roomId === selectedRoomId} for={roomId}>
             {room.roomLabel}
-          </button>
+          </label>
         {/each}
-      </div>
+      </fieldset>
     {/if}
 
     <div class="form-actions">
@@ -136,3 +137,12 @@
     </div>
   </form>
 </Modal>
+
+<style>
+  fieldset.qs-room-list {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+</style>

@@ -11,6 +11,9 @@
 
   let { open = $bindable(false), selectedIconId = null, onSelect }: Props = $props();
 
+  const instanceId = $props.id();
+  const selectionHintId = `${instanceId}-selection`;
+
   let query = $state('');
 
   const filteredIcons = $derived(
@@ -49,11 +52,14 @@
     />
   </label>
 
-  <div class="topic-icon-grid" role="listbox" aria-label={t('mfa.settings.topicIconPickerTitle')}>
+  <span id={selectionHintId} class="sr-only">{t('mfa.settings.topicIconCurrent')}</span>
+
+  <div class="topic-icon-grid" role="group" aria-label={t('mfa.settings.topicIconPickerTitle')}>
     <button
       type="button"
       class="topic-icon-option"
       class:topic-icon-option--selected={selectedIconId == null}
+      aria-describedby={selectedIconId == null ? selectionHintId : undefined}
       onclick={() => pick(null)}
     >
       <span class="topic-icon-option-preview topic-icon-option-preview--letter" aria-hidden="true">A</span>
@@ -66,6 +72,7 @@
         type="button"
         class="topic-icon-option"
         class:topic-icon-option--selected={selectedIconId === entry.id}
+        aria-describedby={selectedIconId === entry.id ? selectionHintId : undefined}
         onclick={() => pick(entry.id)}
       >
         <span class="topic-icon-option-preview" aria-hidden="true">

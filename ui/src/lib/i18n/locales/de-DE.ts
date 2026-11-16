@@ -638,6 +638,7 @@ export const dict = {
       topicIconChoose: 'Icon wählen',
       topicIconPickerTitle: 'Icon für Terminal-Thema',
       topicIconPickerLead: 'Optional — ohne Icon wird der erste Buchstabe des Namens angezeigt.',
+      topicIconCurrent: 'Aktuell ausgewählt',
       topicIconNone: 'Kein Icon (Buchstabe)',
       topicIconSearchLabel: 'Icons durchsuchen',
       topicIconSearchPlaceholder: 'Suchen (z. B. Zahn, Labor, Termin)',

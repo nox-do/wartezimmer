@@ -25,7 +25,7 @@
   {open}
   title={t('mfa.assistancePlacementTitle')}
   showCloseButton={false}
-  closeOnEscape={!busy}
+  closeDisabled={busy}
   closeOnBackdropClick={!busy}
   dimBackdrop={true}
   maxWidth="440px"

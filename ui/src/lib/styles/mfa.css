@@ -1278,13 +1278,19 @@ button.queue-ticket {
   color: var(--green-success-emphasis);
 }
 
-.qs-room-chip:hover:not(:disabled) {
+.qs-room-chip:hover:not(:disabled):not(input:disabled + label) {
   border-color: var(--zinc-400);
 }
 
+input:disabled + .qs-room-chip,
 .qs-room-chip:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+input:focus-visible + .qs-room-chip {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 .terminal-lock {

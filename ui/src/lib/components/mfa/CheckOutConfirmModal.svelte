@@ -38,10 +38,10 @@
   dimBackdrop={true}
   maxWidth="400px"
   headerClass="modal-header--hero bg-gradient-primary"
-  closeOnEscape={!busy}
+  closeDisabled={busy}
   onClose={handleClose}
 >
-  {#snippet header()}
+  {#snippet header(titleId)}
     <div class="modal-header__left">
       <div class="modal-header__icon">
         {#if purpose === 'cancel'}
@@ -51,7 +51,7 @@
         {/if}
       </div>
       <div class="modal-header__texts">
-        <h2 id="modal-title" class="modal-title">
+        <h2 id={titleId} class="modal-title">
           {purpose === 'cancel' ? t('mfa.cancelVisitModalTitle') : t('mfa.checkOutModalTitle')}
         </h2>
         {#if ticket}

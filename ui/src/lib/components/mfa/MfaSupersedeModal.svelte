@@ -122,16 +122,16 @@
   dimBackdrop={true}
   maxWidth="560px"
   headerClass="modal-header--hero bg-gradient-primary"
-  closeOnEscape={!submitBusy}
+  closeDisabled={submitBusy}
   onClose={handleClose}
 >
-  {#snippet header()}
+  {#snippet header(titleId)}
     <div class="modal-header__left">
       <div class="modal-header__icon">
         <ArrowRightLeft size={18} aria-hidden="true" />
       </div>
       <div class="modal-header__texts">
-        <h2 id="modal-title" class="modal-title">{t('mfa.supersedeTitle')}</h2>
+        <h2 id={titleId} class="modal-title">{t('mfa.supersedeTitle')}</h2>
       </div>
     </div>
   {/snippet}
