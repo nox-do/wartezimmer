@@ -1405,6 +1405,12 @@ html:has(.overview-dialog[open]) {
   margin: 0;
   padding: 20px var(--inset);
 }
+.guide-disclosure > .guide-copy {
+  max-width: none;
+}
+.guide-disclosure > .guide-copy > p + h3 {
+  margin-top: 28px;
+}
 .guide-vendor-details .guide-note {
   margin: 0;
   padding: 0 var(--inset) 20px;
