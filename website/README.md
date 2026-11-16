@@ -23,8 +23,10 @@ Artikelkopf mit klarer Leserfrage und einer Einleitung zu Inhalt und Nutzen:
 keine Hero-Sektion, kein dekoratives Einstiegsschaubild und keine Start-CTAs.
 Das Layout folgt einem Fachartikel mit begrenzter Textbreite und sachlichen
 Zwischenüberschriften. Der Artikel bleibt am Desktop mittig; links daneben steht
-eine mitlaufende Sprungnavigation. Der Vergleich nutzt bis zu 1100 px Breite;
-Fließtexte bleiben auf 850 px begrenzt. Bis 1640 px steht die Navigation vor dem
+eine mitlaufende Sprungnavigation. Der Vergleich nutzt bis zu 1240 px Breite;
+Fließtexte bleiben auf 850 px begrenzt. Die Leistungsmerkmale verteilen sich je nach
+Spaltenbreite flexibel; Symbol und Bezeichnung bleiben zusammen. PVS-Namen bleiben
+ab 640 px ohne Umbruch. Bis 1780 px steht die Navigation vor dem
 Artikel, bis 1100 px werden die Anbieter als Karten dargestellt. Das Frau-Weber-Beispiel
 erklärt den Stationswechsel mit drei Ablaufschritten, mobil untereinander.
 Fachbegriffe dort verwenden, wo sie Entscheidungen präzisieren; Einleitungen und

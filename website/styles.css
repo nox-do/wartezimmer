@@ -915,7 +915,7 @@ html:has(.overview-dialog[open]) {
 /* Editorial guide: a complete decision path, readable without JavaScript. */
 .guide-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1100px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1240px) minmax(0, 1fr);
   gap: 48px;
   width: calc(100% - 80px);
   margin-inline: auto;
@@ -1137,6 +1137,12 @@ html:has(.overview-dialog[open]) {
   font-size: 0.875em;
   font-weight: 550;
 }
+@media (min-width: 640px) {
+  .guide-scope th:first-child {
+    width: 34%;
+    white-space: nowrap;
+  }
+}
 .guide-scope thead {
   background: #f0f1eb;
 }
@@ -1197,16 +1203,16 @@ html:has(.overview-dialog[open]) {
   width: 13%;
 }
 .guide-comparison thead th:nth-child(2) {
-  width: 8%;
+  width: 10%;
 }
 .guide-comparison thead th:nth-child(3) {
-  width: 15%;
+  width: 14%;
 }
 .guide-comparison thead th:nth-child(4) {
-  width: 20%;
+  width: 22%;
 }
 .guide-comparison thead th:nth-child(5) {
-  width: 27%;
+  width: 25%;
 }
 .guide-self-service {
   margin: 0;
@@ -1271,24 +1277,28 @@ html:has(.overview-dialog[open]) {
 }
 .guide-features {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 112px), 1fr));
   gap: 6px 10px;
   margin: 0;
   color: var(--ink);
 }
 .guide-features li {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
   min-width: 0;
   text-align: left;
   font-size: 11px;
   line-height: 1.5;
   hyphens: none;
+  white-space: nowrap;
 }
 .guide-features b {
+  flex: none;
   display: inline-block;
   width: 1em;
   font-size: 15px;
   line-height: 1.25;
-  margin-inline-end: 3px;
 }
 .guide-more {
   margin-top: 10px;
@@ -1495,10 +1505,10 @@ html:has(.overview-dialog[open]) {
 .guide-teaser .button {
   flex-shrink: 0;
 }
-@media (max-width: 1640px) {
+@media (max-width: 1780px) {
   .guide-layout {
     display: block;
-    width: min(1100px, calc(100% - 40px));
+    width: min(1240px, calc(100% - 40px));
   }
   .guide-nav {
     position: static;
