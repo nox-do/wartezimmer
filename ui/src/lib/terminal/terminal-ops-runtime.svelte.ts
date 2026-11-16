@@ -18,13 +18,11 @@ function createInitialOps(): TerminalOpsSnapshot {
     loading: true,
     deviceAuthorized: false,
     checkinLocked: false,
-    emergencyEnabled: false,
     terminalWlanPromoEnabled: false,
     terminalAuthPhoneEnabled: false,
     terminalAuthNameDobEnabled: false,
     terminalAuthEgkEnabled: false,
     terminalPatientLocales: [...DEFAULT_TERMINAL_PATIENT_LOCALES],
-    emergencyActive: false,
   };
 }
 
@@ -48,18 +46,6 @@ function resetTerminalOpsState(): void {
 export type MountTerminalOpsRuntimeOptions = {
   pairingMessages: DevicePairingMessages;
 };
-
-type RuntimeRefresh = () => Promise<boolean>;
-
-let activeRefresh: RuntimeRefresh | null = null;
-
-/** Heartbeat refresh while terminal layout is mounted; no-op if unmounted. */
-export async function refreshTerminalOpsHeartbeat(): Promise<boolean> {
-  if (!activeRefresh) {
-    return false;
-  }
-  return activeRefresh();
-}
 
 /**
  * Pairing + Heartbeat-Poll + Device-SSE. Call from terminal layout `onMount`.
@@ -139,17 +125,13 @@ export function mountTerminalOpsRuntime(options: MountTerminalOpsRuntimeOptions)
     terminalPairingUi.error = null;
     ensureDeviceStream();
     terminalOps.checkinLocked = result.data.checkinLocked;
-    terminalOps.emergencyEnabled = result.data.emergencyEnabled;
     terminalOps.terminalWlanPromoEnabled = result.data.terminalWlanPromoEnabled;
     terminalOps.terminalAuthPhoneEnabled = result.data.terminalAuthPhoneEnabled;
     terminalOps.terminalAuthNameDobEnabled = result.data.terminalAuthNameDobEnabled;
     terminalOps.terminalAuthEgkEnabled = result.data.terminalAuthEgkEnabled;
     terminalOps.terminalPatientLocales = result.data.terminalPatientLocales;
-    terminalOps.emergencyActive = result.data.emergencyActive;
     return true;
   }
-
-  activeRefresh = refresh;
 
   void refresh().then((authorized) => {
     if (!authorized) {
@@ -184,7 +166,6 @@ export function mountTerminalOpsRuntime(options: MountTerminalOpsRuntimeOptions)
 
   return () => {
     stopped = true;
-    activeRefresh = null;
     stopDeviceStream();
     pairing.destroy();
     clearInterval(timer);

@@ -82,7 +82,6 @@ export type ComposeRunOptions = {
   preserveEnvFile?: boolean;
   restrictedOperationId?: string;
   delivery?: boolean;
-  withGateway?: boolean;
   withProxy?: boolean;
   composeProjectName: string;
 };
@@ -96,11 +95,6 @@ function usesDeliveryCompose(projectRoot: string, delivery?: boolean): boolean {
   }
   const hasDev = fs.existsSync(path.join(projectRoot, 'docker-compose.yml'));
   return !hasDev;
-}
-
-/** Lab openNDS gateway compose removed from the product tree — never attach. */
-function wantsGatewayCompose(_projectRoot: string, _withGateway?: boolean): boolean {
-  return false;
 }
 
 function wantsProxyCompose(projectRoot: string, withProxy?: boolean): boolean {
@@ -131,10 +125,6 @@ function wantsProxyTlsCompose(projectRoot: string): boolean {
   return mode === 'tls-managed' || mode === 'tls-custom' || tlsState !== 'off';
 }
 
-/**
- * Single compose-file resolver for up/ps/stop/restart/logs/down.
- * (Former openNDS gateway overlay removed from the product tree.)
- */
 function wantsTlsLabCompose(projectRoot: string): boolean {
   const envPath = path.join(projectRoot, '.env');
   if (!fs.existsSync(envPath)) return false;
@@ -149,8 +139,6 @@ export function resolveComposeFiles(input: {
   proxyTlsEnabled?: boolean;
   tlsLabEnabled?: boolean;
   restrictedEnabled?: boolean;
-  /** @deprecated Ignored — openNDS gateway compose removed. */
-  gatewayEnabled?: boolean;
 }): string[] {
   const useDelivery = usesDeliveryCompose(input.projectRoot, input.delivery);
   const files = useDelivery ? ['docker-compose.delivery.yml'] : ['docker-compose.yml'];
@@ -177,11 +165,7 @@ export function resolveComposeFiles(input: {
   return files;
 }
 
-export function productComposeServices(input: {
-  proxyEnabled?: boolean;
-  /** @deprecated Ignored — openNDS gateway compose removed. */
-  gatewayEnabled?: boolean;
-}): string[] {
+export function productComposeServices(input: { proxyEnabled?: boolean }): string[] {
   const services = ['app', 'sandbox'];
   if (input.proxyEnabled) services.push('proxy');
   return services;
@@ -189,15 +173,10 @@ export function productComposeServices(input: {
 
 export function resolveProductComposeServices(options: ComposeRunOptions): string[] {
   const proxyEnabled = wantsProxyCompose(options.projectRoot, options.withProxy);
-  const { wantGateway } = resolveComposeFileList(options);
-  return productComposeServices({ proxyEnabled, gatewayEnabled: wantGateway });
+  return productComposeServices({ proxyEnabled });
 }
 
-function resolveComposeFileList(options: ComposeRunOptions): {
-  files: string[];
-  wantGateway: boolean;
-  gatewaySkipped: boolean;
-} {
+function resolveComposeFileList(options: ComposeRunOptions): string[] {
   const proxyEnabled = wantsProxyCompose(options.projectRoot, options.withProxy);
   const proxyTlsEnabled = proxyEnabled && wantsProxyTlsCompose(options.projectRoot);
   const tlsLabEnabled =
@@ -210,9 +189,6 @@ function resolveComposeFileList(options: ComposeRunOptions): {
     proxyTlsEnabled &&
     fs.existsSync(envPath) &&
     readEnvMap(envPath).get('SETUP_RESTRICTED_ENABLED')?.trim().toLowerCase() === 'true';
-  const gatewayWanted = wantsGatewayCompose(options.projectRoot, options.withGateway);
-  const wantGateway = gatewayWanted && canRunGatewayCompose();
-  const gatewaySkipped = gatewayWanted && !canRunGatewayCompose();
   const files = resolveComposeFiles({
     projectRoot: options.projectRoot,
     delivery: options.delivery,
@@ -220,12 +196,11 @@ function resolveComposeFileList(options: ComposeRunOptions): {
     proxyTlsEnabled,
     tlsLabEnabled,
     restrictedEnabled,
-    gatewayEnabled: gatewayWanted,
   });
   if (options.restrictedOperationId)
     files.push(path.join(restrictedOperationDir(options.projectRoot), 'compose.yml'));
   files.push(...(options.overrideFiles ?? []));
-  return { files, wantGateway, gatewaySkipped };
+  return files;
 }
 
 export function buildComposeEnv(
@@ -339,7 +314,7 @@ export async function composeUp(options: ComposeUpOptions & { services?: string[
     assertWindowsHostPath(folders.exports, { allowMappedDrive: true });
   }
   if (!options.restrictedOperationId) await recoverRestrictedOperation(options, false);
-  const { files, wantGateway, gatewaySkipped } = resolveComposeFileList(options);
+  const files = resolveComposeFileList(options);
   const bindingError = options.restrictedOperationId
     ? validateStaffBindingEnv(
         readEnvMap(restrictedOperationEnv(options.projectRoot, options.restrictedOperationId)),
@@ -347,21 +322,15 @@ export async function composeUp(options: ComposeUpOptions & { services?: string[
       )
     : composeStaffBindingError(options.projectRoot);
   if (bindingError) {
-    return { ok: false, log: bindingError, gatewaySkipped };
+    return { ok: false, log: bindingError, gatewaySkipped: false };
   }
-  // Gateway profile only when not targeting a subset of services.
-  const useGatewayProfile = wantGateway && (!options.services || options.services.length === 0);
-
   const args = ['compose'];
   for (const file of files) {
-    // When services filter is set, drop gateway overlay so we don't require the profile.
-    if (!useGatewayProfile && /docker-compose\.gateway/.test(file)) {
+    // An override from an older installation can still name a retired gateway overlay.
+    if (/docker-compose\.gateway/.test(file)) {
       continue;
     }
     args.push('-f', file);
-  }
-  if (useGatewayProfile) {
-    args.push('--profile', 'gateway');
   }
   args.push(
     '--env-file',
@@ -387,7 +356,7 @@ export async function composeUp(options: ComposeUpOptions & { services?: string[
   });
 
   const log = [result.stdout, result.stderr].filter(Boolean).join('\n');
-  return { ok: result.code === 0, log, gatewaySkipped };
+  return { ok: result.code === 0, log, gatewaySkipped: false };
 }
 
 type ComposePsPublisher = {
@@ -607,14 +576,11 @@ function buildComposeArgv(
   options: ComposeRunOptions,
   subcommand: string[],
 ): { args: string[]; cwd: string; env: NodeJS.ProcessEnv } {
-  const { files, wantGateway } = resolveComposeFileList(options);
+  const files = resolveComposeFileList(options);
 
   const args = ['compose'];
   for (const file of files) {
     args.push('-f', file);
-  }
-  if (wantGateway) {
-    args.push('--profile', 'gateway');
   }
   args.push(
     '--env-file',
@@ -814,14 +780,11 @@ export async function composeDown(
     return { ok: true, log: 'no .env — skipped compose down' };
   }
 
-  const { files, wantGateway } = resolveComposeFileList(options);
+  const files = resolveComposeFileList(options);
 
   const args = ['compose'];
   for (const file of files) {
     args.push('-f', file);
-  }
-  if (wantGateway) {
-    args.push('--profile', 'gateway');
   }
   args.push(
     '--env-file',

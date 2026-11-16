@@ -170,7 +170,6 @@ test('resolveComposeFiles selects base file by delivery flag', () => {
       projectRoot: '/tmp/pf',
       delivery: false,
       proxyEnabled: false,
-      gatewayEnabled: false,
     }),
     ['docker-compose.yml'],
   );
@@ -179,7 +178,6 @@ test('resolveComposeFiles selects base file by delivery flag', () => {
       projectRoot: '/tmp/pf',
       delivery: true,
       proxyEnabled: false,
-      gatewayEnabled: false,
     }),
     ['docker-compose.delivery.yml'],
   );
@@ -191,7 +189,6 @@ test('resolveComposeFiles stacks proxy overlays', () => {
       projectRoot: '/tmp/pf',
       delivery: false,
       proxyEnabled: true,
-      gatewayEnabled: false,
     }),
     ['docker-compose.yml', 'docker-compose.proxy.yml'],
   );
@@ -200,7 +197,6 @@ test('resolveComposeFiles stacks proxy overlays', () => {
       projectRoot: '/tmp/pf',
       delivery: true,
       proxyEnabled: true,
-      gatewayEnabled: false,
     }),
     ['docker-compose.delivery.yml', 'docker-compose.proxy.delivery.yml'],
   );
@@ -294,14 +290,9 @@ test('resolveComposeFiles adds restricted publish only after the TLS proxy overl
 test('productComposeServices never includes TLS lab or removed gateway', () => {
   assert.deepEqual(productComposeServices({}), ['app', 'sandbox']);
   assert.deepEqual(productComposeServices({ proxyEnabled: true }), ['app', 'sandbox', 'proxy']);
-  assert.deepEqual(productComposeServices({ proxyEnabled: true, gatewayEnabled: true }), [
-    'app',
-    'sandbox',
-    'proxy',
-  ]);
   assert.equal(
     COMPOSE_TLS_LAB_SERVICES.some((name) =>
-      productComposeServices({ proxyEnabled: true, gatewayEnabled: true }).includes(name),
+      productComposeServices({ proxyEnabled: true }).includes(name),
     ),
     false,
   );

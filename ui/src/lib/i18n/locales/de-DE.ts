@@ -524,12 +524,6 @@ export const dict = {
     displayOnline: 'Online',
     displayStale: 'Eingefroren',
     displayOffline: 'Offline',
-    emergencyTitle: 'Notfall — Terminal',
-    emergencyAlarm: 'Alarm {time}',
-    emergencyRespond: '— bitte reagieren.',
-    emergencyAck: 'Quittieren',
-    emergencyAckBusy: '…',
-    emergencyAckError: 'Notfall konnte nicht quittiert werden.',
     assistTitle: 'Hilfe am Terminal',
     assistLine: '{ticket} wartet am Terminal und benötigt persönliche Begleitung.',
     assistPickedUp: 'Abgeholt',
@@ -1047,6 +1041,8 @@ export const dict = {
     deleteError: 'Löschen fehlgeschlagen.',
     documentsLoadError: 'Dateiliste konnte nicht geladen werden.',
     browserHeader: 'Browser · Upload · Session',
+    sessionStorageUnavailable:
+      'Der Browser erlaubt keinen Zugriff auf den Sitzungsspeicher. Bitte erlauben Sie den Sitzungsspeicher für diese Website oder öffnen Sie das Portal in einem anderen Browser. Starten Sie danach das Portal erneut mit Ihrer Wartenummer.',
     sessionMissing: 'Keine aktive Upload-Session.',
     sessionMissingHint:
       'Bitte über das Patientenportal mit Ihrer Wartenummer starten oder vom WLAN weiterleiten lassen.',
@@ -1234,15 +1230,6 @@ export const dict = {
     assistanceConfirmedAria:
       'Ihre Wartenummer ist {code}. Bitte bleiben Sie am Terminal. Sie werden abgeholt.',
     assistanceReceiptInstruction: 'Bitte am Terminal warten. Sie werden dort abgeholt.',
-    emergencySectionAria: 'Notfall melden',
-    emergencyReport: 'Notfall melden',
-    emergencyReportHint: 'Antippen, dann {seconds} Sek. warten',
-    emergencyCountdownAria: 'Notfall wird in {remaining} Sekunden gemeldet',
-    emergencyCancel: 'Abbrechen',
-    emergencyDone: 'Das Praxisteam wurde informiert. Bitte warten Sie hier.',
-    emergencyErrorDisabled: 'Notfall-Funktion ist in den Einstellungen deaktiviert.',
-    emergencyErrorLocked: 'Notfall kann bei gesperrtem Terminal nicht ausgelöst werden.',
-    emergencyErrorFallback: 'Notfall konnte nicht gemeldet werden.',
     wlanPromoAria: 'Hinweis Praxis-WLAN',
     wlanPromoKicker: 'Praxis-WLAN',
     wlanPromoWithTicket:
@@ -1260,7 +1247,7 @@ export const dict = {
     printSettingsHotspotAria: 'Drucker-Einstellungen (unten links lange gedrückt halten)',
     printSettingsTitle: 'Bon-Drucker',
     printSettingsLead:
-      'Papierbreite für den Thermodrucker. Nach dem Check-in wird einmal automatisch gedruckt — schlägt es fehl, bleibt die Nummer auf dem Bildschirm.',
+      'Bonbreite und Papierformat im Treiber müssen übereinstimmen. Automatischen Bondruck erst nach einem erfolgreichen echten Testdruck mit genau diesem Terminal-PC, Browser, Treiber und Drucker freigeben. Eine Druckvorschau genügt nicht. Die Nummer bleibt auf dem Bildschirm sichtbar.',
     printSettingsWidthLabel: 'Papierbreite',
     printSettingsWidthOption: '{width} mm',
     printSettingsSetupTitle: 'Einrichtung am Terminal-PC (Windows)',

@@ -7,13 +7,11 @@ function ops(overrides: Partial<TerminalOpsSnapshot>): TerminalOpsSnapshot {
     loading: false,
     deviceAuthorized: true,
     checkinLocked: false,
-    emergencyEnabled: false,
     terminalWlanPromoEnabled: false,
     terminalAuthPhoneEnabled: true,
     terminalAuthNameDobEnabled: true,
     terminalAuthEgkEnabled: true,
     terminalPatientLocales: ['de-DE'],
-    emergencyActive: false,
     ...overrides,
   };
 }

@@ -246,8 +246,9 @@
     </section>
   {:else if errorMessage}
     <section class="card flex flex-col gap-2">
-      <div class="alert alert--error">{errorMessage}</div>
+      <div class="alert alert--error" role="alert">{errorMessage}</div>
       <p class="text-muted">{t('portal.sessionMissingHint')}</p>
+      <a href={resolve('/portal')}>{t('portal.backToPortal')}</a>
     </section>
   {:else if submitted}
     <section class="card flex flex-col gap-2">

@@ -5,14 +5,9 @@ import { t } from '$lib/i18n/i18nStore.svelte';
 import {
   applyDevicePairingOpsSnapshot,
   applyDevicePresenceOpsSnapshot,
-  applyEmergencyOpsSnapshot,
   resetOpsStreamStore,
 } from './ops-stream-store.svelte';
-import {
-  parseDevicePairingOpsSnapshot,
-  parseDevicePresenceOpsSnapshot,
-  parseEmergencyOpsSnapshot,
-} from './ops-stream-parse';
+import { parseDevicePairingOpsSnapshot, parseDevicePresenceOpsSnapshot } from './ops-stream-parse';
 
 export type OpsStreamHandlers = {
   onError?: (message: string) => void;
@@ -24,12 +19,6 @@ export function connectOpsStream(handlers: OpsStreamHandlers = {}): () => void {
     credentials: 'include',
     clientRole: 'mfa',
     handlers: {
-      emergency: (data) => {
-        const snapshot = parseEmergencyOpsSnapshot(data);
-        if (snapshot) {
-          applyEmergencyOpsSnapshot(snapshot);
-        }
-      },
       'device.presence': (data) => {
         const snapshot = parseDevicePresenceOpsSnapshot(data);
         if (snapshot) {

@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { gotoResolved } from '$lib/navigation/kit-paths';
   import { resolve } from '$app/paths';
   import Button from '$lib/components/forms/Button.svelte';
   import PrivacyNoticeModal from '$lib/components/shared/PrivacyNoticeModal.svelte';
@@ -19,7 +18,6 @@
   } from '$lib/portal/patient-document-api';
   import {
     clearPortalSession,
-    readPortalSession,
     type PortalSessionContext,
   } from '$lib/portal/portal-session';
   import type { PatientDocument } from '$lib/portal/types';
@@ -38,10 +36,6 @@
   let practiceProfile = $state(getPracticeProfileFallback());
 
   const privacyNotice = $derived(getUploadPrivacyNotice(practiceProfile));
-
-  function backToPortal() {
-    void gotoResolved('/portal');
-  }
 
   async function loadDocuments(activeSession: PortalSessionContext) {
     const result = await fetchPatientDocuments(activeSession.sessionToken);
@@ -81,7 +75,7 @@
     const files = input.files ? [...input.files] : [];
     input.value = '';
 
-    const activeSession = session ?? readPortalSession();
+    const activeSession = session;
     if (!activeSession) {
       uploadFeedback = t('portal.sessionMissing');
       toastStore.error(t('portal.sessionMissing'));
@@ -141,7 +135,7 @@
   }
 
   async function onDelete(documentId: string) {
-    const activeSession = session ?? readPortalSession();
+    const activeSession = session;
     if (!activeSession) {
       return;
     }
@@ -178,11 +172,11 @@
     </section>
   {:else if errorMessage}
     <section class="card flex flex-col gap-2">
-      <div class="alert alert--error">{errorMessage}</div>
+      <div class="alert alert--error" role="alert">{errorMessage}</div>
       <p class="text-muted">{t('portal.sessionMissingHint')}</p>
+      <a href={resolve('/portal')}>{t('portal.backToPortal')}</a>
       {#if errorMessage === t('portal.sessionExpired')}
         <p class="text-muted">{t('portal.sessionExpiredHint')}</p>
-        <Button variant="primary" onclick={backToPortal}>{t('portal.backToPortal')}</Button>
       {/if}
     </section>
   {:else if session}

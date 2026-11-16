@@ -76,4 +76,3 @@ export type RuntimeResetResponse = OpsSchemas['RuntimeResetResponse'];
 export type OpsHeartbeatResponse = OpsSchemas['OpsHeartbeatResponse'];
 export type ContactLookupPreviewResponse = OpsSchemas['ContactLookupPreviewResponse'];
 export type ContactLookupValidateResponse = OpsSchemas['ContactLookupValidateResponse'];
-export type EmergencyRaiseResponse = OpsSchemas['EmergencyRaiseResponse'];

@@ -1,8 +1,4 @@
-import type {
-  DevicePairingOpsSnapshot,
-  DevicePresenceOpsSnapshot,
-  EmergencyOpsSnapshot,
-} from './ops-stream-types';
+import type { DevicePairingOpsSnapshot, DevicePresenceOpsSnapshot } from './ops-stream-types';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -17,35 +13,6 @@ function readNullableString(value: unknown): string | null | undefined {
     return null;
   }
   return readString(value) ?? undefined;
-}
-
-export function parseEmergencyOpsSnapshot(data: unknown): EmergencyOpsSnapshot | null {
-  if (!isRecord(data)) {
-    return null;
-  }
-
-  const revision = data.revision;
-  const active = data.active;
-  const serverTime = readString(data.serverTime);
-  if (typeof revision !== 'number' || typeof active !== 'boolean' || !serverTime) {
-    return null;
-  }
-
-  const emergencyId = readNullableString(data.emergencyId);
-  const raisedAt = readNullableString(data.raisedAt);
-  const acknowledgedAt = readNullableString(data.acknowledgedAt);
-  if (emergencyId === undefined || raisedAt === undefined || acknowledgedAt === undefined) {
-    return null;
-  }
-
-  return {
-    revision,
-    active,
-    emergencyId,
-    raisedAt,
-    acknowledgedAt,
-    serverTime,
-  };
 }
 
 export function parseDevicePresenceOpsSnapshot(data: unknown): DevicePresenceOpsSnapshot | null {

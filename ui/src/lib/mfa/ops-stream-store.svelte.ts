@@ -9,16 +9,11 @@ import {
   loadPersistedDeviceHeuristics,
   savePersistedDeviceHeuristics,
 } from './ops-stream-device-heuristics-persist';
-import type {
-  DevicePairingOpsSnapshot,
-  DevicePresenceOpsSnapshot,
-  EmergencyOpsSnapshot,
-} from './ops-stream-types';
+import type { DevicePairingOpsSnapshot, DevicePresenceOpsSnapshot } from './ops-stream-types';
 
 export type { DeviceQuicksettingsPhase } from './ops-stream-device-phase';
 
 export const opsStream = $state({
-  emergency: null as EmergencyOpsSnapshot | null,
   devicePresence: {} as Record<string, DevicePresenceOpsSnapshot>,
   devicePairing: {
     tv: null,
@@ -131,10 +126,6 @@ export function beginDeviceConnectionWait(deviceId: string, timeoutMs = 10_000):
   });
 }
 
-export function applyEmergencyOpsSnapshot(snapshot: EmergencyOpsSnapshot): void {
-  opsStream.emergency = snapshot;
-}
-
 export function applyDevicePresenceOpsSnapshot(snapshot: DevicePresenceOpsSnapshot): void {
   opsStream.devicePresence[snapshot.deviceId] = snapshot;
   if (
@@ -160,7 +151,6 @@ export function resetOpsStreamStore(): void {
   for (const deviceId of connectionWaitCancelByDevice.keys()) {
     cancelDeviceConnectionWait(deviceId);
   }
-  opsStream.emergency = null;
   opsStream.devicePresence = {};
   opsStream.devicePairing = { tv: null, terminal: null };
   opsStream.deviceWasOnline = {};

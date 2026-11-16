@@ -1,5 +1,5 @@
 -- wartezimmer schema baseline (2026-06): Wartezimmer / Patientenfluss
--- Fresh databases only. Schema change = delete SQLite file / Docker volume and restart (no in-place upgrades).
+-- Fresh databases only. CoreDatabase applies additive schema updates at startup.
 -- Phase B3: tickets/queue_entries removed; portal tables use visit_id (FK added at runtime via ensureVisitPortalSchema).
 
 CREATE TABLE IF NOT EXISTS ops_state (

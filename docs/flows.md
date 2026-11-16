@@ -6,13 +6,13 @@
 
 Die Tabelle beschreibt die vorhandenen Oberflächen. Grenzen optionaler Anbindungen stehen unter [Integrationen](operations/integrations.md).
 
-| Bereich             | In Runtime-UI                                                                                                                                                                                                                                                                                                                                                                                                                     | Nur Backend/Mocks                                        |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| Terminal Happy Path | Phone/DOB (+49 fest), **Nachname+DOB** (optional per Ops), Themen, Bestätigung, MFA-Assist, Notfall, Terminal gesperrt, Themen-Zeitfenster (Backend-Filter), optional Bon-Druck (Kiosk), Sprachen de/en/tr/ru/uk (Patienten-UI; MFA wählt sichtbare Sprachen, Default nur DE)                                                                                                                                                     | Empfangs-Ausweg bei nicht verfügbarer Anmeldung / Themen |
-| Portal              | Wartenummer → Menü → Upload **und** Erstanamnese; Session-Abschluss (Formular → revoke, Upload → TTL 30 Min); Captive-Authorize-Hook (Lab)                                                                                                                                                                                                                                                                                        | Keine Captive-Adapter                                    |
-| MFA                 | Warteliste (SSE), Zonen, **Raum-Board** (grüne Spalte), **DnD** (WZ↔Räume), **Triage-Merker**, persistierter Anzeigename (`identity-ref`), Dokument-Vorschau (inkl. Deep-Link), Notfall (Ops-Stream), Quicksettings (**Terminal sperren**, Aufrufziel, Geräte-Presence/Pairing), Betrieb-Settings (WLAN-Promo, `returnWindowMinutes`), Rückhol-SMS, Themen-Reihenfolge per Drag, **Raum-Panel-Settings** (Tür + im Raum pro Raum) | Queue-Summary, Identity/Patient-Detail, PVS-Spalten      |
-| Raum-Panel          | Login pro Placement (`/room-panel`), Live-Snapshot (SSE), Ankunft/Entlassen/Aufruf aus `actions`, getrennte `callCandidates`-Liste                                                                                                                                                                                                                                                                                                | —                                                        |
-| TV                  | SSE, Aufruf, Chime, Pagination, Device-Pairing                                                                                                                                                                                                                                                                                                                                                                                    | —                                                        |
+| Bereich             | In Runtime-UI                                                                                                                                                                                                                                                                                                                                                                                               | Nur Backend/Mocks                                        |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Terminal Happy Path | Phone/DOB (+49 fest), **Nachname+DOB** (optional per Ops), Themen, Bestätigung, MFA-Assist, Terminal gesperrt, Themen-Zeitfenster (Backend-Filter), optional Bon-Druck (Kiosk), Sprachen de/en/tr/ru/uk (Patienten-UI; MFA wählt sichtbare Sprachen, Default nur DE)                                                                                                                                        | Empfangs-Ausweg bei nicht verfügbarer Anmeldung / Themen |
+| Portal              | Wartenummer → Menü → Upload **und** Erstanamnese; Session-Abschluss (Formular → revoke, Upload → TTL 30 Min); Captive-Authorize-Hook (Lab)                                                                                                                                                                                                                                                                  | Keine Captive-Adapter                                    |
+| MFA                 | Warteliste (SSE), Zonen, **Raum-Board** (grüne Spalte), **DnD** (WZ↔Räume), **Triage-Merker**, persistierter Anzeigename (`identity-ref`), Dokument-Vorschau (inkl. Deep-Link), Quicksettings (**Terminal sperren**, Aufrufziel, Geräte-Presence/Pairing), Betrieb-Settings (WLAN-Promo, `returnWindowMinutes`), Rückhol-SMS, Themen-Reihenfolge per Drag, **Raum-Panel-Settings** (Tür + im Raum pro Raum) | Queue-Summary, Identity/Patient-Detail, PVS-Spalten      |
+| Raum-Panel          | Login pro Placement (`/room-panel`), Live-Snapshot (SSE), Ankunft/Entlassen/Aufruf aus `actions`, getrennte `callCandidates`-Liste                                                                                                                                                                                                                                                                          | —                                                        |
+| TV                  | SSE, Aufruf, Chime, Pagination, Device-Pairing                                                                                                                                                                                                                                                                                                                                                              | —                                                        |
 
 **Echtzeit-Vertrag:** `docs/architecture/realtime.md` — Presence (offline) und Pairing (Code) sind getrennte SSE-Events; REST nur fuer Aktionen.
 
@@ -64,7 +64,7 @@ Die folgenden Abschnitte beschreiben die Abläufe und ihre Grenzen.
 - **Kein Drucker / Fehler:** kein Bon — Wartenummer bleibt groß sichtbar (kein dynamisches Fehler-Feedback am Display, da Browser keinen Druck-Erfolg meldet)
 - Konfiguration am Terminal-PC (Papierbreite, Kiosk-Launcher) — kein Ops-Setting in v1
 
-Technik (Runtime): Kiosk-Chromium mit `--kiosk-printing`, clientseitiges Print-CSS (`window.print()` auf Bestätigungs-Screen), Papierbreite 58/80 mm in `localStorage` (Long-Press unten links → Testdruck). Kein Backend-Print-Agent in v1.
+Technik (Runtime): Kiosk-Chromium mit `--kiosk-printing`, clientseitiges Print-CSS (`window.print()` auf Bestätigungs-Screen), Bonbreite 58/80 mm in `localStorage` (Long-Press unten links → Testdruck). Das passende Rollenformat einschließlich Länge bzw. Vorschub muss im Standarddrucker-Treiber eingerichtet sein; `@page { size: auto; margin: 2mm; }` übernimmt das Treiberformat, die Bonansicht begrenzt den Inhalt auf 54/76 mm. Kein Backend-Print-Agent in v1. Automatischen Bondruck nur für die konkret physisch geprüfte Kombination aus Terminal-PC, Betriebssystem, Browser/Kiosk-Start, Treiber, Drucker und Papierformat freigeben; nach Änderungen erneut prüfen. Druckvorschau und `afterprint` belegen weder Papierausgabe noch Schnitt. Ohne echten Testbon bleibt die Hardwarefreigabe offen. Siehe [manuelle Prüfung](development/browser-und-bondruck-pruefung.md).
 
 ### Screen-Ablauf (Happy Path)
 
@@ -83,13 +83,13 @@ Anmeldung (Start) ──┬── Rufnummer + Geburtsdatum ──┐
 
 - **Wann:** z. B. bei Überlast oder wenn die MFA keine neuen Terminal-Anmeldungen mehr möchte — keine neuen Wartenummern mehr
 - **Wo:** Flow 3 **Quicksettings** (rechts oben) — Schalter **Terminal deaktivieren** / wieder aktivieren (**nicht** auf der Wartelisten-Zeile, **nicht** unter Betrieb-Settings)
-- **Terminal (Flow 1):** Vollbild „Keine Anmeldung am Terminal“ → **Empfang / MFA**; Notfall-Hinweis zum Empfang (kein Countdown-Notfall-Button)
+- **Terminal (Flow 1):** Vollbild „Keine Anmeldung am Terminal“ → **Empfang / MFA**; bei einem Notfall verweist der Sperrbildschirm direkt an den Empfang
 - **Queue:** Bereits eingecheckte Patienten bleiben in der Warteliste und werden aufgerufen
 - **Wieder an:** „Terminal wieder aktivieren“ in den Quicksettings
 
 ### Schritt 1 — Anmeldung wählen (Start)
 
-- **Start-Screen UX:** Oben **Standard-Anmeldung** (Telefon, Nachname+DOB und/oder eGK — per Ops-Toggle) — das ist der Hauptweg. Unten getrennt **Notfall**: Text + rote Leiste (3-Sek.-Countdown → Alarm, Abbrechen) → **„MFA wurde informiert — Bitte warten Sie hier.“** (Absicherung + klare Vorgabe; Terminal in MFA-Sichtweite). Keine Symptom-Liste (simpel).
+- Mit **„Begleitung ab Terminal“** kann der Patient persönliche Hilfe anfordern. Nach der Bestätigung erhält er eine Wartenummer und wartet am Terminal auf die MFA.
 - **Sprachauswahl:** DE / EN / TR über Flaggen (`PatientLangPicker`); Terminal- und Portal-Texte über i18n (en/tr partiell); Themen-Labels aus MFA-Settings (Deutsch), optional per Browser-Translator
 - **Rufnummer + Geburtsdatum**, **Nachname + Geburtsdatum**, **Gesundheitskarte** oder **Zur MFA** (welche Kacheln sichtbar sind, steuert MFA unter Betrieb → Terminal-Anmeldung)
 - Kein vorgeschalteter Willkommens-Screen (redundant)
@@ -317,7 +317,7 @@ Mit aktivem Proxy/TLS sind Geräte-/Portal-URLs über `CANONICAL_BASE_URL` kanon
 
 **Upload-Symbol:** deutliches blaues Dokument-Icon mit Anzahl — Dateien über Portal **oder** Erstanamnese nach Absenden (Flow 2). Klick → **Dokumente bearbeiten** (Vorschau Sandbox, ins PVS speichern, löschen). Deep-Link `/mfa?visitId=…&documentId=…` öffnet Vorschau-Overlay direkt. Symbol verschwindet nach Verarbeitung.
 
-**Notfall-Alarm:** rotes Banner oben (Terminal-Meldung) — MFA **quittiert** nach Reaktion; Banner verschwindet (neuer Alarm am Terminal würde erneut erscheinen). Notfall am Terminal ist nur aktiv, wenn das Feature in den Einstellungen aktiviert ist und das Terminal nicht deaktiviert wurde.
+**Begleitung ab Terminal:** Bei einer offenen Abholung zeigt die MFA-Oberfläche die Wartenummer unter „Hilfe am Terminal“. Sobald die MFA den Patienten abgeholt hat, bestätigt sie „Abgeholt“.
 
 ### Zurück ins Wartezimmer (von grün)
 
@@ -412,11 +412,10 @@ Ampel-Button auf jeder Queue-Karte (Button-Größe), Zyklus **Weiß → Grün �
 
 ### Praxis-Einstellungen (MFA, kein System)
 
-| Bereich                    | Inhalt                                                                                                                                                                                                                                                                        |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Themen & Räume**         | Terminal-Themen (Label, Nummernkreis `laneCode`, Zeitfenster, aktiv, Reihenfolge per Drag) + Raumliste + **Tür-Panel / Raum-Panel** pro Raum (Expander, je Placement Modus, Texte, optional Namen/Aufruf) + Standard-Aufrufziel je Thema — **laufende Nummer nur vom System** |
-| **Betrieb**                | WLAN-Promo, **Rückkehr-Fenster** (`returnWindowMinutes` — einziger MFA-Zeitwert für Rückholen, mit/ohne SMS); **nicht** Terminal sperren (nur Quicksettings)                                                                                                                  |
-| **Terminal & Wartezimmer** | Notfall-Feature an/aus                                                                                                                                                                                                                                                        |
+| Bereich            | Inhalt                                                                                                                                                                                                                                                                        |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Themen & Räume** | Terminal-Themen (Label, Nummernkreis `laneCode`, Zeitfenster, aktiv, Reihenfolge per Drag) + Raumliste + **Tür-Panel / Raum-Panel** pro Raum (Expander, je Placement Modus, Texte, optional Namen/Aufruf) + Standard-Aufrufziel je Thema — **laufende Nummer nur vom System** |
+| **Betrieb**        | WLAN-Promo, **Rückkehr-Fenster** (`returnWindowMinutes` — einziger MFA-Zeitwert für Rückholen, mit/ohne SMS); **nicht** Terminal sperren (nur Quicksettings)                                                                                                                  |
 
 **Bewusst nicht:** Server, DB, Netzwerk, Updates.
 
@@ -426,7 +425,7 @@ Ampel-Button auf jeder Queue-Karte (Button-Größe), Zyklus **Weiß → Grün �
 | -------- | ----------------------------------------------------- |
 | Check-in | Anliegen, Wartenummer (`laneCode` + Laufnummer), Zeit |
 | Portal   | Session, Upload, Erstanamnese                         |
-| Terminal | Notfall-Alarm                                         |
+| Terminal | Wartenummer für die Abholung am Terminal              |
 | PVS `?`  | Termin, Raum                                          |
 
 ### Zuständigkeit und PVS-Anbindung

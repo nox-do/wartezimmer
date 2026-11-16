@@ -21,7 +21,14 @@
     pageStyleEl?.remove();
     const style = document.createElement('style');
     style.setAttribute('data-terminal-receipt-page', 'true');
-    style.textContent = `@media print { @page { size: ${widthMm}mm auto; margin: 2mm; } }`;
+    // Roll size/length comes from the printer driver; CSS cannot mix a length and auto.
+    // Keep the existing 2mm margins and constrain only the receipt content width.
+    style.textContent = `@media print {
+      @page { size: auto; margin: 2mm; }
+      body.terminal-receipt-print-active .terminal-receipt-print-layer {
+        width: ${widthMm - 4}mm; max-width: 100%;
+      }
+    }`;
     document.head.appendChild(style);
     pageStyleEl = style;
   }

@@ -240,7 +240,9 @@
 }
 
 .segmented-control--journey
-  .segmented-control__option:hover:not(:disabled):not([aria-checked='true']):not(input:checked + label):not(input:disabled + label) {
+  .segmented-control__option:hover:not(:disabled):not([aria-checked='true']):not(
+    input:checked + label
+  ):not(input:disabled + label) {
   border-color: var(--zinc-400);
   background: color-mix(in srgb, var(--mfa-border) 14%, transparent);
 }

@@ -16,7 +16,7 @@
     stripCaptivePortalQuery,
   } from '$lib/portal/captive-portal-context';
   import { formatTicketCodeInput, normalizeTicketCode } from '$lib/portal/normalize-ticket-code';
-  import { activatePortalSession } from '$lib/portal/portal-session';
+  import { activatePortalSession, PortalSessionStorageError } from '$lib/portal/portal-session';
   import { authorizeCaptivePortalSession, resolvePortalSession } from '$lib/portal/session-api';
 
   let ticketInput = $state('');
@@ -50,7 +50,11 @@
       return stopProfile;
     }
 
-    storeCaptivePortalContext(captiveContext);
+    try {
+      storeCaptivePortalContext(captiveContext);
+    } catch {
+      formError = t('portal.sessionStorageUnavailable');
+    }
     const cleaned = stripCaptivePortalQuery(currentUrl);
     replaceStateResolved(`${cleaned.pathname}${cleaned.search}`, {});
 
@@ -86,7 +90,12 @@
         visitId: resolved.data.visitId,
       });
 
-      const captiveContext = readCaptivePortalContext();
+      let captiveContext;
+      try {
+        captiveContext = readCaptivePortalContext();
+      } catch {
+        throw new PortalSessionStorageError();
+      }
       const menuPath = '/portal/menu';
 
       if (captiveContext?.clientIp || captiveContext?.clientMac) {
@@ -102,7 +111,11 @@
           return;
         }
 
-        clearCaptivePortalContext();
+        try {
+          clearCaptivePortalContext();
+        } catch {
+          throw new PortalSessionStorageError();
+        }
 
         if (authorized.data.wlanAuthorized && authorized.data.redirectUrl.startsWith('http')) {
           window.location.assign(authorized.data.redirectUrl);
@@ -111,6 +124,10 @@
       }
 
       await gotoResolved(menuPath);
+    } catch (error) {
+      formError = error instanceof PortalSessionStorageError
+        ? t('portal.sessionStorageUnavailable')
+        : t('portal.sessionResolveError');
     } finally {
       submitting = false;
     }
@@ -164,7 +181,7 @@
   </form>
 
   {#if formError}
-    <div class="alert alert--error mt-2">{formError}</div>
+    <div class="alert alert--error mt-2" role="alert">{formError}</div>
   {/if}
 </section>
 

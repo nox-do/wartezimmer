@@ -23,10 +23,7 @@ function resolveMigrationDirectory(): string {
   throw new Error('Migration directory not found');
 }
 
-/**
- * Fresh databases only: apply baseline SQL when no schema exists.
- * Schema changes require deleting the SQLite file / Docker volume and restarting.
- */
+/** Apply the baseline to a fresh database. CoreDatabase handles existing schema generations. */
 export function runMigrations(db: DatabaseSync): void {
   const initialized = db
     .prepare(

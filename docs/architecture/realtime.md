@@ -10,7 +10,7 @@ Nicht: Rollenmatrix → [`apis.md`](apis.md) · Fachflows → [`../flows.md`](..
 | **SSE**  | Beobachten — schnell sichtbar                      |
 | **REST** | Tun — Mutations, Login, Pairing bestätigen, Export |
 
-Beispiel: Terminal `POST /ops/emergency/raise` → Hub → MFA über Ops-SSE.
+Startet ein Terminal die Kopplung, meldet der Ops-Stream der MFA die ausstehende Anfrage als `device.pairing`.
 
 In-Memory-Pub/Sub, Single-Praxis — **kein** Redis/Broker.
 
@@ -88,7 +88,7 @@ Device-Cookie aus Pairing-GET — deshalb Poll am Gerät; MFA-Prompt ist Push.
 
 ## 5. MFA-Client
 
-- **Ops:** eine SSE-Verbindung, getrennte Handler/Stores (`emergency` / `presence` / `pairing`). Quicksettings liest dieselben Stores — kein REST-Poll für Devices/Pairing-Prompt.
+- Die MFA-Quicksettings verwenden die Ops-Ereignisse `device.presence` und `device.pairing`. Das Ereignis `emergency` gehört weiterhin zum API-Vertrag. Die Anzeige für „Hilfe am Terminal“ bezieht offene Abholungen aus dem Queue-Snapshot (`terminalAssistancePending`).
 - **Queue:** eigener SSE (`connectMfaQueueStream`). Zusätzlich **Stale-Fallback:** alle 3s prüft der Client, ob seit dem letzten Snapshot zu lange Stille herrscht — sichtbar **25s**, Tab hidden **5s** — dann `GET /api/v1/queue` (`ui/src/lib/mfa/queue-stream.ts`). Das ist Sicherheitsnetz neben dem Stream, kein Ersatz für Ops-Stores.
 
 ### Wiederanlauf nach Backend-Unterbrechung
@@ -96,7 +96,7 @@ Device-Cookie aus Pairing-GET — deshalb Poll am Gerät; MFA-Prompt ist Push.
 `MfaOpsStreamHost` behält zwei getrennte SSE-Kanäle bei:
 
 - `/queue/stream` für Queue-Snapshots,
-- `/ops/stream` für Emergency, Device-Presence und Pairing.
+- `/ops/stream` für Gerätepräsenz und Kopplung.
 
 Die Server-Hubs und Stores bleiben getrennt; nur ihr Client-Lifecycle wird gemeinsam im Host
 koordiniert.
@@ -107,7 +107,7 @@ Nach einer vorübergehenden Backend-Unterbrechung:
 2. schließt `handleMfaBackendRecovered` transiente Queue-/Dokumentzustände,
 3. wird nur der aktive MFA-Routeninhalt remountet,
 4. laufen dadurch dessen vorhandene Loader erneut,
-5. bleiben Stream-Verbindungen, Emergency- und Assist-Host außerhalb des Remounts bestehen.
+5. bleiben Stream-Verbindungen und die Anzeige für offene Abholungen außerhalb des Remounts bestehen.
 
 Bei einem vollständigen Host-Mount wird `mfaQueueDisplay` einschließlich lokaler Revision
 zurückgesetzt. Damit werden nach Backend-Neustart und erneutem SPA-Login auch Snapshots mit

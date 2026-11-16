@@ -3,6 +3,7 @@ import { t } from '$lib/i18n/i18nStore.svelte';
 import { normalizeTicketCode } from '$lib/portal/normalize-ticket-code';
 import {
   activatePortalSession,
+  PortalSessionStorageError,
   clearPortalSession,
   readPortalSession,
   type PortalSessionContext,
@@ -16,6 +17,20 @@ export type PortalSessionBootstrapResult =
 export async function ensurePortalSession(
   ticketFromUrl: string | null,
   options: { replacePath?: string } = {},
+): Promise<PortalSessionBootstrapResult> {
+  try {
+    return await bootstrapPortalSession(ticketFromUrl, options);
+  } catch (error) {
+    if (error instanceof PortalSessionStorageError) {
+      return { ok: false, errorMessage: t('portal.sessionStorageUnavailable') };
+    }
+    throw error;
+  }
+}
+
+async function bootstrapPortalSession(
+  ticketFromUrl: string | null,
+  options: { replacePath?: string },
 ): Promise<PortalSessionBootstrapResult> {
   if (ticketFromUrl) {
     const normalized = normalizeTicketCode(ticketFromUrl);

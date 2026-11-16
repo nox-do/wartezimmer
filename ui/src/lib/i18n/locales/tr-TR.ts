@@ -13,6 +13,8 @@ export const dict = {
     toastCloseAria: 'Bildirimi kapat',
   },
   portal: {
+    sessionStorageUnavailable:
+      'Tarayıcı oturum depolama alanına erişemiyor. Bu site için oturum depolamaya izin verin veya portalı başka bir tarayıcıda açın. Ardından sıra numaranızla portalı yeniden başlatın.',
     indexKicker: 'Pratik Wi-Fi',
     indexTitle: 'Hoş geldiniz',
     disabledTitle: 'Hasta portalı aktif değil',
@@ -210,15 +212,6 @@ export const dict = {
     assistanceConfirmedAria:
       'Sıra numaranız {code}. Lütfen terminalin yanında kalın. Bir personel sizi alacak.',
     assistanceReceiptInstruction: 'Lütfen terminalde bekleyin. Bir personel sizi alacak.',
-    emergencySectionAria: 'Acil durum bildir',
-    emergencyReport: 'Acil durum bildir',
-    emergencyReportHint: 'Dokunun, ardından {seconds} sn. bekleyin',
-    emergencyCountdownAria: 'Acil durum {remaining} saniye içinde bildirilecek',
-    emergencyCancel: 'İptal',
-    emergencyDone: 'Muayenehane ekibi bilgilendirildi. Lütfen burada bekleyin.',
-    emergencyErrorDisabled: 'Acil durum özelliği ayarlarda kapalı.',
-    emergencyErrorLocked: 'Terminal kilitliyken acil durum bildirilemez.',
-    emergencyErrorFallback: 'Acil durum bildirilemedi.',
     wlanPromoAria: 'Pratik Wi-Fi bilgisi',
     wlanPromoKicker: 'Pratik Wi-Fi',
     wlanPromoWithTicket:
@@ -236,7 +229,7 @@ export const dict = {
     printSettingsHotspotAria: 'Yazıcı ayarları (sol alt, uzun basın)',
     printSettingsTitle: 'Fiş yazıcısı',
     printSettingsLead:
-      'Termal yazıcı için kağıt genişliği. Check-in sonrası bir kez otomatik yazdırılır — olmazsa numara ekranda kalır.',
+      'Fiş genişliği sürücüdeki kağıt boyutuyla eşleşmelidir. Otomatik yazdırmayı yalnızca bu terminal bilgisayarı, tarayıcı, sürücü ve yazıcıyla başarılı bir gerçek test baskısından sonra onaylayın. Baskı önizlemesi yeterli değildir. Numara ekranda görünür kalır.',
     printSettingsWidthLabel: 'Kağıt genişliği',
     printSettingsWidthOption: '{width} mm',
     printSettingsSetupTitle: 'Kurulum terminal PC (Windows)',

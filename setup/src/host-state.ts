@@ -326,7 +326,6 @@ export async function recoverBindingOperation(
           const up = await (hooks?.composeUp ?? composeUp)({
             ...previousOptions,
             build: false,
-            withGateway: readGatewayStatusFromEnv(previous).enabled,
           });
           if (!up.ok) throw new Error(up.log);
           const health = await waitForExpectedStackHealth(
@@ -1944,7 +1943,7 @@ export async function applySetupPlan(
             composeProjectName: ctx.composeProjectName,
           };
           await checkBindingPreflight(
-            { ...runOptions, withGateway: input.gateway.enabled, withProxy: proxy.enabled },
+            { ...runOptions, withProxy: proxy.enabled },
             envAfterWrite,
             hooks,
           );
@@ -1959,7 +1958,6 @@ export async function applySetupPlan(
           }
           compose = await runComposeUp({
             ...runOptions,
-            withGateway: input.gateway.enabled,
             withProxy: proxy.enabled,
             build: resolveComposeBuild({ ...input, delivery }),
           });
@@ -2177,7 +2175,6 @@ export async function saveHostNetwork(
           await checkBindingPreflight(
             {
               ...resolveComposeRunOptions(ctx),
-              withGateway: gateway.enabled,
               withProxy: proxy.enabled,
             },
             envAfter,
@@ -2197,7 +2194,6 @@ export async function saveHostNetwork(
           const up = await runComposeUp({
             ...resolveComposeRunOptions(ctx),
             build: false,
-            withGateway: gateway.enabled,
             withProxy: proxy.enabled,
           });
           if (!up.ok) {

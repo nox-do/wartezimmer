@@ -1,12 +1,3 @@
-export type EmergencyOpsSnapshot = {
-  revision: number;
-  active: boolean;
-  emergencyId: string | null;
-  raisedAt: string | null;
-  acknowledgedAt: string | null;
-  serverTime: string;
-};
-
 export type DevicePresenceOpsSnapshot = {
   revision: number;
   deviceId: string;

@@ -13,6 +13,8 @@ export const dict = {
     toastCloseAria: 'Закрити сповіщення',
   },
   portal: {
+    sessionStorageUnavailable:
+      'Браузер не має доступу до сховища сеансу. Дозвольте сховище для цього сайту або відкрийте портал в іншому браузері. Потім знову увійдіть за номером черги.',
     indexKicker: 'Wi-Fi клініки',
     indexTitle: 'Ласкаво просимо',
     disabledTitle: 'Портал пацієнта не активний',
@@ -209,15 +211,6 @@ export const dict = {
     assistanceConfirmedAria:
       'Ваш номер черги {code}. Залишайтеся біля термінала. Працівник забере вас.',
     assistanceReceiptInstruction: 'Зачекайте біля термінала. Працівник забере вас тут.',
-    emergencySectionAria: 'Повідомити про невідкладний випадок',
-    emergencyReport: 'Невідкладний випадок',
-    emergencyReportHint: 'Натисніть, потім зачекайте {seconds} сек.',
-    emergencyCountdownAria: 'Невідкладний випадок буде повідомлено через {remaining} сек.',
-    emergencyCancel: 'Скасувати',
-    emergencyDone: 'Персонал практики сповіщено. Будь ласка, чекайте тут.',
-    emergencyErrorDisabled: 'Функцію невідкладного випадку вимкнено в налаштуваннях.',
-    emergencyErrorLocked: 'Невідкладний випадок не можна повідомити, поки термінал заблоковано.',
-    emergencyErrorFallback: 'Не вдалося повідомити про невідкладний випадок.',
     wlanPromoAria: 'Інформація про Wi-Fi клініки',
     wlanPromoKicker: 'Wi-Fi клініки',
     wlanPromoWithTicket:
@@ -235,7 +228,7 @@ export const dict = {
     printSettingsHotspotAria: 'Налаштування принтера (довге натискання внизу зліва)',
     printSettingsTitle: 'Чековий принтер',
     printSettingsLead:
-      'Ширина паперу для термопринтера. Після реєстрації виконується один автоматичний друк — при помилці номер залишається на екрані.',
+      'Ширина чека має відповідати формату паперу в драйвері. Дозволяйте автоматичний друк лише після успішного фізичного пробного друку саме з цим терміналом, браузером, драйвером і принтером. Попереднього перегляду недостатньо. Номер залишається на екрані.',
     printSettingsWidthLabel: 'Ширина паперу',
     printSettingsWidthOption: '{width} мм',
     printSettingsSetupTitle: 'Налаштування на ПК терміналу (Windows)',

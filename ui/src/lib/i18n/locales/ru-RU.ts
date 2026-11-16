@@ -13,6 +13,8 @@ export const dict = {
     toastCloseAria: 'Закрыть уведомление',
   },
   portal: {
+    sessionStorageUnavailable:
+      'Браузер не может получить доступ к хранилищу сеанса. Разрешите хранилище для этого сайта или откройте портал в другом браузере. Затем снова войдите с номером очереди.',
     indexKicker: 'Wi-Fi клиники',
     indexTitle: 'Добро пожаловать',
     disabledTitle: 'Портал пациента не активен',
@@ -210,15 +212,6 @@ export const dict = {
     assistanceConfirmedAria:
       'Ваш номер очереди {code}. Оставайтесь у терминала. Сотрудник заберёт вас.',
     assistanceReceiptInstruction: 'Ждите у терминала. Сотрудник заберёт вас здесь.',
-    emergencySectionAria: 'Сообщить об экстренном случае',
-    emergencyReport: 'Экстренный случай',
-    emergencyReportHint: 'Нажмите, затем подождите {seconds} сек.',
-    emergencyCountdownAria: 'Экстренный случай будет сообщён через {remaining} сек.',
-    emergencyCancel: 'Отмена',
-    emergencyDone: 'Персонал практики уведомлён. Пожалуйста, ждите здесь.',
-    emergencyErrorDisabled: 'Функция экстренного случая отключена в настройках.',
-    emergencyErrorLocked: 'Экстренный случай нельзя сообщить, пока терминал заблокирован.',
-    emergencyErrorFallback: 'Не удалось сообщить об экстренном случае.',
     wlanPromoAria: 'Информация о Wi-Fi клиники',
     wlanPromoKicker: 'Wi-Fi клиники',
     wlanPromoWithTicket:
@@ -236,7 +229,7 @@ export const dict = {
     printSettingsHotspotAria: 'Настройки принтера (долгое нажатие внизу слева)',
     printSettingsTitle: 'Чековый принтер',
     printSettingsLead:
-      'Ширина бумаги для термопринтера. После регистрации выполняется одна автоматическая печать — при ошибке номер остаётся на экране.',
+      'Ширина чека должна совпадать с форматом бумаги в драйвере. Разрешайте автоматическую печать только после успешной физической пробной печати именно с этим терминалом, браузером, драйвером и принтером. Предпросмотра недостаточно. Номер остаётся на экране.',
     printSettingsWidthLabel: 'Ширина бумаги',
     printSettingsWidthOption: '{width} мм',
     printSettingsSetupTitle: 'Настройка на ПК терминала (Windows)',

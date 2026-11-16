@@ -13,6 +13,8 @@ export const dict = {
     toastCloseAria: 'Dismiss notification',
   },
   portal: {
+    sessionStorageUnavailable:
+      'The browser cannot access session storage. Allow session storage for this website or open the portal in another browser. Then start the portal again with your queue number.',
     indexKicker: 'Practice Wi-Fi',
     indexTitle: 'Welcome',
     disabledTitle: 'Patient portal is not active',
@@ -209,15 +211,6 @@ export const dict = {
     assistanceConfirmedAria:
       'Your queue number is {code}. Please remain at the terminal. A staff member will collect you.',
     assistanceReceiptInstruction: 'Please wait at the terminal. A staff member will collect you.',
-    emergencySectionAria: 'Report emergency',
-    emergencyReport: 'Report emergency',
-    emergencyReportHint: 'Tap, then wait {seconds} sec.',
-    emergencyCountdownAria: 'Emergency will be reported in {remaining} seconds',
-    emergencyCancel: 'Cancel',
-    emergencyDone: 'The practice team has been notified. Please wait here.',
-    emergencyErrorDisabled: 'Emergency feature is disabled in settings.',
-    emergencyErrorLocked: 'Emergency cannot be triggered while the terminal is locked.',
-    emergencyErrorFallback: 'Emergency could not be reported.',
     wlanPromoAria: 'Practice Wi-Fi notice',
     wlanPromoKicker: 'Practice Wi-Fi',
     wlanPromoWithTicket:
@@ -235,7 +228,7 @@ export const dict = {
     printSettingsHotspotAria: 'Printer settings (long press bottom left)',
     printSettingsTitle: 'Receipt printer',
     printSettingsLead:
-      'Paper width for the thermal printer. After check-in we try one automatic print — if it fails, the number stays on screen.',
+      'Receipt width must match the paper format in the driver. Approve automatic receipt printing only after a successful physical test print with this exact terminal PC, browser, driver and printer. Print preview is insufficient. The number remains visible on screen.',
     printSettingsWidthLabel: 'Paper width',
     printSettingsWidthOption: '{width} mm',
     printSettingsSetupTitle: 'Setup on terminal PC (Windows)',

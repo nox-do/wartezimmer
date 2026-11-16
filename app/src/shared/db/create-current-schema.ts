@@ -53,7 +53,7 @@ export function assertForeignKeyIntegrity(db: DatabaseSync): void {
   }
 }
 
-/** Release A transition path for legacy databases (user_version 0). */
+/** Idempotent schema updates for fresh and existing supported databases. */
 export function runTransitionSchemaEnsures(db: DatabaseSync): void {
   ensureOpsSetupSchema(db);
   ensureWaitSettingsSchema(db);
