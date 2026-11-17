@@ -1,3 +1,4 @@
+import { requirePorts } from './port-check.js';
 import { durableWrite } from './restricted-operation.js';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -152,6 +153,7 @@ export async function verifyMaintenanceRollback(
   const runOptions = resolveMaintenanceComposeRunOptions(input.ctx, envMap);
   try {
     const request = createRuntimePostcondition(envMap, readInstalledPortalContract(input.ctx.home));
+    await requirePorts(input.ctx, { env: envMap, delivery: runOptions.delivery });
     const up = await input.runtime.startFullStack(runOptions);
     if (!up.ok) throw new Error(up.log || 'Stack konnte nach Rollback nicht gestartet werden.');
     const stackHealth = await waitForExpectedStackHealth(

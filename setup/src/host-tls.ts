@@ -1,3 +1,6 @@
+import { trackPortRecovery } from './port-check-history.js';
+import { requirePorts } from './port-check.js';
+import { candidatePortEnv } from './port-check-plan.js';
 import { atPhase } from './operation-journal.js';
 import { waitForExpectedStackHealth } from './stack-health.js';
 import { assertMaintenancePredecessors, runHostMutation } from './maintenance-operation-guard.js';
@@ -1049,6 +1052,9 @@ export async function prepareHostTls(
       };
     }
 
+    if (input.existingOnly)
+      throw new SetupApiValidationError('Es liegt keine HTTPS-Vorbereitung vor.');
+    await requirePorts(ctx, { env: candidatePortEnv(ctx, { kind: 'tls-prepare' }, env) });
     const installationId = createInstallationId(deps.randomBytes);
     const zone = normalizeTlsHostname(
       env.get('TLS_OPERATOR_ZONE')?.trim() || TLS_OPERATOR_ZONE_DEFAULT,
@@ -1257,6 +1263,7 @@ export async function obtainManagedCertificate(
 ): Promise<TlsActionResult> {
   return runHostMutation(ctx.home, 'obtainManagedCertificate', async () => {
     assertHostLifecycleAction(ctx, 'tls-obtain');
+    await requirePorts(ctx);
     return obtainManagedCertificateForAuthorizedAction(ctx, deps);
   });
 }
@@ -1295,6 +1302,7 @@ export async function checkCustomCertificate(
 ): Promise<TlsActionResult> {
   return runHostMutation(ctx.home, 'checkCustomCertificate', async () => {
     assertHostLifecycleAction(ctx, 'tls-check-certificate');
+    await requirePorts(ctx);
     let status = readTlsStatus(readEnvMap(envPathOf(ctx)));
     if (
       status.mode !== 'custom' ||
@@ -1371,6 +1379,7 @@ export async function repairHostTls(
 ): Promise<TlsActionResult> {
   return runHostMutation(ctx.home, 'repairHostTls', async () => {
     assertHostLifecycleAction(ctx, 'tls-repair');
+    await requirePorts(ctx);
     const envPath = envPathOf(ctx);
     const env = readEnvMap(envPath);
     const current = readTlsStatus(env);
@@ -1426,6 +1435,7 @@ export async function repairHostTls(
 export async function resetHostTls(
   ctx: SetupContext,
   deps: TlsRuntimeDependencies = {},
+  discardPreparationOnly = false,
 ): Promise<TlsActionResult> {
   return runHostMutation(ctx.home, 'resetHostTls', async () => {
     assertHostLifecycleAction(ctx, 'tls-reset');
@@ -1439,6 +1449,10 @@ export async function resetHostTls(
       if (fs.existsSync(paths.root)) fs.rmSync(paths.root, { recursive: true, force: true });
       return { tls: status };
     }
+    if (discardPreparationOnly)
+      throw new SetupApiValidationError(
+        'HTTPS ist bereits aktiv. Bitte aktualisieren Sie die Ansicht.',
+      );
     if (current.mode === 'custom') {
       throw new SetupApiValidationError(
         'Aktives Custom TLS kann nur mit einem neuen PEM über renew ersetzt werden; HTTP-Rollback ist gesperrt.',
@@ -1578,6 +1592,8 @@ async function runTlsOperation(
   deps: TlsRuntimeDependencies,
   mutate: () => Promise<TlsActionResult>,
 ): Promise<TlsActionResult> {
+  const portTarget = { env: readEnvMap(envPathOf(ctx)), services: ['proxy'] };
+  const portReport = await requirePorts(ctx, portTarget);
   assertMaintenancePredecessors(ctx.home);
   const previousEnv = readEnvMap(envPathOf(ctx));
   // The mutation helpers own exactly these mounts. Never snapshot one directory
@@ -1602,6 +1618,7 @@ async function runTlsOperation(
   let committed = false;
   try {
     await stopTlsProxy(ctx, deps);
+    if (portReport?.rows.some((row) => row.state === 'owned')) await requirePorts(ctx, portTarget);
     captureTlsRollback(ctx.home, operation);
     operation = atPhase(operation, 'rollback-ready');
     writeTlsOperation(ctx.home, operation);
@@ -1628,7 +1645,12 @@ async function runTlsOperation(
         },
         { cause: error },
       );
+    const recordRecovery = trackPortRecovery(ctx.home, [
+      String(error),
+      String(error instanceof Error ? error.cause : undefined),
+    ]);
     const recovery = await recoverTlsOperation(ctx, deps);
+    recordRecovery(recovery.ok);
     throw new ManagerApiError(
       {
         code: recovery.ok ? 'tls_operation_failed' : 'tls_recovery_failed',

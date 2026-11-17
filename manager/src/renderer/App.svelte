@@ -1,4 +1,6 @@
 <script lang="ts">
+  import {portGuide} from './port-check-guide.svelte.js';
+  import PortCheckDialog from './PortCheckDialog.svelte';
   import type { ManagerView } from './host-refresh-controller.js';
   import MainNav from './MainNav.svelte';
   import StatusView from './StatusView.svelte';
@@ -35,6 +37,9 @@
 
   <div class="app-shell">
     <div class="app-content">
+      {#if portGuide.history.length && !portGuide.open}
+        <button class="btn-secondary" onclick={()=>portGuide.open=true}>Portprüfung · Ungelesene Befunde ({portGuide.history.length})</button>
+      {/if}
       <StatusView
         onSetupClick={onStatusSetupClick}
         onLoadReleaseArchive={onStatusLoadReleaseArchive}
@@ -53,3 +58,5 @@
     </div>
   </div>
 </div>
+
+<PortCheckDialog />

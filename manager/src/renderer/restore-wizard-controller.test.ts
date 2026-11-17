@@ -216,65 +216,76 @@ test('pre-update file dialog cancel returns to choose without continuing update'
   assert.equal(completed, false);
 });
 
-test('retry restore reuses backup content without file picker', async () => {
-  let readCalls = 0;
-  let restoreCalls = 0;
-  const controller = createRestoreWizardController({
-    api: createMockApi({
-      selectPfbackupForRestore: async () => {
-        readCalls += 1;
-        return {
-          canceled: false,
-          content: 'backup-content',
-          filePath: '/tmp/sample.pfbackup',
-        };
-      },
-      restorePfbackup: async () => {
-        restoreCalls += 1;
-        if (restoreCalls === 1) {
-          return {
-            ok: false,
-            restoreId: 'restore-1',
-            failedPhase: 'health',
-            rollbackAttempted: true,
-            rollbackSucceeded: true,
-            errors: ['Health check failed'],
-          };
-        }
-        return {
-          ok: true,
-          restoreId: 'restore-2',
-          report: {
-            restoreId: 'restore-2',
-            routingMode: 'simple',
-            portalEnabled: false,
-            providerCredentialsSkipped: false,
-            disabledProviderIds: [],
-            compose: { running: true, services: [] },
-          },
-        };
-      },
-    }),
-  });
-
-  controller.openStandalone();
-  await flushMicrotasks();
-  assert.equal(readCalls, 1);
-
-  controller.confirmRestore();
-  await flushMicrotasks();
-  assert.equal(controller.getState().phase, 'failed');
-
-  controller.retryRestore();
-  await flushMicrotasks();
-  assert.equal(readCalls, 1);
-  assert.equal(restoreCalls, 2);
-  assert.equal(controller.getState().phase, 'success');
+for (const failure of [
+  { failedPhase: 'health', rollbackAttempted: true, rollbackSucceeded: true },
   {
-    const completed = controller.getState();
-    if (completed.phase === 'success') assert.equal(completed.restoreResult.ok, true);
-  }
-});
+    failedPhase: 'port_recheck',
+    rollbackAttempted: false,
+    rollbackSucceeded: false,
+    restartSucceeded: true,
+  },
+])
+  test(
+    'retry restore reuses backup content without file picker after ' + failure.failedPhase,
+    async () => {
+      let readCalls = 0;
+      let restoreCalls = 0;
+      const controller = createRestoreWizardController({
+        api: createMockApi({
+          selectPfbackupForRestore: async () => {
+            readCalls += 1;
+            return {
+              canceled: false,
+              content: 'backup-content',
+              filePath: '/tmp/sample.pfbackup',
+            };
+          },
+          restorePfbackup: async (content) => {
+            assert.equal(content, 'backup-content');
+            restoreCalls += 1;
+            if (restoreCalls === 1) {
+              return {
+                ok: false,
+                restoreId: 'restore-1',
+                ...failure,
+                errors: ['Fixture error'],
+              };
+            }
+            return {
+              ok: true,
+              restoreId: 'restore-2',
+              report: {
+                restoreId: 'restore-2',
+                routingMode: 'simple',
+                portalEnabled: false,
+                providerCredentialsSkipped: false,
+                disabledProviderIds: [],
+                compose: { running: true, services: [] },
+              },
+            };
+          },
+        }),
+      });
+
+      controller.openStandalone();
+      await flushMicrotasks();
+      assert.equal(readCalls, 1);
+
+      controller.confirmRestore();
+      await flushMicrotasks();
+      assert.equal(controller.getState().phase, 'failed');
+
+      controller.retryRestore();
+      await flushMicrotasks();
+      assert.equal(readCalls, 1);
+      assert.equal(restoreCalls, 2);
+      assert.equal(controller.getState().phase, 'success');
+      {
+        const completed = controller.getState();
+        if (completed.phase === 'success') assert.equal(completed.restoreResult.ok, true);
+      }
+    },
+  );
 
 test('credential import failure preserves the explicit user choice', async () => {
   let restoreOptions: { skipProviderCredentials?: boolean } | undefined;
@@ -592,4 +603,21 @@ test('local progress and locks follow the active variants', async () => {
     states.map((state) => state.phase),
     ['closed', 'select', 'preview', 'restoring', 'success'],
   );
+});
+
+test('Zurück in der Portprüfung behält das ausgewählte Backup in der Vorschau', async () => {
+  const controller = createRestoreWizardController({
+    api: createMockApi({
+      restorePfbackup: async () => {
+        throw Object.assign(new Error('Zurück'), { name: 'PortCheckCancelled' });
+      },
+    }),
+  });
+  controller.openStandalone();
+  await flushMicrotasks();
+  const preview = controller.getState();
+  assert.equal(preview.phase, 'preview');
+  controller.confirmRestore();
+  await flushMicrotasks();
+  assert.deepEqual(controller.getState(), preview);
 });

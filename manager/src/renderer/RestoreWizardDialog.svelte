@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ErrorDialog from './ErrorDialog.svelte';
   import { hasBlockingMaintenanceOperation } from '@wartezimmer/server-shared/manager-status-projection';
   import { managerShell } from './manager-shell-state.svelte.js';
   import { managerStatusViewModel } from './manager-status-view-model.js';
@@ -45,6 +46,7 @@
   const result = $derived('restoreResult' in snapshot ? snapshot.restoreResult ?? null : null);
   const open = $derived(snapshot.phase !== 'closed');
   let dialogEl = $state<HTMLDialogElement | null>(null);
+  let ignoreNextClose = false;
 
   $effect(() => {
     if (!dialogEl) {
@@ -55,6 +57,7 @@
       return;
     }
     if (!open && dialogEl.open) {
+      ignoreNextClose = true;
       dialogEl.close();
     }
   });
@@ -72,9 +75,9 @@
   );
   const inspectWarnings = $derived(backup?.inspect?.compatibility.warnings ?? []);
   const rollbackFailed = $derived(isRestoreRollbackFailed(result));
-  const showRetry = $derived(canRetryRestoreAfterFailure(result));
+  const showRetry = $derived(!blocked && canRetryRestoreAfterFailure(result));
   const showSkip = $derived(
-    mode === 'pre-update' && canSkipRestoreAfterFailure(result),
+    !blocked && mode === 'pre-update' && canSkipRestoreAfterFailure(result),
   );
   const showCredentialSkip = $derived(
     shouldOfferCredentialSkip(backup?.inspect),
@@ -87,16 +90,19 @@
   aria-busy={busy}
   oncancel={(event) => {
     event.preventDefault();
-    handleClose();
+    if (snapshot.phase !== 'failed') handleClose();
   }}
-  onclose={handleClose}
+  onclose={() => {
+    if (ignoreNextClose) ignoreNextClose = false;
+    else handleClose();
+  }}
   onclick={(event) => {
-    if (event.target === dialogEl && !busy) {
+    if (event.target === dialogEl && !busy && snapshot.phase !== 'failed') {
       handleClose();
     }
   }}
 >
-  {#if blocked && !busy}
+  {#if blocked && !busy && snapshot.phase !== 'failed'}
     <p class={diagnosis.noticeClass}>{diagnosis.primary.summary}</p>
     <p>{diagnosis.primary.detail}</p>
     <button type="button" class="btn-secondary" onclick={onClose}>Schließen</button>
@@ -164,13 +170,13 @@
       </label>
     {/if}
     <p class="hint">
-      Wartezimmer wird angehalten und die gesicherten Einstellungen werden übernommen.
+      Zuerst prüft der Manager die Netzwerkzugänge des Backups. Nach erfolgreicher Prüfung können Sie die Wiederherstellung starten. Dabei wird Wartezimmer angehalten.
       Die aktuelle Warteschlange und die darin gespeicherten Patientendaten werden gelöscht.
       Terminal und Anmeldung sind währenddessen nicht verfügbar.
     </p>
     <div class="actions-row actions-row--dialog">
       <button type="button" disabled={busy} onclick={onConfirmRestore}>
-        Wiederherstellen
+        Portfreigaben prüfen
       </button>
       <button type="button" class="btn-secondary" disabled={busy} onclick={handleClose}>
         Abbrechen
@@ -224,7 +230,7 @@
       <div class="actions-row actions-row--dialog">
         {#if showRetry}
           <button type="button" disabled={busy} onclick={onRetry}>
-            Erneut versuchen
+            {result && !result.ok && ['port_preflight', 'port_recheck'].includes(result.failedPhase) ? 'Portfreigaben erneut prüfen' : 'Erneut versuchen'}
           </button>
         {/if}
         {#if showSkip}
@@ -240,6 +246,8 @@
     {/if}
   {/if}
 </dialog>
+
+<ErrorDialog message={snapshot.phase === 'failed' ? snapshot.error : null} />
 
 <style>
   .restore-wizard-checkbox {

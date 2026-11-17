@@ -98,6 +98,20 @@ function createInitialState(
   };
 }
 
+function savedNetworkFields(
+  status: HostStatus,
+  network: NonNullable<InstallOperationSummary['network']>,
+) {
+  const local = status.network.currentLanCandidates.some(
+    (candidate) => candidate.address === network.lanAppIp,
+  );
+  return {
+    lanAppIp: local ? network.lanAppIp : '__custom__',
+    customLanIp: local ? '' : network.lanAppIp,
+    proxyEnabled: network.proxy?.enabled ?? false,
+  };
+}
+
 export function createWizardController(deps: WizardControllerDeps): WizardController {
   let state = createInitialState(null);
   let lifecycleGeneration = 0;
@@ -166,7 +180,11 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
       return;
     }
     const operation = installation?.kind === 'installing' ? installation.operation : null;
-    patch({ status, operation });
+    patch({
+      status,
+      operation,
+      ...(operation?.network ? savedNetworkFields(status, operation.network) : {}),
+    });
     if (installation?.kind === 'docker-unavailable') {
       patch({ recoveryPhase: 'prerequisites' });
       setError(null);
@@ -213,8 +231,12 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
   async function commitRecovery(): Promise<void> {
     await recoveryAction(async (generation) => {
       if (!state.operation) throw new Error('Kein Installationsvorgang.');
+      const network = {
+        lanAppIp: resolvedLanIp(state),
+        proxy: { enabled: state.proxyEnabled, httpPort: 80 },
+      };
       await deps.api
-        .commitInstall({ operationId: state.operation.id, replaceConfirmed: true })
+        .commitInstall({ operationId: state.operation.id, replaceConfirmed: true, network })
         .finally(refreshHostAfterMutation);
       const status = await deps.api.fetchSetupStatus();
       if (!still(generation)) return;
@@ -222,6 +244,7 @@ export function createWizardController(deps: WizardControllerDeps): WizardContro
         status.installation?.kind === 'installing' ? status.installation.operation : null;
       patch({
         ...createInitialState(status, state.presentation),
+        ...savedNetworkFields(status, network),
         operation,
         recoveryPhase: 'setup',
         action: { kind: 'working' },

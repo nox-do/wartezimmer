@@ -285,6 +285,8 @@ export type PfbackupRestoreResult =
       failedPhase: string;
       rollbackAttempted: boolean;
       rollbackSucceeded: boolean;
+      /** Verified restart of the original stack after the post-stop port check, before data replacement. */
+      restartSucceeded?: boolean;
       errors: string[];
     };
 
@@ -470,6 +472,8 @@ export type TlsStatus = {
 
 export type TlsPrepareInput = {
   mode: TlsMode;
+  /** Read an existing operator request without creating a new TLS identity. */
+  existingOnly?: boolean;
   /** Fixed DNS name. Managed setup may omit it to use the installation-ID label. */
   hostname?: string;
   /** Confirmed, stable LAN IPv4 address which the public A record must contain. */
@@ -770,6 +774,7 @@ export type InstallationReason = {
 };
 
 export type InstallOperationSummary = {
+  network?: PortNetworkDraft;
   id: string;
   mode: 'fresh' | 'replace';
   phase: 'prepared' | 'installing';
@@ -869,6 +874,7 @@ export type InstallPrepareResult = {
 };
 
 export type InstallCommitInput = {
+  network?: PortNetworkDraft;
   operationId: string;
   /** Required for replace and for any restart of an installing operation. */
   replaceConfirmed?: boolean;
@@ -994,4 +1000,35 @@ export type InstallFinishResult = {
   ok: boolean;
   errors: string[];
   restore?: PfbackupRestoreResult;
+};
+
+export type PortNetworkDraft = {
+  lanAppIp: string;
+  proxy?: { enabled: boolean; httpPort?: number };
+};
+export type PortCheckRequest =
+  | { kind: 'current' | 'tls-prepare' | 'patient-enable' | 'patient-disable' }
+  | { kind: 'network'; network: PortNetworkDraft }
+  | { kind: 'setup'; network: PortNetworkDraft; delivery?: boolean; build?: boolean }
+  | { kind: 'update'; input: PfupdateInspectInput }
+  | { kind: 'restore'; content: string }
+  | { kind: 'install'; operationId: string; network?: PortNetworkDraft }
+  | { kind: 'install-restore'; operationId: string };
+export type PortCheckRow = ComposePublishedBinding & {
+  label: string;
+  state: 'pending' | 'checking' | 'verified' | 'owned' | 'failed';
+};
+export type PortCheckReport = {
+  phase?: 'preflight' | 'publish';
+  platform?: string;
+  desktopVersion?: string;
+  recovery?: 'restored' | 'failed';
+  id: string;
+  at: string;
+  rows: PortCheckRow[];
+  error?: {
+    kind: 'address' | 'occupied' | 'mac-permission' | 'permission' | 'technical';
+    message: string;
+    detail?: string;
+  };
 };

@@ -1,3 +1,4 @@
+import type { PortNetworkDraft } from '@wartezimmer/server-shared/setup-api';
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -8,6 +9,7 @@ export type InstallMode = 'fresh' | 'replace';
 export type InstallOperationPhase = 'prepared' | 'installing';
 
 export type InstallOperation = {
+  network?: PortNetworkDraft;
   schemaVersion: 1;
   id: string;
   mode: InstallMode;
@@ -26,6 +28,9 @@ export type InstallOperation = {
 
 const OPERATIONS_RELATIVE_PATH = path.join('operations', 'install');
 const ACTIVE_MARKER_FILE = 'operation.json';
+export function installPortStopReceipt(home: string, id: string) {
+  return path.join(installOperationDirectory(home, id), 'port-test-stop.json');
+}
 export const PINNED_RELEASE_FILE = 'release.pfinstall';
 
 export function installOperationsRoot(home: string): string {
@@ -88,6 +93,7 @@ export function installOperationSummary(operation: InstallOperation): InstallOpe
     createdAt: operation.createdAt,
     releaseVersion: operation.package.releaseVersion,
     backupContainsTls: operation.backup?.containsTls ?? null,
+    ...(operation.network ? { network: operation.network } : {}),
   };
 }
 
@@ -123,11 +129,19 @@ export function createPreparedInstallOperation(input: {
   return operation;
 }
 
-export function markInstallOperationInstalling(home: string, id: string): InstallOperation {
+export function markInstallOperationInstalling(
+  home: string,
+  id: string,
+  network?: PortNetworkDraft,
+): InstallOperation {
   const operation = readInstallOperation(home);
   if (!operation || operation.id !== id) throw new Error('INSTALL_OPERATION_NOT_FOUND');
-  if (operation.phase === 'installing') return operation;
-  const next: InstallOperation = { ...operation, phase: 'installing' };
+  if (operation.phase === 'installing' && !network) return operation;
+  const next: InstallOperation = {
+    ...operation,
+    phase: 'installing',
+    ...(network ? { network } : {}),
+  };
   durableWrite(installOperationMarkerPath(home), `${JSON.stringify(next, null, 2)}\n`, 0o666);
   return next;
 }
@@ -136,6 +150,8 @@ export function abortPreparedInstallOperation(home: string, id: string): void {
   const operation = readInstallOperation(home);
   if (!operation || operation.id !== id) throw new Error('INSTALL_OPERATION_NOT_FOUND');
   if (operation.phase !== 'prepared') throw new Error('INSTALL_OPERATION_ALREADY_INSTALLING');
+  if (fs.existsSync(installPortStopReceipt(home, id)))
+    throw new Error('Der vorherige Betrieb muss zuerst wieder anlaufen.');
   fs.unlinkSync(installOperationMarkerPath(home));
   fs.rmSync(installOperationDirectory(home, id), { recursive: true, force: true });
 }

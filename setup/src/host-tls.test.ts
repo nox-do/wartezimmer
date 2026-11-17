@@ -195,6 +195,20 @@ test('managed fake vertical slice stays HTTP until apply and consumes token afte
     assert.equal(prepared.operatorRequest?.aRecord.name, 'staff.7fk3m2.lan.notaus.de');
     assert.equal(prepared.operatorRequest?.acmeCname.name, '_acme-challenge.7fk3m2.lan.notaus.de');
     assert.ok(prepared.operatorRequest?.oneTimeToken);
+    const replay = await prepareHostTls(
+      {
+        ...ctx,
+        checkPorts: async () => assert.fail('reading an existing DNS request must not test ports'),
+      },
+      {
+        mode: 'managed',
+        existingOnly: true,
+        hostname: '7fk3m2.lan.notaus.de',
+        lanIp: '192.168.178.112',
+      },
+      deps,
+    );
+    assert.deepEqual(replay.operatorRequest, prepared.operatorRequest);
     assert.equal(readEnvMap(path.join(root, '.env')).get('PROXY_MODE'), 'http');
 
     const verified = await verifyHostTlsDns(ctx, {
@@ -513,10 +527,25 @@ test('reset before cutover removes persisted identity and secret files', async (
       hostname: 'flow.praxis-meyer.de',
       lanIp: '192.168.178.112',
     });
-    const result = await resetHostTls(ctx);
+    const blockedPort = {
+      ...ctx,
+      checkPorts: async () => assert.fail('discarding the TLS preparation must not test ports'),
+    };
+    const result = await resetHostTls(blockedPort, {}, true);
     assert.equal(result.tls.state, 'off');
     assert.equal(readEnvMap(path.join(root, '.env')).has('TLS_STATE'), false);
     assert.equal(fs.existsSync(resolveProxyTlsPaths(root).root), false);
+    await assert.rejects(
+      prepareHostTls(blockedPort, {
+        mode: 'managed',
+        existingOnly: true,
+        lanIp: '192.168.178.112',
+      }),
+      /keine HTTPS-Vorbereitung/,
+    );
+    writeEnv(root, activeManagedEnv());
+    await assert.rejects(resetHostTls(blockedPort, {}, true), /bereits aktiv/);
+    assert.equal(readEnvMap(path.join(root, '.env')).get('TLS_STATE'), 'active');
   });
 });
 

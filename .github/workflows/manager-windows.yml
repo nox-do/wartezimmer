@@ -35,6 +35,7 @@ jobs:
         run: >-
           node --import tsx --test
           setup/src/windows-compatibility.test.ts
+          setup/src/port-check.test.ts
           setup/src/restricted-start-audit.test.ts
           setup/src/restricted-network.test.ts
           setup/src/restricted-listener-probe.test.ts
@@ -58,6 +59,8 @@ jobs:
           setup/src/delivery-images.test.ts
       - name: Compose binding environment regression
         run: node --import tsx --test --test-name-pattern="Compose bindings cannot" setup/src/docker.test.ts
+      - name: Restore a backup with active patient access and verify listener isolation
+        run: node --import tsx --test --test-name-pattern="restricted restore audits" setup/src/settings-backup-restore.test.ts
       - name: Build internal x64 NSIS installer (never publish)
         run: npm run dist:manager:win
         env:

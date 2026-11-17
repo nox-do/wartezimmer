@@ -1,3 +1,4 @@
+import { recordPublishFailure } from './port-check-diagnostics.js';
 import { restrictedPlatformSupported } from './restricted-platform.js';
 import { assertWindowsHostPath } from './windows-host-path.js';
 import { runHostMutation } from './maintenance-operation-guard.js';
@@ -97,15 +98,15 @@ function usesDeliveryCompose(projectRoot: string, delivery?: boolean): boolean {
   return !hasDev;
 }
 
-function wantsProxyCompose(projectRoot: string, withProxy?: boolean): boolean {
+function wantsProxyCompose(
+  projectRoot: string,
+  withProxy?: boolean,
+  candidate?: Map<string, string>,
+): boolean {
   if (withProxy !== undefined) {
     return withProxy;
   }
-  const envPath = path.join(projectRoot, '.env');
-  if (!fs.existsSync(envPath)) {
-    return false;
-  }
-  const envMap = readEnvMap(envPath);
+  const envMap = candidate ?? readEnvMap(path.join(projectRoot, '.env'));
   const enabled = ['1', 'true', 'yes', 'on'].includes(
     (envMap.get('PROXY_ENABLED')?.trim() || '').toLowerCase(),
   );
@@ -116,19 +117,18 @@ function wantsProxyCompose(projectRoot: string, withProxy?: boolean): boolean {
   return mode === 'http' || mode === 'tls-managed' || mode === 'tls-custom';
 }
 
-function wantsProxyTlsCompose(projectRoot: string): boolean {
-  const envPath = path.join(projectRoot, '.env');
-  if (!fs.existsSync(envPath)) return false;
-  const envMap = readEnvMap(envPath);
+function wantsProxyTlsCompose(projectRoot: string, candidate?: Map<string, string>): boolean {
+  const envMap = candidate ?? readEnvMap(path.join(projectRoot, '.env'));
   const mode = (envMap.get('PROXY_MODE')?.trim() || '').toLowerCase();
   const tlsState = (envMap.get('TLS_STATE')?.trim() || 'off').toLowerCase();
   return mode === 'tls-managed' || mode === 'tls-custom' || tlsState !== 'off';
 }
 
-function wantsTlsLabCompose(projectRoot: string): boolean {
-  const envPath = path.join(projectRoot, '.env');
-  if (!fs.existsSync(envPath)) return false;
-  const directory = readEnvMap(envPath).get('TLS_ACME_DIRECTORY')?.trim().toLowerCase();
+function wantsTlsLabCompose(projectRoot: string, candidate?: Map<string, string>): boolean {
+  const directory = (candidate ?? readEnvMap(path.join(projectRoot, '.env')))
+    .get('TLS_ACME_DIRECTORY')
+    ?.trim()
+    .toLowerCase();
   return directory === 'pebble';
 }
 
@@ -176,19 +176,22 @@ export function resolveProductComposeServices(options: ComposeRunOptions): strin
   return productComposeServices({ proxyEnabled });
 }
 
-function resolveComposeFileList(options: ComposeRunOptions): string[] {
-  const proxyEnabled = wantsProxyCompose(options.projectRoot, options.withProxy);
-  const proxyTlsEnabled = proxyEnabled && wantsProxyTlsCompose(options.projectRoot);
+export function resolveComposeFileList(
+  options: ComposeRunOptions,
+  candidate?: Map<string, string>,
+): string[] {
+  const proxyEnabled = wantsProxyCompose(options.projectRoot, options.withProxy, candidate);
+  const proxyTlsEnabled = proxyEnabled && wantsProxyTlsCompose(options.projectRoot, candidate);
   const tlsLabEnabled =
     proxyTlsEnabled &&
-    wantsTlsLabCompose(options.projectRoot) &&
+    wantsTlsLabCompose(options.projectRoot, candidate) &&
     fs.existsSync(path.join(options.projectRoot, 'docker-compose.tls-lab.yml')) &&
     fs.existsSync(path.join(options.projectRoot, 'docker-compose.tls-lab-proxy.yml'));
   const envPath = restrictedOperationEnv(options.projectRoot, options.restrictedOperationId);
   const restrictedEnabled =
     proxyTlsEnabled &&
-    fs.existsSync(envPath) &&
-    readEnvMap(envPath).get('SETUP_RESTRICTED_ENABLED')?.trim().toLowerCase() === 'true';
+    (candidate ?? readEnvMap(envPath)).get('SETUP_RESTRICTED_ENABLED')?.trim().toLowerCase() ===
+      'true';
   const files = resolveComposeFiles({
     projectRoot: options.projectRoot,
     delivery: options.delivery,
@@ -216,6 +219,12 @@ export function buildComposeEnv(
   const protectedKeys = new Set([
     'SETUP_LAN_APP_IP',
     'APP_BIND_ADDRESS',
+    'PROXY_HTTP_PORT',
+    'PROXY_HTTPS_PORT',
+    'TLS_LAB_DNS_HOST_PORT',
+    'TLS_LAB_ACME_DNS_API_HOST_PORT',
+    'TLS_LAB_PEBBLE_HOST_PORT',
+    'TLS_LAB_PEBBLE_MGMT_HOST_PORT',
     'SETUP_RESTRICTED_APP_IP',
     'SETUP_RESTRICTED_ENABLED',
   ]);
@@ -356,6 +365,7 @@ export async function composeUp(options: ComposeUpOptions & { services?: string[
   });
 
   const log = [result.stdout, result.stderr].filter(Boolean).join('\n');
+  if (result.code !== 0) recordPublishFailure(options.projectRoot, result.stderr);
   return { ok: result.code === 0, log, gatewaySkipped: false };
 }
 
@@ -624,6 +634,8 @@ export async function runComposeCommand(
   const { args, cwd, env } = buildComposeArgv(options, subcommand);
   const result = await runDockerCommand(args, { cwd, env });
   const log = [result.stdout, result.stderr].filter(Boolean).join('\n');
+  if (result.code !== 0 && subcommand.includes('up'))
+    recordPublishFailure(options.projectRoot, result.stderr);
   return { ok: result.code === 0, log, stdout: result.stdout };
 }
 

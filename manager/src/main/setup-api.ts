@@ -96,6 +96,8 @@ export function setupApiTimeoutMs(request: SetupApiCallRequest): number {
   if (request.method === 'GET' && request.path.split('?')[0] === '/api/setup/host/status') {
     return SETUP_STATUS_TIMEOUT_MS;
   }
+  if (request.method === 'POST' && request.path === '/api/setup/host/port-check')
+    return DOCKER_LOAD_TIMEOUT_MS;
   if (request.method === 'POST' && request.path === '/api/setup/host/rebuild') return 5 * 60 * 1000;
   if (request.method === 'POST' && request.path === '/api/setup/host/installation/start') {
     return 3 * 60 * 1000;

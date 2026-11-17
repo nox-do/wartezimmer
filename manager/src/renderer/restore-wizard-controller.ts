@@ -134,12 +134,15 @@ export function createRestoreWizardController(
             error: restoreFailureSummary(result),
           };
     } catch (error) {
-      completed = {
-        phase: 'failed',
-        mode,
-        backup,
-        error: message(error, 'Restore fehlgeschlagen.'),
-      };
+      completed =
+        error instanceof Error && error.name === 'PortCheckCancelled'
+          ? { phase: 'preview', mode, backup }
+          : {
+              phase: 'failed',
+              mode,
+              backup,
+              error: message(error, 'Restore fehlgeschlagen.'),
+            };
     } finally {
       // Even a departed UI session must reconcile the durable backend operation.
       try {

@@ -16,6 +16,7 @@ import { requirePackageFileExtension } from './package-file-extension.js';
 export type { PfupdateInspectInput };
 
 export type PfupdateInspectDeps = {
+  checkedTarget?: (manifest: PfupdateManifestV1, stagingDir: string) => Promise<void>;
   extractArchive?: typeof extractPfupdateArchive;
   validatePackage?: typeof validateExtractedPfupdate;
   resolveSettingsFormatVersion?: typeof resolveCurrentSettingsFormatVersion;
@@ -27,8 +28,12 @@ function inspectStagingDirectory(home: string, inspectId: string): string {
 
 function cleanupInspectStaging(stagingDir: string): void {
   const inspectRoot = path.dirname(stagingDir);
-  if (fs.existsSync(inspectRoot)) {
-    fs.rmSync(inspectRoot, { recursive: true, force: true });
+  fs.rmSync(stagingDir, { recursive: true, force: true });
+  try {
+    fs.rmdirSync(inspectRoot);
+  } catch (error) {
+    if (!['ENOENT', 'ENOTEMPTY', 'EEXIST'].includes((error as NodeJS.ErrnoException).code ?? ''))
+      throw error;
   }
 }
 
@@ -101,6 +106,7 @@ export async function inspectPfupdate(
       compatibility.managerCompatible &&
       compatibility.settingsCompatible;
 
+    if (updateSupported) await deps.checkedTarget?.(validation.manifest, stagingDir);
     return {
       ok: updateSupported,
       package: buildPackageSummary(validation.manifest),

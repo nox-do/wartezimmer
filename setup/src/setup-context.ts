@@ -1,3 +1,4 @@
+import { checkDockerPorts, type PortCheck } from './port-check.js';
 import { assertWindowsHostPath } from './windows-host-path.js';
 import { readTlsOperationStatus } from './tls-operation.js';
 import { readRestoreOperationStatus } from './restore-operation.js';
@@ -18,6 +19,7 @@ import { generateToken, isWeakGeneratedSecret } from './secrets.js';
 export type SetupMode = 'repo' | 'install';
 
 export type SetupContext = {
+  checkPorts?: PortCheck;
   home: string;
   mode: SetupMode;
   composeProjectName: string;
@@ -134,6 +136,7 @@ export function resolveSetupContext(startDir = process.cwd()): SetupContext {
     return {
       home,
       mode: 'install',
+      checkPorts: checkDockerPorts,
       composeProjectName: resolveComposeProjectName(home),
       templateRoot,
     };
@@ -144,6 +147,7 @@ export function resolveSetupContext(startDir = process.cwd()): SetupContext {
     return {
       home: repoRoot,
       mode: 'repo',
+      checkPorts: checkDockerPorts,
       composeProjectName: process.env.COMPOSE_PROJECT_NAME?.trim() || 'wartezimmer',
       templateRoot: repoRoot,
     };
@@ -154,6 +158,7 @@ export function resolveSetupContext(startDir = process.cwd()): SetupContext {
   return {
     home,
     mode: 'install',
+    checkPorts: checkDockerPorts,
     composeProjectName: resolveComposeProjectName(home),
     templateRoot,
   };

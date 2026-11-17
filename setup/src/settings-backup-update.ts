@@ -1,3 +1,5 @@
+import { trackPortRecovery } from './port-check-history.js';
+import { requirePorts } from './port-check.js';
 import { summarizeUpdateFailure } from './update-error-summary.js';
 import { auditUpdateRuntimePostcondition } from './update-runtime-postcondition.js';
 import { waitForCompatibleMaintenanceApp } from './settings-format-version.js';
@@ -98,6 +100,8 @@ import {
 const logger = createModuleLogger('setup.update');
 
 export const UPDATE_PHASES = {
+  portPreflight: 'port_preflight',
+  portRecheck: 'port_recheck',
   validatePackage: 'validate_package',
   createSettingsBackup: 'create_settings_backup',
   stagePackage: 'stage_package',
@@ -298,7 +302,7 @@ function buildReleaseStateFromManifest(
   };
 }
 
-function buildUpdateEnv(
+export function buildUpdateEnv(
   currentEnv: Record<string, string>,
   manifest: PfupdateManifestV1,
 ): Record<string, string> {
@@ -871,6 +875,20 @@ async function applyPreparedUpdate(input: {
     ]);
   }
 
+  const portTarget = {
+    env: targetEnv,
+    root: path.join(input.prepared.stagingDir, 'templates'),
+    fallbackRoot: input.ctx.home,
+    delivery: true,
+  };
+  let portReport;
+  try {
+    portReport = await requirePorts(input.ctx, portTarget);
+  } catch (error) {
+    return failureResult(input.updateId, UPDATE_PHASES.portPreflight, [
+      errorMessage(error, 'Portprüfung fehlgeschlagen.'),
+    ]);
+  }
   let operation: UpdateOperation = {
     schemaVersion: 1,
     id: input.updateId,
@@ -885,6 +903,10 @@ async function applyPreparedUpdate(input: {
     const stop = await input.runtime.stopStack(input.prepared.runOptions);
     if (!stop.ok) {
       throw new UpdatePhaseError(phase, [stop.log || 'Stack konnte nicht gestoppt werden.']);
+    }
+    if (portReport?.rows.some((row) => row.state === 'owned')) {
+      phase = UPDATE_PHASES.portRecheck;
+      await requirePorts(input.ctx, portTarget);
     }
     phase = UPDATE_PHASES.backupRollbackState;
     const rollback = await backupUpdateRollbackArtifacts(
@@ -944,6 +966,7 @@ async function applyPreparedUpdate(input: {
     } catch {
       // An unreadable journal cannot prove that rollback was attempted.
     }
+    const recordRecovery = trackPortRecovery(input.ctx.home, failure.errors);
     let recovery: { ok: boolean; errors: string[] };
     try {
       recovery = await recoverUpdateOperation(input.ctx, {
@@ -958,6 +981,7 @@ async function applyPreparedUpdate(input: {
         errors: ['Update-Recovery-Abschluss ungeklärt. Bitte Setup-Diagnose prüfen.'],
       };
     }
+    recordRecovery(recovery.ok);
     return failureResult(
       input.updateId,
       failure.phase,

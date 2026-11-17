@@ -185,6 +185,7 @@ test('hydrateOperatorRequest replays prepare to recover the unused token', async
     api: {
       prepareHostTls: async (body: TlsPrepareInput) => {
         assert.equal(body.hostname, '7fk3m2.lan.notaus.de');
+        assert.equal(body.existingOnly, true);
         return {
           tls: tls({
             state: 'awaiting-operator-dns',

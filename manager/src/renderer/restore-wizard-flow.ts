@@ -154,6 +154,9 @@ export function restoreInspectBlockedMessage(inspect: PfbackupInspectResult): st
 
 function restoreStepFailure(phase: string): string {
   const steps: Record<string, string> = {
+    port_recheck:
+      'Docker konnte eine zuvor vom Wartezimmer verwendete Portbindung nach dem Anhalten nicht erneut bestätigen.',
+    port_preflight: 'Der Restore wurde vor dem Stoppen bei der Portprüfung angehalten.',
     validate_archive: 'Das Backup konnte nicht geprüft werden.',
     validate_settings: 'Die gesicherten Einstellungen konnten nicht geprüft werden.',
     backup_rollback_state: 'Der bisherige Zustand konnte nicht gesichert werden.',
@@ -175,6 +178,9 @@ export function restoreFailureSummary(
   result: Extract<PfbackupRestoreResult, { ok: false }>,
 ): string {
   const parts = [restoreStepFailure(result.failedPhase), ...result.errors];
+  if (result.restartSucceeded === true) parts.push('Der bisherige Betrieb läuft wieder.');
+  if (result.restartSucceeded === false)
+    parts.push('Der bisherige Betrieb konnte nicht wieder anlaufen.');
   if (result.rollbackAttempted) {
     parts.push(
       result.rollbackSucceeded
@@ -192,8 +198,7 @@ export function isRestoreRollbackFailed(result: PfbackupRestoreResult | null): b
   return (
     result !== null &&
     !result.ok &&
-    result.rollbackAttempted === true &&
-    result.rollbackSucceeded === false
+    (result.restartSucceeded === false || (result.rollbackAttempted && !result.rollbackSucceeded))
   );
 }
 
@@ -202,6 +207,7 @@ export function canSkipRestoreAfterFailure(result: PfbackupRestoreResult | null)
   if (result === null || result.ok) {
     return true;
   }
+  if (result.failedPhase === 'port_recheck') return result.restartSucceeded === true;
   if (!result.rollbackAttempted) {
     return true;
   }
@@ -209,7 +215,13 @@ export function canSkipRestoreAfterFailure(result: PfbackupRestoreResult | null)
 }
 
 export function canRetryRestoreAfterFailure(result: PfbackupRestoreResult | null): boolean {
-  return result !== null && !result.ok && result.rollbackAttempted && result.rollbackSucceeded;
+  return (
+    result !== null &&
+    !result.ok &&
+    (result.failedPhase === 'port_preflight' ||
+      (result.failedPhase === 'port_recheck' && result.restartSucceeded === true) ||
+      (result.rollbackAttempted && result.rollbackSucceeded))
+  );
 }
 
 export function restoreSuccessSummary(

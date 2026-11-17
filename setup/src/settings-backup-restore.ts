@@ -1,3 +1,5 @@
+import { trackPortRecovery } from './port-check-history.js';
+import { requirePorts } from './port-check.js';
 import { assertWindowsHostPath } from './windows-host-path.js';
 import { waitForCompatibleMaintenanceApp } from './settings-format-version.js';
 import { atPhase } from './operation-journal.js';
@@ -97,6 +99,8 @@ import { assertNoUpdateOperation } from './update-operation.js';
 const logger = createModuleLogger('setup.restore');
 
 export const RESTORE_PHASES = {
+  portPreflight: 'port_preflight',
+  portRecheck: 'port_recheck',
   validateArchive: 'validate_archive',
   validateSettings: 'validate_settings',
   backupRollbackState: 'backup_rollback_state',
@@ -295,6 +299,7 @@ function failureResult(
   errors: string[],
   rollbackAttempted: boolean,
   rollbackSucceeded: boolean,
+  restartSucceeded?: boolean,
 ): PfbackupRestoreResult {
   return {
     ok: false,
@@ -302,6 +307,7 @@ function failureResult(
     failedPhase,
     rollbackAttempted,
     rollbackSucceeded,
+    ...(restartSucceeded === undefined ? {} : { restartSucceeded }),
     errors,
   };
 }
@@ -471,10 +477,6 @@ function buildRestoreTargetEnv(input: {
     for (const key of ['IMPORTS_HOST_PATH', 'EXPORTS_HOST_PATH']) {
       if (restoreEnv[key]) assertWindowsHostPath(restoreEnv[key], { allowMappedDrive: true });
     }
-    if (input.backupEnv.SETUP_RESTRICTED_ENABLED === 'true')
-      throw new RestorePhaseError(RESTORE_PHASES.validateArchive, [
-        'Aktiver Patientenzugang aus dieser Sicherung ist unter Windows nicht freigegeben. Bitte auf einem freigegebenen Host wiederherstellen.',
-      ]);
   }
   // Restricted state is a complete backup-owned unit. An absent key in the
   // backup must not inherit an active marker from the current installation.
@@ -484,6 +486,30 @@ function buildRestoreTargetEnv(input: {
     if (value !== undefined) restoreEnv[key] = value;
   }
   return applyTlsRestorePlan({ ...input, restoreEnv });
+}
+
+export function restorePortTargetEnv(
+  ctx: SetupContext,
+  content: string,
+  current: Map<string, string>,
+): Map<string, string> {
+  const valid = validatePfbackupContent(content);
+  if (!valid.archiveValid)
+    throw new SetupApiValidationError('Das Backup konnte nicht geprüft werden.');
+  const parsed = parseArchiveContent(content);
+  const backupEnv = (parsed.settings.env ?? {}) as Record<string, string>;
+  try {
+    const plan = buildRestoreTargetEnv({
+      backupEnv,
+      currentEnv: Object.fromEntries(current),
+      tlsSidecarBase64: parsed.tlsArchiveBase64,
+      installHome: ctx.home,
+    });
+    return new Map(Object.entries(plan.restoreEnv));
+  } catch (error) {
+    if (error instanceof RestorePhaseError) throw new SetupApiValidationError(error.message);
+    throw error;
+  }
 }
 
 async function prepareRestore(input: {
@@ -784,6 +810,22 @@ async function applyPreparedRestore(input: {
       false,
     );
   }
+  const portTarget = {
+    env: new Map(Object.entries(input.prepared.restoreEnv)),
+    delivery: input.prepared.runOptions.delivery,
+  };
+  let portReport;
+  try {
+    portReport = await requirePorts(input.ctx, portTarget);
+  } catch (error) {
+    return failureResult(
+      input.restoreId,
+      'port_preflight',
+      [error instanceof Error ? error.message : 'Portprüfung fehlgeschlagen.'],
+      false,
+      false,
+    );
+  }
   assertNoMaintenanceOperation(input.ctx.home);
   assertMaintenancePredecessors(input.ctx.home, input.installationId);
   let operation: RestoreOperation = {
@@ -801,6 +843,10 @@ async function applyPreparedRestore(input: {
     const stop = await input.runtime.stopStack(input.prepared.runOptions);
     if (!stop.ok)
       throw new RestorePhaseError(phase, [stop.log || 'Stack konnte nicht gestoppt werden.']);
+    if (portReport?.rows.some((row) => row.state === 'owned')) {
+      phase = RESTORE_PHASES.portRecheck;
+      await requirePorts(input.ctx, portTarget);
+    }
     phase = RESTORE_PHASES.backupRollbackState;
     const rollback = await backupRollbackArtifactsAfterStop(
       input.ctx,
@@ -822,7 +868,12 @@ async function applyPreparedRestore(input: {
     const durable = readRestoreOperation(input.ctx.home);
     if (!(durable?.phase === 'committed' && completed)) {
       const failure = restoreFailure(error, phase, 'Restore ist fehlgeschlagen.');
+      logger.error(
+        { restoreId: input.restoreId, phase: failure.phase, errors: failure.errors },
+        'Restore fehlgeschlagen',
+      );
       const rollbackAttempted = durable ? restoreNeedsRollback(durable) : false;
+      const recordRecovery = trackPortRecovery(input.ctx.home, failure.errors);
       let recovery: { ok: boolean; errors: string[] };
       try {
         recovery = await recoverRestoreOperation(input.ctx, {
@@ -845,6 +896,7 @@ async function applyPreparedRestore(input: {
           errors: ['Restore-Recovery-Abschluss ungeklärt. Bitte Setup-Diagnose prüfen.'],
         };
       }
+      recordRecovery(recovery.ok);
       return rollbackAttempted
         ? failureWithRollback(input.restoreId, failure.phase, failure.errors, recovery)
         : failureResult(
@@ -853,6 +905,7 @@ async function applyPreparedRestore(input: {
             [...failure.errors, ...recovery.errors],
             false,
             false,
+            failure.phase === RESTORE_PHASES.portRecheck ? recovery.ok : undefined,
           );
     }
   }
@@ -922,6 +975,10 @@ export async function restorePfbackup(
         error,
         RESTORE_PHASES.validateArchive,
         'Restore-Vorbereitung ist fehlgeschlagen.',
+      );
+      logger.error(
+        { restoreId, phase: failure.phase, errors: failure.errors },
+        'Restore-Vorbereitung fehlgeschlagen',
       );
       return failureResult(restoreId, failure.phase, failure.errors, false, false);
     }

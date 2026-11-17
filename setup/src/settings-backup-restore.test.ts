@@ -20,6 +20,7 @@ import { readEnvMap, writeEnvRecordAtomically } from './env-file.js';
 import { readManagerState } from './manager-state.js';
 import {
   restorePfbackup,
+  restorePortTargetEnv,
   mergeConfigRestoreEnv,
   mergeConfigRestoreManagerState,
   RESTORE_PHASES,
@@ -1174,13 +1175,33 @@ for (const failure of [null, 'listener', 'bindings'] as const)
       const tlsDir = path.join(dir, 'state/tls');
       fs.mkdirSync(tlsDir, { recursive: true });
       fs.writeFileSync(path.join(tlsDir, 'portal-contract.json'), JSON.stringify(contract));
-      const settings = { ...sampleSettings, env: { ...sampleSettings.env, ...runtimeAuditEnv } };
+      const settings = {
+        ...sampleSettings,
+        env: {
+          ...sampleSettings.env,
+          ...runtimeAuditEnv,
+          IMPORTS_HOST_PATH: path.join(dir, 'imports'),
+          EXPORTS_HOST_PATH: path.join(dir, 'exports'),
+        },
+      };
+      const archive = buildArchiveContent(
+        settings,
+        fs.readFileSync(sidecarPath).toString('base64'),
+      );
+      const ctx = testSetupContext(dir);
+      const target = restorePortTargetEnv(ctx, archive, readEnvMap(envPath));
+      assert.equal(target.get('SETUP_RESTRICTED_ENABLED'), 'true');
+      assert.equal(target.get('SETUP_RESTRICTED_APP_IP'), runtimeAuditEnv.SETUP_RESTRICTED_APP_IP);
+      assert.equal(
+        target.get('SETUP_RESTRICTED_INTERFACE_ID'),
+        runtimeAuditEnv.SETUP_RESTRICTED_INTERFACE_ID,
+      );
       let listenerCalls = 0;
       let stops = 0;
       const observed: unknown[] = [];
       const result = await restorePfbackup(
-        buildArchiveContent(settings, fs.readFileSync(sidecarPath).toString('base64')),
-        testSetupContext(dir),
+        archive,
+        ctx,
         {},
         {
           ...successfulRestoreDeps(appDataDir),
@@ -1575,3 +1596,104 @@ test('restore never recovers or overwrites a separate restricted operation', asy
     '{private broken restricted',
   );
 });
+
+test('a refused host port stops restore before the journal, stack stop or data replacement', async (t) => {
+  const f = recoveryFixture(t);
+  const previous = fs.readFileSync(f.envPath, 'utf8');
+  const ctx = {
+    ...f.ctx,
+    checkPorts: async () => ({
+      id: 'aaaaaaaa-1111-4111-8111-111111111111',
+      at: new Date().toISOString(),
+      rows: [],
+      error: {
+        kind: 'mac-permission' as const,
+        message: '192.168.0.83:443 benötigt eine Freigabe.',
+      },
+    }),
+  };
+  const result = await restorePfbackup(
+    buildArchiveContent(),
+    ctx,
+    {},
+    {
+      ...f.deps,
+      stopStack: async () =>
+        assert.fail('a failed candidate must not stop the current installation'),
+    },
+  );
+  assert.ok(!result.ok);
+  assert.equal(result.failedPhase, 'port_preflight');
+  assert.equal(result.rollbackAttempted, false);
+  assert.equal(readRestoreOperation(f.home), null);
+  assert.equal(fs.readFileSync(f.envPath, 'utf8'), previous);
+  assert.ok(
+    fs.existsSync(
+      path.join(f.home, 'state', 'port-checks', 'aaaaaaaa-1111-4111-8111-111111111111.json'),
+    ),
+  );
+});
+
+for (const restartSucceeded of [true, false])
+  test(
+    'restore retests owned ports before cutover, old stack restarted=' + restartSucceeded,
+    async (t) => {
+      const f = recoveryFixture(t);
+      const order: string[] = [];
+      const previous = fs.readFileSync(f.envPath, 'utf8');
+      const ctx = {
+        ...f.ctx,
+        checkPorts: async () => {
+          order.push('check');
+          const owned = order.length === 1;
+          return {
+            id: 'aaaaaaaa-1111-4111-8111-111111111111',
+            at: new Date().toISOString(),
+            rows: owned
+              ? [
+                  {
+                    label: 'Patienten',
+                    state: 'owned' as const,
+                    hostIp: '192.168.0.83',
+                    publishedPort: 443,
+                    targetPort: 444,
+                    protocol: 'tcp',
+                  },
+                ]
+              : [],
+            ...(!owned && order.length === 3
+              ? { error: { kind: 'occupied' as const, message: 'Port ist belegt.' } }
+              : {}),
+          };
+        },
+      };
+      const result = await restorePfbackup(
+        buildArchiveContent(),
+        ctx,
+        {},
+        {
+          ...f.deps,
+          stopStack: async () => {
+            order.push('stop');
+            return { ok: true, log: '' };
+          },
+          startAppStack: async () => assert.fail('must not enter cutover'),
+          startFullStack: async () => ({
+            ok: restartSucceeded,
+            log: restartSucceeded ? '' : 'Restart failed',
+            gatewaySkipped: false,
+          }),
+        },
+      );
+      assert.ok(!result.ok);
+      assert.equal(result.failedPhase, 'port_recheck');
+      assert.equal(result.restartSucceeded, restartSucceeded);
+      assert.equal(result.rollbackAttempted, false);
+      assert.deepEqual(order.slice(0, 3), ['check', 'stop', 'check']);
+      assert.equal(fs.readFileSync(f.envPath, 'utf8'), previous);
+      assert.equal(
+        readRestoreOperation(f.home)?.phase ?? null,
+        restartSucceeded ? null : 'recovery-failed',
+      );
+    },
+  );

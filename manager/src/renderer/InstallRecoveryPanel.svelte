@@ -53,6 +53,16 @@
   {:else if snapshot.recoveryPhase === 'prepared'}
     <h2>Installation vorbereitet</h2>
     <p>Software-Version {operation?.releaseVersion}. {hasBackup ? operation?.backupContainsTls ? 'Backup mit HTTPS ausgewählt.' : 'Backup ohne HTTPS ausgewählt.' : 'Ohne Backup.'}</p>
+    <label class="recovery-backup-field">Praxis-IP für die Einrichtung
+      <select value={snapshot.lanAppIp} disabled={wizardIsBusy(snapshot)} onchange={(event)=>controller.patchFields({lanAppIp:event.currentTarget.value})}>
+        {#each snapshot.status?.network.currentLanCandidates ?? [] as candidate (candidate.address)}
+          <option value={candidate.address}>{candidate.address} ({candidate.interfaceName})</option>
+        {/each}
+        <option value="__custom__">Andere Adresse</option>
+      </select>
+    </label>
+    {#if snapshot.lanAppIp==='__custom__'}<input aria-label="Praxis-IP" value={snapshot.customLanIp} oninput={(event)=>controller.patchFields({customLanIp:event.currentTarget.value})}/>{/if}
+    <label><input type="checkbox" checked={snapshot.proxyEnabled} onchange={(event)=>controller.patchFields({proxyEnabled:event.currentTarget.checked})}/> HTTP-Proxy auf Port 80 verwenden</label>
   {:else if snapshot.recoveryPhase === 'restart'}
     <h2>Installation prüfen</h2>
     <p>Prüfen Sie den aktuellen Status, bevor Sie die Installation erneut starten.</p>

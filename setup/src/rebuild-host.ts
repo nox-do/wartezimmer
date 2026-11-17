@@ -1,3 +1,4 @@
+import { requirePorts } from './port-check.js';
 import { runHostMutation } from './maintenance-operation-guard.js';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -234,6 +235,7 @@ export async function rebuildHost(
       return fail('Bisheriger Laufzustand ist nicht eindeutig.');
     }
 
+    if (running) await requirePorts(ctx, { env, services });
     const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-rebuild-'));
     let previous: Buffer | null = null;
     let written = false;

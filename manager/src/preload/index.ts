@@ -1,3 +1,4 @@
+import type { PortCheckRequest, PortCheckReport } from '@wartezimmer/server-shared/setup-api';
 import { serializeManagerApiErrors } from '../shared/manager-api-bridge.js';
 import type {
   RecoveryBackupCandidate,
@@ -365,8 +366,14 @@ async function repairHostTls(): Promise<TlsActionResult> {
   return callSetupApi<TlsActionResult>({ method: 'POST', path: SETUP_TLS_ROUTES.repair });
 }
 
-async function resetHostTls(): Promise<TlsActionResult> {
-  return callSetupApi<TlsActionResult>({ method: 'POST', path: SETUP_TLS_ROUTES.reset });
+async function resetHostTls(options?: {
+  discardPreparationOnly: boolean;
+}): Promise<TlsActionResult> {
+  return callSetupApi<TlsActionResult>({
+    method: 'POST',
+    path: SETUP_TLS_ROUTES.reset,
+    body: options,
+  });
 }
 
 async function renewHostTls(): Promise<TlsActionResult> {
@@ -408,6 +415,25 @@ async function openExternalUrl(url: string): Promise<void> {
 
 const api = serializeManagerApiErrors({
   hostPlatform: process.platform,
+  unreadPortFailures: () =>
+    callSetupApi<PortCheckReport[]>({ method: 'GET', path: '/api/setup/host/port-check/errors' }),
+  acknowledgePortFailures: (ids: string[]) =>
+    callSetupApi<void>({
+      method: 'POST',
+      path: '/api/setup/host/port-check/acknowledge',
+      body: { ids },
+    }),
+  checkPorts: (request: PortCheckRequest) =>
+    callSetupApi<PortCheckReport>({
+      method: 'POST',
+      path: '/api/setup/host/port-check',
+      body:
+        request.kind === 'update'
+          ? { ...request, input: { ...request.input, managerVersion } }
+          : request,
+    }),
+  portCheckProgress: () =>
+    callSetupApi<PortCheckReport | null>({ method: 'GET', path: '/api/setup/host/port-check' }),
   fetchSetupStatus,
   fetchRuntimeHealth,
   fetchSetupNetwork,

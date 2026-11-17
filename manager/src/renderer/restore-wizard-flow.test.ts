@@ -182,6 +182,23 @@ test('successful rollback allows retry and skip', () => {
   assert.equal(canRetryRestoreAfterFailure(failed), true);
 });
 
+test('retrying or skipping after a port recheck requires a confirmed restart', () => {
+  for (const restartSucceeded of [true, false, undefined]) {
+    const result = {
+      ok: false as const,
+      restoreId: 'r1',
+      failedPhase: 'port_recheck',
+      errors: [],
+      rollbackAttempted: false,
+      rollbackSucceeded: false,
+      restartSucceeded,
+    };
+    assert.equal(canRetryRestoreAfterFailure(result), restartSucceeded === true);
+    assert.equal(canSkipRestoreAfterFailure(result), restartSucceeded === true);
+    assert.equal(isRestoreRollbackFailed(result), restartSucceeded === false);
+  }
+});
+
 for (const included of [false, true]) {
   test(`credential checkbox follows backup metadata: ${included}`, () => {
     assert.equal(

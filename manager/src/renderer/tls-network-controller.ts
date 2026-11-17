@@ -192,10 +192,10 @@ export function createTlsNetworkController(deps: {
       return { localChecks: result.checks ?? null };
     });
   }
-  async function runReset(): Promise<void> {
+  async function runReset(discardPreparationOnly: boolean): Promise<void> {
     if (!lifecycleAllows('tls-reset')) return;
     await runAction('reset', async () => {
-      await deps.api.resetHostTls();
+      await deps.api.resetHostTls({ discardPreparationOnly });
       return { ...INITIAL };
     });
   }
@@ -255,6 +255,7 @@ export function createTlsNetworkController(deps: {
         if (!lifecycleAllows('tls-prepare')) return;
         const result = await deps.api.prepareHostTls({
           mode: 'managed',
+          existingOnly: true,
           hostname: current.installationDomain || current.hostname,
           lanIp,
         });
@@ -422,14 +423,17 @@ export function createTlsNetworkController(deps: {
           return;
         }
         const generation = sessionGeneration;
+        const discardPreparationOnly = tls()?.cutoverApplied === false;
         deps.requestConfirm(
-          TLS_RESET_CONFIRM_MESSAGE,
+          discardPreparationOnly
+            ? TLS_RESET_CONFIRM_MESSAGE
+            : 'Aktiven HTTPS-Zugang wiederherstellen?',
           () => {
             if (generation !== sessionGeneration) {
               resolve();
               return;
             }
-            void runReset().then(resolve, reject);
+            void runReset(discardPreparationOnly).then(resolve, reject);
           },
           () => resolve(),
         );

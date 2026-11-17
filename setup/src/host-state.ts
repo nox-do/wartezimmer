@@ -1,3 +1,7 @@
+import { trackPortRecovery } from './port-check-history.js';
+import { checkBeforeInstallReset } from './install-port-cutover.js';
+import { requirePorts } from './port-check.js';
+import { candidatePortEnv, setupPortTarget, withInstallPortTargets } from './port-check-plan.js';
 import { stackStartFailureMessage } from './stack-start-error.js';
 import { auditRestrictedStart, type RestrictedStartAuditHooks } from './restricted-start-audit.js';
 import { restrictedPlatformSupported, restrictedPlatformMessage } from './restricted-platform.js';
@@ -90,7 +94,6 @@ import {
 import {
   auditDeliveryImages,
   activatePreparedPfinstall,
-  extractPreparedPfinstallTemplates,
   isDeliveryProfile,
   preparePfinstall,
 } from './delivery-images.js';
@@ -401,7 +404,9 @@ async function runBindingChange<T>(
         'inconsistent',
       );
     const unchanged = stored?.runtimeChanged === false;
+    const recordRecovery = trackPortRecovery(ctx.home, [String(error)]);
     const recovery = await recoverBindingOperation(ctx, hooks);
+    recordRecovery(recovery.ok);
     throw hostOperationError(
       recovery.ok
         ? unchanged
@@ -592,6 +597,7 @@ export async function runComposeAction(
       ctx,
       action === 'start' ? 'stack-start' : action === 'stop' ? 'stack-stop' : 'stack-restart',
     );
+    if (action !== 'stop') await requirePorts(ctx);
     const runOptions = resolveComposeRunOptions(ctx);
     const runComposeUp = hooks?.composeUp ?? composeUp;
     const runComposeStop = hooks?.composeStop ?? composeStop;
@@ -711,6 +717,7 @@ export async function resetStaffPinsAndRestart(ctx: SetupContext): Promise<Reset
     const runOptions = resolveComposeRunOptions(ctx);
     const lines: string[] = [];
 
+    await requirePorts(ctx);
     const current = await composePs(runOptions);
     if (current.running) {
       const stop = await composeStop(runOptions);
@@ -1147,6 +1154,7 @@ export async function startStoppedInstallation(
       release?.appImage?.trim() ||
       (ctx.mode === 'repo' ? `${ctx.composeProjectName}-app` : '');
     assertHostLifecycleAction(ctx, 'stack-start');
+    await requirePorts(ctx);
     const started = await startExistingInstallation(resolveComposeRunOptions(ctx), appImage);
     if (!started.ok) {
       return {
@@ -1245,16 +1253,18 @@ export async function commitPreparedInstallOperation(
 
     if (operation.backup) readPinnedRecoveryBackup(ctx.home, operation);
 
-    // Persist the destructive boundary before touching containers, volumes or live host files.
-    operation = markInstallOperationInstalling(ctx.home, operation.id);
-    if (resetRequired) {
-      const staged = extractPreparedPfinstallTemplates(ctx.home, operation.id);
-      try {
-        await factoryResetInstallation(ctx, staged.templatesRoot);
-      } finally {
-        staged.cleanup();
-      }
-    }
+    const requested = {
+      kind: 'install' as const,
+      operationId: operation.id,
+      network: input.network ?? operation.network,
+    };
+    const id = operation.id;
+    await withInstallPortTargets(ctx, requested, async (targets, root) => {
+      await checkBeforeInstallReset(ctx, id, targets, resetRequired, () => {
+        operation = markInstallOperationInstalling(ctx.home, id, requested.network);
+      });
+      if (resetRequired) await factoryResetInstallation(ctx, root);
+    });
     activatePreparedPfinstall(ctx.home, operation.id);
     const after = await getHostStatus(ctx);
     return {
@@ -1515,6 +1525,13 @@ async function mutateRestrictedNetwork(
   };
 
   // All tentative runtime changes use a separate env and restart:no overlay.
+  await requirePorts(ctx, {
+    env: candidatePortEnv(
+      ctx,
+      { kind: enable ? 'patient-enable' : 'patient-disable' },
+      readEnvMap(envPath),
+    ),
+  });
   const operation = beginRestrictedOperation(ctx.home, enable, stackWasRunning);
   try {
     operationId = operation.id;
@@ -1570,6 +1587,7 @@ async function mutateRestrictedNetwork(
 
     let rollbackAttempted = false;
     const rollback = async (reason: string): Promise<never> => {
+      const recordRecovery = trackPortRecovery(ctx.home, [reason]);
       rollbackAttempted = true;
 
       const failedOptions = operationOptions;
@@ -1658,6 +1676,7 @@ async function mutateRestrictedNetwork(
         finish();
       }
 
+      recordRecovery(rollbackOk);
       throw hostOperationError(
         rollbackOk ? 'restricted_apply_failed' : 'restricted_rollback_incomplete',
         rollbackOk
@@ -1826,6 +1845,15 @@ export async function applySetupPlan(
       }
     }
     const existingBefore = readEnvMap(envPathExisting);
+    if (
+      ctx.checkPorts &&
+      (input.runCompose ||
+        (fs.existsSync(envPathExisting) && (await getComposeStatus(ctx)).running))
+    )
+      await requirePorts(
+        ctx,
+        setupPortTarget(ctx, input, input.delivery, resolveComposeBuild(input)),
+      );
     const preparedStorage = input.folders ? prepareStorageFoldersOnDisk(input.folders) : null;
     const {
       secrets,
@@ -2148,6 +2176,7 @@ export async function saveHostNetwork(
     let restartLog: string | null = null;
     let gatewayComposeSkipped = false;
 
+    await requirePorts(ctx, { env: new Map([...existing, ...Object.entries(updates)]) });
     const restartCompose = Boolean(input.restartCompose) || repairProxy;
     const proxyActions = planProxyComposeActions({
       proxyEnabled: proxy.enabled,
@@ -2249,6 +2278,7 @@ export async function saveStorageFolders(
     const composeBefore = await composePs(runOptions);
     const stackWasRunning = composeBefore.running;
 
+    if (input.restartCompose && stackWasRunning) await requirePorts(ctx);
     const result = writeStorageFolders(ctx, folders);
 
     let composeRestarted = false;

@@ -22,6 +22,7 @@
   import InstallRecoveryPanel from './InstallRecoveryPanel.svelte';
   import WizardSteps from './WizardSteps.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
+  import ErrorDialog from './ErrorDialog.svelte';
 
   let {
     onComplete,
@@ -220,4 +221,5 @@
   <ConfirmDialog open={confirmOpen && !blocked} onConfirm={confirmAndRun} onCancel={closeConfirm}>
     <p>{confirmMessage}</p>
   </ConfirmDialog>
+  <ErrorDialog message={snapshot ? wizardError(snapshot) : null} />
 </div>

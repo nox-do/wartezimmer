@@ -1,3 +1,12 @@
+import {
+  unreadPortFailures,
+  acknowledgePortFailures,
+  storePortFailure,
+} from './port-check-history.js';
+import { recoverInstallPortTest } from './install-port-cutover.js';
+import { waitForProjectPortChecks } from './port-check.js';
+import { parsePortRequest, parsePortNetworkDraft, previewPortChecks } from './port-check-plan.js';
+import type { PortCheckReport } from '@wartezimmer/server-shared/setup-api';
 import { readBindingOperationStatus } from './binding-operation.js';
 import { readTlsOperationStatus } from './tls-operation.js';
 import { recoverTlsOperation } from './host-tls.js';
@@ -65,6 +74,10 @@ import { requirePackageFileExtension } from './package-file-extension.js';
 import { resolveSetupApiError } from './api-error.js';
 import { hostMutationLock } from './host-mutation-lock.js';
 import {
+  parsePfupdateInput,
+  readBodyRecord,
+  readOptionalString,
+  requireString,
   normalizeApplySetupInput,
   normalizeHostNetworkInput,
   normalizeRestrictedNetworkPrepareInput,
@@ -92,17 +105,6 @@ const logger = createModuleLogger('setup.server');
 type RouteResult = [status: number, body: unknown];
 type RouteHandler = (req: http.IncomingMessage, url: URL) => RouteResult | Promise<RouteResult>;
 type Routes = Record<string, RouteHandler>;
-
-function readBodyRecord(body: unknown): Record<string, unknown> {
-  return body !== null && typeof body === 'object' && !Array.isArray(body)
-    ? (body as Record<string, unknown>)
-    : {};
-}
-
-function readOptionalString(record: Record<string, unknown>, key: string): string | undefined {
-  const value = record[key];
-  return typeof value === 'string' ? value : undefined;
-}
 
 function readJsonBody(req: http.IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
@@ -136,39 +138,30 @@ function routeResult(body: unknown): RouteResult {
   return [200, body];
 }
 
-function requireString(
-  record: Record<string, unknown>,
-  key: string,
-  errorMessage = `${key} required`,
-): string {
-  const value = readOptionalString(record, key)?.trim();
-  if (!value) {
-    throw new SetupApiValidationError(errorMessage);
-  }
-  return value;
-}
-
-async function readPfupdateInput(req: http.IncomingMessage) {
-  const body = readBodyRecord(await readJsonBody(req));
-  const settingsFormatVersion = body.settingsFormatVersion;
-  const archivePath = requireString(body, 'archivePath');
-  try {
-    requirePackageFileExtension(archivePath, '.pfupdate');
-  } catch {
-    throw new SetupApiValidationError('archivePath must end with .pfupdate');
-  }
-  return {
-    archivePath,
-    managerVersion: readOptionalString(body, 'managerVersion')?.trim() || undefined,
-    settingsFormatVersion:
-      typeof settingsFormatVersion === 'number' && Number.isInteger(settingsFormatVersion)
-        ? settingsFormatVersion
-        : undefined,
-  };
-}
-
 function createRuntimeRoutes(ctx: SetupContext, tlsDeps: TlsRuntimeDependencies): Routes {
+  let progress: PortCheckReport | null = null;
   return {
+    'GET /api/setup/host/port-check/errors': () => routeResult(unreadPortFailures(ctx.home)),
+    'POST /api/setup/host/port-check/acknowledge': async (req) => {
+      acknowledgePortFailures(ctx.home, readBodyRecord(await readJsonBody(req)).ids);
+      return routeResult({ ok: true });
+    },
+    'GET /api/setup/host/port-check': () => routeResult(progress),
+    'POST /api/setup/host/port-check': async (req) => {
+      const request = parsePortRequest(await readJsonBody(req));
+      return hostMutationLock(ctx.home).run('port-preflight', async () => {
+        progress = null;
+        try {
+          const result = await previewPortChecks(ctx, request, (report) => {
+            progress = report;
+          });
+          if (result.error) storePortFailure(ctx.home, result);
+          return routeResult(result);
+        } finally {
+          progress = null;
+        }
+      });
+    },
     'GET /api/setup/host/status': async (_req, url) => {
       const includeParam = url.searchParams.get('include') ?? '';
       const include = new Set(
@@ -220,7 +213,14 @@ function createRuntimeRoutes(ctx: SetupContext, tlsDeps: TlsRuntimeDependencies)
       routeResult(await checkCustomCertificate(ctx, tlsDeps)),
     [`POST ${SETUP_TLS_ROUTES.apply}`]: async () => routeResult(await applyHostTls(ctx, tlsDeps)),
     [`POST ${SETUP_TLS_ROUTES.repair}`]: async () => routeResult(await repairHostTls(ctx, tlsDeps)),
-    [`POST ${SETUP_TLS_ROUTES.reset}`]: async () => routeResult(await resetHostTls(ctx, tlsDeps)),
+    [`POST ${SETUP_TLS_ROUTES.reset}`]: async (req) =>
+      routeResult(
+        await resetHostTls(
+          ctx,
+          tlsDeps,
+          readBodyRecord(await readJsonBody(req)).discardPreparationOnly === true,
+        ),
+      ),
     [`POST ${SETUP_TLS_ROUTES.renew}`]: async (req) =>
       routeResult(
         await renewHostTls(ctx, normalizeTlsRenewInput(await readJsonBody(req)), tlsDeps),
@@ -365,22 +365,27 @@ function createDeliveryRoutes(ctx: SetupContext): Routes {
         await commitPreparedInstallOperation(ctx, {
           operationId: requireString(body, 'operationId'),
           replaceConfirmed: body.replaceConfirmed === true,
+          network: body.network === undefined ? undefined : parsePortNetworkDraft(body.network),
         }),
       );
     },
     'DELETE /api/setup/host/install/operation': async (req) => {
       const body = readBodyRecord(await readJsonBody(req));
-      return routeResult(abortInstallOperation(ctx, requireString(body, 'operationId')));
+      const id = requireString(body, 'operationId');
+      return hostMutationLock(ctx.home).run('abort-install', async () => {
+        await recoverInstallPortTest(ctx);
+        return routeResult(abortInstallOperation(ctx, id));
+      });
     },
     'POST /api/setup/host/installation/start': async () =>
       routeResult(await startStoppedInstallation(ctx)),
     'POST /api/setup/host/update/inspect': async (req) => {
-      const input = await readPfupdateInput(req);
+      const input = parsePfupdateInput(await readJsonBody(req));
       await assertUpdateEligible();
       return routeResult(await inspectPfupdate(input, ctx));
     },
     'POST /api/setup/host/update/apply': async (req) => {
-      const input = await readPfupdateInput(req);
+      const input = parsePfupdateInput(await readJsonBody(req));
       await assertUpdateEligible();
       const result = await applyPfupdate(input, ctx);
       return routeResult(result);
@@ -548,9 +553,11 @@ export function createSetupRequestHandler(
   const restorePending = readRestoreOperationStatus(ctx.home);
   const updatePending = readUpdateOperationStatus(ctx.home);
   let recovery: Promise<void> = Promise.resolve();
+  let installRestartPending = false;
   if (bindingPending || tlsPending || restorePending || updatePending) {
     void mutationLock
       .run('maintenance-recovery', async () => {
+        if (ctx.checkPorts) await waitForProjectPortChecks(ctx.composeProjectName);
         const result = bindingPending
           ? await recoverBindingOperation(ctx)
           : tlsPending
@@ -562,12 +569,18 @@ export function createSetupRequestHandler(
       })
       .catch((error: unknown) => logger.error({ err: error }, 'Host-Recovery ungeklärt'));
   } else {
-    recovery = mutationLock.run('restricted-recovery', () =>
-      (options.recoverRestrictedOperation ?? recoverRestrictedOperation)({
+    recovery = mutationLock.run('restricted-recovery', async () => {
+      try {
+        await recoverInstallPortTest(ctx);
+      } catch (error) {
+        installRestartPending = true;
+        logger.error({ err: error }, 'Wiederanlauf nach Installations-Portprüfung ausstehend');
+      }
+      return (options.recoverRestrictedOperation ?? recoverRestrictedOperation)({
         projectRoot: ctx.home,
         composeProjectName: ctx.composeProjectName,
-      }),
-    );
+      });
+    });
     void recovery.catch((error: unknown) =>
       logger.error({ err: error }, 'Restricted-Recovery ungeklärt'),
     );
@@ -598,7 +611,13 @@ export function createSetupRequestHandler(
         });
       }
       // Reads never trigger or wait for recovery. Mutations cannot overtake startup.
-      if (req.method !== 'GET') await recovery;
+      if (req.method !== 'GET') {
+        await recovery;
+        if (installRestartPending && !url.pathname.startsWith('/api/setup/host/port-check')) {
+          await mutationLock.run('install-port-recovery', () => recoverInstallPortTest(ctx));
+          installRestartPending = false;
+        }
+      }
       const [status, body] = await handler(req, url);
       return sendJson(res, status, body);
     } catch (error) {

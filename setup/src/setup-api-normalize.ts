@@ -1,3 +1,4 @@
+import { requirePackageFileExtension } from './package-file-extension.js';
 import type {
   ApplySetupInput,
   GatewayPlan,
@@ -29,22 +30,8 @@ export class SetupApiValidationError extends ManagerApiError {
   }
 }
 
-function coerceSetupRecord(body: unknown): Record<string, unknown> {
-  return body !== null && typeof body === 'object' && !Array.isArray(body)
-    ? (body as Record<string, unknown>)
-    : {};
-}
-
-function requireBodyString(record: Record<string, unknown>, key: string): string {
-  const value = record[key];
-  if (typeof value !== 'string' || !value.trim()) {
-    throw new SetupApiValidationError(`${key} required`);
-  }
-  return value.trim();
-}
-
 export function normalizeTlsPrepareInput(body: unknown): TlsPrepareInput {
-  const record = coerceSetupRecord(body);
+  const record = readBodyRecord(body);
   const mode = record.mode;
   if (mode !== 'managed' && mode !== 'custom') {
     throw new SetupApiValidationError('mode must be managed or custom');
@@ -58,7 +45,8 @@ export function normalizeTlsPrepareInput(body: unknown): TlsPrepareInput {
   }
   return {
     mode,
-    lanIp: requireBodyString(record, 'lanIp'),
+    lanIp: requireString(record, 'lanIp'),
+    ...(record.existingOnly === true ? { existingOnly: true } : {}),
     ...(hostname ? { hostname } : {}),
   };
 }
@@ -66,27 +54,27 @@ export function normalizeTlsPrepareInput(body: unknown): TlsPrepareInput {
 export function normalizeRestrictedNetworkPrepareInput(
   body: unknown,
 ): RestrictedNetworkPrepareInput {
-  const record = coerceSetupRecord(body);
+  const record = readBodyRecord(body);
   if (typeof record.warningsConfirmed !== 'boolean') {
     throw new SetupApiValidationError('warningsConfirmed must be boolean');
   }
   return {
-    hostIp: requireBodyString(record, 'hostIp'),
-    interfaceId: requireBodyString(record, 'interfaceId'),
+    hostIp: requireString(record, 'hostIp'),
+    interfaceId: requireString(record, 'interfaceId'),
     warningsConfirmed: record.warningsConfirmed,
   };
 }
 
 export function normalizeTlsCustomCertificateInput(body: unknown): TlsCustomCertificateInput {
-  const record = coerceSetupRecord(body);
+  const record = readBodyRecord(body);
   return {
-    fullchainPem: requireBodyString(record, 'fullchainPem'),
-    privateKeyPem: requireBodyString(record, 'privateKeyPem'),
+    fullchainPem: requireString(record, 'fullchainPem'),
+    privateKeyPem: requireString(record, 'privateKeyPem'),
   };
 }
 
 export function normalizeTlsRenewInput(body: unknown): TlsRenewInput {
-  const record = coerceSetupRecord(body);
+  const record = readBodyRecord(body);
   const fullchainPem =
     typeof record.fullchainPem === 'string' && record.fullchainPem.trim()
       ? record.fullchainPem.trim()
@@ -104,15 +92,15 @@ export function normalizeTlsRenewInput(body: unknown): TlsRenewInput {
 }
 
 function coerceSetupPlanInput(body: unknown): SetupPlanInput {
-  return coerceSetupRecord(body) as SetupPlanInput;
+  return readBodyRecord(body) as SetupPlanInput;
 }
 
 function coerceApplySetupInput(body: unknown): ApplySetupInput {
-  return coerceSetupRecord(body) as ApplySetupInput;
+  return readBodyRecord(body) as ApplySetupInput;
 }
 
 function coerceHostNetworkInput(body: unknown): HostNetworkInput {
-  return coerceSetupRecord(body) as HostNetworkInput;
+  return readBodyRecord(body) as HostNetworkInput;
 }
 
 export function requireTrimmedLanAppIp(value: string | undefined): string {
@@ -295,5 +283,50 @@ export function normalizeHostNetworkInput(body: unknown): {
     repairProxy,
     gateway: normalizeGatewayPlan(requireHostNetworkGateway(input.gateway), lanAppIp),
     ...(proxy ? { proxy } : {}),
+  };
+}
+
+export function readBodyRecord(body: unknown): Record<string, unknown> {
+  return body !== null && typeof body === 'object' && !Array.isArray(body)
+    ? (body as Record<string, unknown>)
+    : {};
+}
+
+export function readOptionalString(
+  record: Record<string, unknown>,
+  key: string,
+): string | undefined {
+  const value = record[key];
+  return typeof value === 'string' ? value : undefined;
+}
+
+export function requireString(
+  record: Record<string, unknown>,
+  key: string,
+  errorMessage = `${key} required`,
+): string {
+  const value = readOptionalString(record, key)?.trim();
+  if (!value) {
+    throw new SetupApiValidationError(errorMessage);
+  }
+  return value;
+}
+
+export function parsePfupdateInput(value: unknown) {
+  const body = readBodyRecord(value);
+  const settingsFormatVersion = body.settingsFormatVersion;
+  const archivePath = requireString(body, 'archivePath');
+  try {
+    requirePackageFileExtension(archivePath, '.pfupdate');
+  } catch {
+    throw new SetupApiValidationError('archivePath must end with .pfupdate');
+  }
+  return {
+    archivePath,
+    managerVersion: readOptionalString(body, 'managerVersion')?.trim() || undefined,
+    settingsFormatVersion:
+      typeof settingsFormatVersion === 'number' && Number.isInteger(settingsFormatVersion)
+        ? settingsFormatVersion
+        : undefined,
   };
 }

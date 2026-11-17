@@ -1,3 +1,4 @@
+import type { PortCheckRequest, PortCheckReport } from '@wartezimmer/server-shared/setup-api';
 import type {
   RecoveryBackupCandidate,
   InstallRecoveryPreview,
@@ -53,6 +54,10 @@ import type {
 
 export type WartezimmerManagerSetupApi = {
   fetchSetupStatus(options?: { includeProbes?: boolean }): Promise<HostStatus>;
+  unreadPortFailures(): Promise<PortCheckReport[]>;
+  acknowledgePortFailures(ids: string[]): Promise<void>;
+  checkPorts(request: PortCheckRequest): Promise<PortCheckReport>;
+  portCheckProgress(): Promise<PortCheckReport | null>;
   fetchRuntimeHealth(): Promise<HostRuntimeHealth>;
   fetchSetupNetwork(): Promise<NetworkSnapshot>;
   startStoppedInstallation(): Promise<InstallationStartResult>;
@@ -111,7 +116,7 @@ export type WartezimmerManagerMaintenanceApi = {
   checkHostTlsCertificate(): Promise<TlsActionResult>;
   applyHostTls(): Promise<TlsActionResult>;
   repairHostTls(): Promise<TlsActionResult>;
-  resetHostTls(): Promise<TlsActionResult>;
+  resetHostTls(options?: { discardPreparationOnly: boolean }): Promise<TlsActionResult>;
   renewHostTls(): Promise<TlsActionResult>;
   renewHostTlsFromPem(): Promise<TlsPemSetupResult>;
   getPfbackupInfo(): Promise<PfbackupInfo>;

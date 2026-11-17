@@ -1,3 +1,4 @@
+import { withPortGuide } from './port-check-guide.svelte.js';
 import { restoreManagerApiErrors } from '../shared/manager-api-bridge.js';
 import { mount } from 'svelte';
 import App from './App.svelte';
@@ -18,7 +19,9 @@ import {
 } from './manager-shell-state.svelte.js';
 
 if (window.wartezimmerManagerBridge) {
-  window.wartezimmerManager = restoreManagerApiErrors(window.wartezimmerManagerBridge);
+  window.wartezimmerManager = withPortGuide(
+    restoreManagerApiErrors(window.wartezimmerManagerBridge),
+  );
 }
 
 const svelteRoot = document.getElementById('svelte-app');
