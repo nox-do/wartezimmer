@@ -11,7 +11,7 @@ export async function loadPagePartials(source) {
 }
 
 export function renderPage(html, page, { header, footer }) {
-  const home = page === 'index.html' ? '' : './index.html';
+  const home = page === 'index.html' ? '' : './';
   const navigation = header
     .replaceAll('{{HOME}}', home)
     .replace(`href="./${page}"`, `href="./${page}" aria-current="page"`);

@@ -66,11 +66,15 @@ if (configuredBase) {
   }
   if (!siteBase.pathname.endsWith('/')) siteBase.pathname += '/';
 }
+const pageUrl = (page) => new URL(page === 'index.html' ? './' : page, siteBase).href;
 
 // Validate the complete rendered pages before replacing the existing artifact.
 const renderedPages = new Map();
 for (const page of pages) {
-  let html = renderPage(await readFile(path.join(source, page), 'utf8'), page, partials);
+  let html = renderPage(await readFile(path.join(source, page), 'utf8'), page, partials).replaceAll(
+    '{{CANONICAL_URL}}',
+    escapeHtml(pageUrl(page)),
+  );
   if (page === 'lizenz.html') {
     if (html.split('{{LICENSE_CONTENT}}').length !== 2) {
       throw new Error('lizenz.html: Lizenz-Platzhalter muss genau einmal vorhanden sein.');
@@ -117,9 +121,7 @@ if (siteBase) {
       .replaceAll('<', '&lt;')
       .replaceAll('>', '&gt;')
       .replaceAll('"', '&quot;');
-  const urls = pages
-    .filter((page) => !sealedPages.has(page))
-    .map((page) => new URL(page === 'index.html' ? './' : page, siteBase).href);
+  const urls = pages.filter((page) => !sealedPages.has(page)).map(pageUrl);
   await writeFile(
     path.join(output, 'sitemap.xml'),
     '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
