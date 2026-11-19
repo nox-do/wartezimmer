@@ -103,6 +103,72 @@ test('Pages build renders the canonical license, project sitemap and blocks inco
   const preview = invoke(['--preview']);
   assert.equal(preview.status, 0, preview.stderr);
   const output = path.join(directory, 'dist/pages');
+  async function assertSearchUrls(base) {
+    const pages = [
+      'index.html',
+      'downloads.html',
+      'technik.html',
+      'patientenaufruf-vergleich.html',
+      'lizenzen.html',
+      'lizenz.html',
+    ];
+    const expectedUrls = pages.map(
+      (page) => new URL(page === 'index.html' ? './' : page, base).href,
+    );
+    const sitemap = new JSDOM(await readFile(path.join(output, 'sitemap.xml'), 'utf8'), {
+      contentType: 'application/xml',
+    });
+    try {
+      assert.deepEqual(
+        [...sitemap.window.document.querySelectorAll('loc')].map((loc) => loc.textContent),
+        expectedUrls,
+      );
+    } finally {
+      sitemap.window.close();
+    }
+    for (const [index, page] of pages.entries()) {
+      const dom = new JSDOM(await readFile(path.join(output, page), 'utf8'), {
+        url: new URL(page, base).href,
+      });
+      try {
+        const document = dom.window.document;
+        const canonicals = [...document.head.querySelectorAll('link[rel="canonical"]')];
+        assert.deepEqual(
+          canonicals.map((link) => link.getAttribute('href')),
+          [expectedUrls[index]],
+          page,
+        );
+        assert.doesNotMatch(
+          document.querySelector('meta[name="robots"]')?.content ?? '',
+          /noindex/,
+        );
+        for (const link of document.querySelectorAll('a[href]')) {
+          if (link.getAttribute('href').startsWith('#')) continue;
+          const url = new URL(link.href);
+          if (url.origin === new URL(base).origin) {
+            assert.notEqual(
+              url.pathname,
+              new URL('index.html', base).pathname,
+              `${page}: ${link.href}`,
+            );
+          }
+        }
+        if (page === 'patientenaufruf-vergleich.html') {
+          assert.equal(
+            document.querySelector('meta[property="og:url"]').content,
+            expectedUrls[index],
+          );
+          assert.equal(
+            document.querySelector('[itemprop="mainEntityOfPage"]').href,
+            expectedUrls[index],
+          );
+        }
+      } finally {
+        dom.window.close();
+      }
+    }
+  }
+  await assertSearchUrls('https://example.org/project/');
   const html = await readFile(path.join(output, 'lizenz.html'), 'utf8');
   assert.match(html, /id="abschnitt-1"/);
   assert.match(html, /id="abschnitt-1-1"/);
@@ -173,6 +239,7 @@ test('Pages build renders the canonical license, project sitemap and blocks inco
   assert.equal(publication.status, 0, publication.stderr);
   const defaultBase = invoke([], '');
   assert.equal(defaultBase.status, 0, defaultBase.stderr);
+  await assertSearchUrls('https://nox-do.github.io/wartezimmer/');
   assert.match(
     await readFile(path.join(output, 'sitemap.xml'), 'utf8'),
     /https:\/\/nox-do\.github\.io\/wartezimmer\/patientenaufruf-vergleich\.html/,
@@ -181,6 +248,9 @@ test('Pages build renders the canonical license, project sitemap and blocks inco
     await readFile(path.join(output, 'robots.txt'), 'utf8'),
     /Sitemap: https:\/\/nox-do\.github\.io\/wartezimmer\/sitemap\.xml/,
   );
+  const rootBase = invoke([], 'https://example.org');
+  assert.equal(rootBase.status, 0, rootBase.stderr);
+  await assertSearchUrls('https://example.org/');
   assert.notEqual(invoke(['--preview'], 'https://example.org/project?token=secret').status, 0);
   const templatePath = path.join(directory, 'website/lizenz.html');
   await writeFile(
@@ -224,7 +294,7 @@ for (const page of ['impressum.html', 'datenschutz.html']) {
       await new Promise((resolve) => setTimeout(resolve, 0));
       assert.match(document.body.textContent, /Schickenberg 41/);
       assert.equal(document.querySelector('a[href^="mailto:"]').href, 'mailto:info@notaus.de');
-      assert.equal(document.querySelector('.brand').href, 'https://example.org/project/index.html');
+      assert.equal(document.querySelector('.brand').href, 'https://example.org/project/');
       assert.equal(
         document.querySelector('meta[name="robots"]').content,
         'noindex,nofollow,noarchive',

@@ -161,6 +161,46 @@ starten. Jeder Build erzeugt die Sitemap und deren robots.txt-Verweis für
 Die Repository-Variable `PAGES_BASE_URL` kann diese Basisadresse überschreiben
 (vollständige URL einschließlich Projektpfad).
 
+## Google Search Console
+
+Die URL-Präfix-Property lautet `https://nox-do.github.io/wartezimmer/`.
+Im Sitemap-Feld hinter diesem Präfix nur `sitemap.xml` ohne führenden Schrägstrich
+eintragen. Die vollständige Adresse muss
+`https://nox-do.github.io/wartezimmer/sitemap.xml` sein;
+`https://nox-do.github.io/sitemap.xml` gehört nicht zur Projektwebsite.
+
+Die Sitemap enthält die sechs öffentlich indexierbaren Seiten. Der Build setzt
+deren `{{CANONICAL_URL}}`-Platzhalter aus derselben Basisadresse wie die Sitemap.
+Die bevorzugte Startseite ist das Projektverzeichnis mit abschließendem `/`,
+nicht `index.html`. Beide URLs liefern bei GitHub Pages denselben Inhalt;
+Canonical-Angabe und interne Links verweisen deshalb auf das Verzeichnis.
+Auch Open Graph und die Artikel-Microdata der Vergleichsseite übernehmen die
+konfigurierte Adresse. Impressum und Datenschutz bleiben bewusst `noindex` und
+außerhalb der Sitemap.
+
+Google liest `robots.txt` nur am Host-Stamm, hier unter
+`https://nox-do.github.io/robots.txt`. Die im Projekt ausgelieferte
+`/wartezimmer/robots.txt` wird dort nicht als Crawling-Regeldatei ausgewertet.
+Ein HTTP 404 für die Datei am Host-Stamm sperrt das Crawling nicht. Deshalb die
+Sitemap direkt in der Search Console einreichen; eine zusätzliche Datei im
+separaten Host-Stamm ist für die Indexierung nicht erforderlich.
+
+Bei „Konnte nicht abgerufen werden“ zuerst in den Sitemap-Details die vollständige
+eingereichte URL prüfen und genau diese im URL-Prüftool live testen. Die Sitemap
+muss HTTP 200 und XML liefern. Ein erfolgreicher Abruf vom eigenen Rechner
+belegt noch nicht den Abruf durch Google. Nach Veröffentlichung geänderter
+Canonical-Angaben die bevorzugte Startseite live prüfen und deren Indexierung
+anfordern. Eine weiter als Duplikat ausgeschlossene `index.html` ist erwartbar,
+wenn Google stattdessen die bevorzugte Startseite indexiert. „Gecrawlt – zurzeit
+nicht indexiert“ bedeutet, dass Google die Seite bereits abrufen konnte; es ist
+keine Zusage für eine spätere Indexierung und kein Beleg für ein Hostingproblem.
+
+Referenzen: [Sitemap-Bericht](https://support.google.com/webmasters/answer/7451001?hl=de),
+[Canonical-Angaben](https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls),
+[robots.txt-Platzierung](https://developers.google.com/crawling/docs/robots-txt/create-robots-txt),
+[robots.txt-HTTP-Status](https://developers.google.com/crawling/docs/robots-txt/robots-txt-spec),
+[Seitenindexierung](https://support.google.com/webmasters/answer/7440203?hl=de).
+
 ## Assets
 
 Nur auf den öffentlichen Seiten verwendete Bilder werden aktiv übernommen. Manrope und DM Sans werden

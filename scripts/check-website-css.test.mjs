@@ -65,7 +65,7 @@ test('Shared navigation keeps home anchors and marks the current page', () => {
   const template = '{{SITE_HEADER}}<main>Content</main>{{SITE_FOOTER}}';
   assert.match(renderPage(template, 'index.html', partials), /href="#contact"/);
   const download = renderPage(template, 'downloads.html', partials);
-  assert.match(download, /href="\.\/index.html#contact"/);
+  assert.match(download, /href="\.\/#contact"/);
   assert.match(download, /href="\.\/downloads.html" aria-current="page"/);
   assert.doesNotMatch(download, /\{\{/);
   assert.throws(() => renderPage('{{SITE_HEADER}}', 'index.html', partials), /SITE_FOOTER/);
