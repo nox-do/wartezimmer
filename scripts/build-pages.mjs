@@ -128,6 +128,7 @@ if (siteBase) {
       urls.map((url) => `  <url><loc>${escapeXml(url)}</loc></url>`).join('\n') +
       '\n</urlset>\n',
   );
+  await writeFile(path.join(output, 'sitemap.txt'), `${urls.join('\n')}\n`);
   const robots = await readFile(path.join(source, 'robots.txt'), 'utf8');
   await writeFile(
     path.join(output, 'robots.txt'),

@@ -169,6 +169,14 @@ eintragen. Die vollständige Adresse muss
 `https://nox-do.github.io/wartezimmer/sitemap.xml` sein;
 `https://nox-do.github.io/sitemap.xml` gehört nicht zur Projektwebsite.
 
+Der Build erzeugt zusätzlich `sitemap.txt` mit denselben URLs, eine pro Zeile.
+Für den Vergleich bei anhaltendem Abruffehler der XML-Sitemap einmalig
+`sitemap.txt` in derselben Property einreichen. Die bestehende XML-Sitemap bleibt
+erhalten. Eine Einreichungsbestätigung belegt noch keine Verarbeitung: Im
+Sitemap-Bericht müssen anschließend Status „Erfolgreich“ und erkannte Seiten
+erscheinen. Das Textformat wird von Google unterstützt, garantiert aber keine
+Verarbeitung oder Indexierung.
+
 Die Sitemap enthält die sechs öffentlich indexierbaren Seiten. Der Build setzt
 deren `{{CANONICAL_URL}}`-Platzhalter aus derselben Basisadresse wie die Sitemap.
 Die bevorzugte Startseite ist das Projektverzeichnis mit abschließendem `/`,
@@ -196,6 +204,7 @@ nicht indexiert“ bedeutet, dass Google die Seite bereits abrufen konnte; es is
 keine Zusage für eine spätere Indexierung und kein Beleg für ein Hostingproblem.
 
 Referenzen: [Sitemap-Bericht](https://support.google.com/webmasters/answer/7451001?hl=de),
+[Text-Sitemaps](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap#text),
 [Canonical-Angaben](https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls),
 [robots.txt-Platzierung](https://developers.google.com/crawling/docs/robots-txt/create-robots-txt),
 [robots.txt-HTTP-Status](https://developers.google.com/crawling/docs/robots-txt/robots-txt-spec),
